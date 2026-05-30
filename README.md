@@ -5,8 +5,20 @@ explore procedurally generated planets, mine resources, craft gear, research blu
 and grow your ship — built from day one as a client/server game so multiplayer and
 self-hosting come naturally.
 
-> **Design docs** (German, input specs): [`anforderungen.md`](anforderungen.md) (game design),
-> [`technische_anforderungen.md`](technische_anforderungen.md) (technical requirements).
+## About this project
+
+Spacecraft is a **father-and-son project**:
+
+- **Justus (age 10)** is the **Product Owner** — he comes up with the game and writes the
+  user requirements.
+- **Marcel (papa)** is the **technical translator** — he turns Justus's ideas into precise
+  technical requirements.
+- The **AI (Claude Code, Anthropic's Claude Opus)** produces the technical implementation
+  from those requirements.
+
+> **Design docs** (German, input specs, kept locally under `plans/`): `plans/anforderungen.md`
+> (game design), `plans/technische_anforderungen.md` (technical requirements), plus the
+> `plans/anf_*.md` extension specs and `plans/IMPLEMENTATION_PLAN.md`.
 > All other docs and code comments are **English**. In-game text is **bilingual
 > (German + English)**.
 
@@ -86,5 +98,6 @@ changes are needed to add content. Player-facing names use localization keys res
 ## Status
 
 MVP backend is implemented and tested end-to-end (join → mine → inventory → save/load,
-crafting, blueprint gating). See [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) for the
-milestone breakdown and [AGENTS.md](AGENTS.md) for contributor rules.
+crafting, blueprint gating, game modes, respawn, universe, cheats, missions, admin content,
+WebSocket gateway). See `plans/IMPLEMENTATION_PLAN.md` (local) for the milestone breakdown
+and [AGENTS.md](AGENTS.md) for contributor rules.

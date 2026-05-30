@@ -28,6 +28,9 @@ saves/
 logs/
 backups/
 
+# Local planning / requirement specs (kept out of the repo by request)
+plans/
+
 # Generated Unity client content (reproduce via scripts/sync-client-libs.ps1)
 client/Assets/Plugins/*.dll
 client/Assets/Plugins/*.dll.meta
