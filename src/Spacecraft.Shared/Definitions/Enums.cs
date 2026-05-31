@@ -32,4 +32,5 @@ public enum CraftingStation
     Refinery,
     Lab,
     MachineRoom,
+    Detoxifier,
 }

@@ -20,6 +20,11 @@
     "unlockCost": [ { "item": "data_fragment", "count": 3 }, { "item": "iron_plate", "count": 15 }, { "item": "cable", "count": 8 } ]
   },
   {
+    "key": "detoxifier", "nameKey": "blueprint.detoxifier.name", "descriptionKey": "blueprint.detoxifier.desc",
+    "category": "ShipExpansion", "prerequisites": [],
+    "unlockCost": [ { "item": "data_fragment", "count": 2 }, { "item": "iron_plate", "count": 12 }, { "item": "cable", "count": 4 } ]
+  },
+  {
     "key": "oxygen_generator", "nameKey": "blueprint.oxygen_generator.name", "descriptionKey": "blueprint.oxygen_generator.desc",
     "category": "ShipExpansion", "prerequisites": [],
     "unlockCost": [ { "item": "data_fragment", "count": 2 }, { "item": "ice", "count": 20 }, { "item": "cable", "count": 5 } ]

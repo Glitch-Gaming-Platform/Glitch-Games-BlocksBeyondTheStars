@@ -1,7 +1,7 @@
 # Spacecraft — Progress & Next Steps
 
 Resume point for development. Full milestone breakdown lives in `plans/IMPLEMENTATION_PLAN.md`
-(local, git-ignored). Tests: **145 passing**. Repo pushed to `origin/main` (private).
+(local, git-ignored). Tests: **148 passing**. Repo pushed to `origin/main` (private).
 
 ## Done (committed & pushed)
 
@@ -191,9 +191,9 @@ consumes protocol messages that already exist.
   — `flora_plant` now also drops **`berries`** (+18); poison still harms. Rides on `PlayerStateUpdate`;
   HUD shows a Hunger vital. 6 tests. Planned: detoxifier module, poison status-effect over time,
   sprint-drain, hunger icon. *(Client needs the refreshed Networking lib — re-run sync-client-libs.)*
-- **(NEW, planned) Detoxifier ship module:** a craftable part built into the ship (if a slot is
-  free) that converts **poisonous** plants/creature meat into **safe food** (e.g. toxic_gland →
-  creature_meat). Reuses ship modules + crafting + the consume/hunger system. See plan.
+- **Detoxifier ship module — DONE.** A buildable `detoxifier` module (blueprint + build cost) adds
+  a `Detoxifier` crafting station; the `detoxify_gland` recipe converts `toxic_gland` →
+  `creature_meat`, gated by having the module aboard. Reuses crafting + module build. 3 tests.
 - **(NEW, planned) Atmosphere-based view distance:** a planet's atmosphere sets a **fog/
   visibility range** (hazy/thick → see less far; thin → farther; airless → clearest), scaled by
   weather intensity, server-supplied via `WorldEnvironment`; the client applies it as camera fog
@@ -243,7 +243,7 @@ Later/optional: Option B true in-process SP server (retarget to netstandard2.1);
 
 ```powershell
 dotnet build Spacecraft.sln
-dotnet test                      # expect all green (145)
+dotnet test                      # expect all green (148)
 git log --oneline -5             # latest = M20 client shell, assets & UX
 ```
 All milestones from the local plan (M0–M20) are now implemented on the server/shared side

@@ -99,6 +99,8 @@
   "blueprint.cargo_expansion_1.desc": "Schaltet die erste Frachtraum-Erweiterung frei.",
   "blueprint.refinery.name": "Raffinerie",
   "blueprint.refinery.desc": "Schaltet das Raffinerie-Modul zur Erzverarbeitung frei.",
+  "blueprint.detoxifier.name": "Entgifter",
+  "blueprint.detoxifier.desc": "Schaltet das Entgifter-Modul frei, das Gift in sicheres Essen wandelt.",
   "blueprint.oxygen_generator.name": "Sauerstoffgenerator",
   "blueprint.oxygen_generator.desc": "Schaltet das Sauerstoffgenerator-Modul frei.",
 
@@ -120,6 +122,8 @@
   "module.cargo_hold_1.desc": "Fügt dem Schiff sichtbaren Lagerraum hinzu.",
   "module.refinery.name": "Raffinerie",
   "module.refinery.desc": "Verarbeitet Erze und stellt Legierungen her.",
+  "module.detoxifier.name": "Entgifter",
+  "module.detoxifier.desc": "Verarbeitet giftige Pflanzen und Fleisch zu sicherem Essen.",
   "module.oxygen_generator.name": "Sauerstoffgenerator",
   "module.oxygen_generator.desc": "Erzeugt Sauerstoff für längere Expeditionen.",
   "module.docking_module.name": "Docking-Modul",

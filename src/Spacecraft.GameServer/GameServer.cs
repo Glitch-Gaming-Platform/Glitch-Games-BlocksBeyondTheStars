@@ -642,6 +642,15 @@ public sealed partial class GameServer
         }
     }
 
+    /// <summary>Runs the authoritative craft validator for a player (used by local play / tests).</summary>
+    public void Craft(string playerId, string recipeKey, int count = 1)
+    {
+        if (FindSessionByPlayerId(playerId) is { } session)
+        {
+            HandleCraft(session, new CraftIntent { RecipeKey = recipeKey, Count = count });
+        }
+    }
+
     // ---------------- Authoritative validators ----------------
 
     private void HandleMove(PlayerSession session, MoveIntent move)
@@ -1047,6 +1056,7 @@ public sealed partial class GameServer
             CraftingStation.Refinery => "refinery",
             CraftingStation.Lab => "lab",
             CraftingStation.MachineRoom => "machine_room",
+            CraftingStation.Detoxifier => "detoxifier",
             _ => string.Empty,
         };
 
