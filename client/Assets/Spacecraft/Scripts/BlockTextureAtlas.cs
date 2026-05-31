@@ -6,8 +6,9 @@ namespace Spacecraft.Client
     /// <summary>
     /// A block texture atlas generated **procedurally in code** (M27) — no bundled image assets.
     /// Each block gets a 32×32 tile painted from its base colour plus per-block detail (grain,
-    /// ore speckles, metal panel + rivets, ice/glass streaks, a circuit grid), with a darker
-    /// edge so blocks read as tiled. The chunk mesher UV-maps faces into this atlas.
+    /// ore speckles, metal panel + rivets, ice/glass streaks, a circuit grid, grass/flora blades,
+    /// crystal facets, water wave crests, glowing lava veins), with a darker edge so blocks read
+    /// as tiled. The chunk mesher UV-maps faces into this atlas.
     /// </summary>
     public sealed class BlockTextureAtlas
     {
@@ -109,17 +110,72 @@ namespace Spacecraft.Client
 
                 case "ice":
                 case "glass":
-                case "water":
                     // Diagonal sheen streak.
                     for (int d = 0; d < Tile; d++)
                     {
                         int x = d, y = (d + 6) % Tile;
-                        Texture.SetPixel(ox + x, oy + y, key == "water" ? new Color(0.5f, 0.7f, 1f) : new Color(0.95f, 0.98f, 1f));
+                        Texture.SetPixel(ox + x, oy + y, new Color(0.95f, 0.98f, 1f));
+                    }
+                    break;
+
+                case "water":
+                    // Horizontal wave crests (a few lighter bands that ripple along x).
+                    {
+                        var crest = new Color(0.50f, 0.72f, 1f);
+                        var deep = new Color(0.12f, 0.30f, 0.66f);
+                        for (int py = 0; py < Tile; py++)
+                        {
+                            int shift = (int)System.Math.Round(1.6 * System.Math.Sin(py * 0.7));
+                            for (int px = 0; px < Tile; px++)
+                            {
+                                int band = (px + shift) % 8;
+                                if (band == 0) Texture.SetPixel(ox + px, oy + py, crest);
+                                else if (band == 4) Texture.SetPixel(ox + px, oy + py, deep);
+                            }
+                        }
                     }
                     break;
 
                 case "lava":
-                    Speckle(ox, oy, rng, new Color(1f, 0.85f, 0.3f), 30); // glowing flecks
+                    // Dark cooled crust with glowing cracks/veins winding through it + hot flecks.
+                    {
+                        var crust = new Color(0.30f, 0.10f, 0.06f);
+                        var glow = new Color(1f, 0.78f, 0.28f);
+                        var hot = new Color(1f, 0.45f, 0.12f);
+                        Speckle(ox, oy, rng, crust, 44); // cooled patches
+                        for (int v = 0; v < 3; v++)
+                        {
+                            int x = 4 + rng.Next(Tile - 8);
+                            for (int y = 2; y < Tile - 2; y++)
+                            {
+                                Texture.SetPixel(ox + x, oy + y, glow);
+                                if (x + 1 < Tile - 1) Texture.SetPixel(ox + x + 1, oy + y, hot);
+                                x += rng.Next(3) - 1; // random-walk crack
+                                if (x < 1) x = 1; else if (x > Tile - 2) x = Tile - 2;
+                            }
+                        }
+
+                        Speckle(ox, oy, rng, glow, 12); // bright embers
+                    }
+                    break;
+
+                case "grass":
+                    // A few short blades poking up from the soil edge → grassy top read.
+                    PaintBlades(ox, oy, rng, 9, Tile / 3,
+                        new Color(0.20f, 0.50f, 0.18f), new Color(0.48f, 0.82f, 0.40f));
+                    break;
+
+                case "flora_plant":
+                    // Leafy blades rising from the base + lighter leaf tips + scattered highlights.
+                    PaintBlades(ox, oy, rng, 8, Tile - 4,
+                        new Color(0.16f, 0.52f, 0.20f), new Color(0.50f, 0.88f, 0.42f));
+                    Speckle(ox, oy, rng, new Color(0.50f, 0.88f, 0.42f), 10);
+                    break;
+
+                case "flora_crystal":
+                    // Faceted shards: a bright spine with a shaded side + a tip glint, then sparkle.
+                    PaintCrystals(ox, oy, rng, new Color(0.88f, 0.96f, 1f), new Color(0.30f, 0.45f, 0.72f));
+                    Speckle(ox, oy, rng, new Color(0.88f, 0.96f, 1f), 14);
                     break;
             }
         }
@@ -140,6 +196,46 @@ namespace Spacecraft.Client
             Texture.SetPixel(x + 1, y, color);
             Texture.SetPixel(x, y + 1, color);
             Texture.SetPixel(x + 1, y + 1, color);
+        }
+
+        /// <summary>Vertical blades from the base up to a random height, with a lighter tip.</summary>
+        private void PaintBlades(int ox, int oy, System.Random rng, int count, int maxTop, Color blade, Color tip)
+        {
+            for (int s = 0; s < count; s++)
+            {
+                int bx = 3 + rng.Next(Tile - 6);
+                int top = Tile / 3 + rng.Next(System.Math.Max(2, maxTop - Tile / 3));
+                for (int y = 2; y < top; y++)
+                {
+                    Texture.SetPixel(ox + bx, oy + y, blade);
+                }
+
+                Texture.SetPixel(ox + bx, oy + top, tip);
+                if (bx + 1 < Tile)
+                {
+                    Texture.SetPixel(ox + bx + 1, oy + System.Math.Max(2, top - 1), tip);
+                }
+            }
+        }
+
+        /// <summary>A few upright crystal shards: a bright spine, a shaded left side and a tip glint.</summary>
+        private void PaintCrystals(int ox, int oy, System.Random rng, Color facet, Color shade)
+        {
+            for (int s = 0; s < 4; s++)
+            {
+                int cx = 6 + rng.Next(Tile - 12);
+                int top = Tile - 4 - rng.Next(6);
+                for (int y = 3; y < top; y++)
+                {
+                    Texture.SetPixel(ox + cx, oy + y, facet);
+                    if (cx - 1 >= 0)
+                    {
+                        Texture.SetPixel(ox + cx - 1, oy + y, shade);
+                    }
+                }
+
+                PutDot(ox + cx, oy + System.Math.Min(Tile - 2, top), facet);
+            }
         }
 
         private static int Hash(string key)
