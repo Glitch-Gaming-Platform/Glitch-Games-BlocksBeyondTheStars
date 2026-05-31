@@ -190,6 +190,14 @@ consumes protocol messages that already exist.
   (`GameServerFlora`), capped at one plant per cell (no spread); **seeds replant** on a valid
   host only (`HandlePlace` host check). 6 flora tests. Planned: procedural form/appearance,
   water/lava flora, effects (poison/heal/food), maturity→produces-seeds. See plan.
+- **(NEW, planned) Player-to-player trading:** a two-sided trade window — both players add items
+  (from **inventory or cargo**), both **confirm**, then the server **atomically transfers** them
+  (revert-on-change, validated, no dupes). Requires both to be **co-located + visible** (same
+  station or same planet in range); auto-cancels on separation/disconnect. `TradeRequest`/
+  `TradeOfferUpdate`/`TradeConfirm`/`TradeCancel`. See CLIENT_COMPLETION_PLAN "Player-to-player trading".
+- **(NEW, planned) Gear disassembly / recycling:** a **workshop** "Disassemble" action that breaks
+  crafted gear back into a **portion of its recipe components** (partial yield, server-tunable);
+  `DisassembleIntent`. Reuses recipe inputs + the crafting station. See CLIENT_COMPLETION_PLAN.
 - **(NEW, planned) Planet settlements & NPC towns:** some worlds have settlements — **primitive
   villages** (single-storey huts) or **modern towns** (multi-storey buildings) — populated by
   **human or alien NPCs**, with **mission boards** + **NPC traders** (like space stations, but

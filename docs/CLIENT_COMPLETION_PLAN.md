@@ -418,6 +418,42 @@ Boardable **space stations** that exist in a system, **near planets**:
 - Server owns station placement, interiors, vendor stock/prices and mission boards; clients
   render the station + interior and use dock/board/trade/mission interactions.
 
+### Player-to-player trading — NEW (planned)
+A safe, server-authoritative **trade** between two players (distinct from NPC vendors):
+
+- **Two-sided offer:** each player puts items into their side of a **trade window**; either side
+  can adjust until **both confirm** ("ready"). Only when **both have confirmed** does the server
+  **atomically transfer** the goods (and revert any confirm if either side changes the offer
+  afterward). No item is duplicated or lost — the server validates both inventories hold what they
+  offered before committing.
+- **Tradeable from inventory *and* cargo:** offered items may come from the player's **personal
+  inventory or the ship's cargo hold**; received items go to a chosen target (inventory/cargo with
+  space checks). Tools/equipment and resources alike.
+- **Proximity + visibility requirement:** both players must be **co-located and able to see each
+  other as characters** — on the **same station** or the **same planet within interaction range**
+  (reuses presence + the station/landing context). A trade auto-cancels if they separate or one
+  disconnects (offered items return to their owner).
+- **Protocol:** `TradeRequest`/`TradeResponse` to open, `TradeOfferUpdate` (set my side),
+  `TradeConfirm`/`TradeCancel`; server broadcasts the combined offer + both ready states; commit on
+  mutual confirm. Client shows a two-column trade panel (my offer / their offer) in the unified UI.
+- Server-authoritative throughout (who may trade, validity, the atomic swap). Builds on multiplayer
+  presence; sequence with stations/trading + the UI pass. Ties into (but is separate from) NPC
+  vendor trading.
+
+### Crafting: gear disassembly / recycling — NEW (planned)
+Let players **dismantle crafted equipment** back into its parts at the **workshop**:
+
+- At a **workshop** (the existing crafting station), a **Disassemble** action breaks a crafted item
+  (tool, weapon, module, component) **back into (a portion of) the components it was crafted from** —
+  derived from that item's **recipe inputs** (e.g. a recipe-based reverse), typically at a
+  **partial yield** (a recovery rate, e.g. ~50–75%, server/rules-tunable) so it isn't free
+  round-tripping. Only items with a known recipe are disassemblable.
+- **Server-authoritative:** validates the workshop is available + the item is present + has a
+  recipe, consumes the item and returns the recovered components to the inventory (cargo when
+  aboard). A `DisassembleIntent { ItemKey }` + result; client adds a "Disassemble" control in the
+  crafting tab. Reuses the recipe data (inputs) and the crafting/station system — no new content.
+- Lets players **recover materials** from unwanted/obsolete gear and re-tier their loadout.
+
 ### Planet settlements & NPC towns — NEW (planned)
 Some planets are **inhabited** — settlements you can walk into, populated by NPCs (the
 planet-side counterpart to space stations), server-authoritative:
