@@ -198,6 +198,12 @@ consumes protocol messages that already exist.
   visibility range** (hazy/thick → see less far; thin → farther; airless → clearest), scaled by
   weather intensity, server-supplied via `WorldEnvironment`; the client applies it as camera fog
   (the view-distance setting stays a client cap). Folded into Atmosphere & breathability. See plan.
+- **(NEW, planned) Player weapons (melee & ranged):** craftable personal weapons — **melee**
+  (machete, vibro-knife, plasma sword) extending the `ToolKind.Weapon` tool model, and **ranged**
+  (gauss pistol, laser pistol, plasma blaster) with server-authoritative hit resolution + per-
+  weapon damage/range/fire-rate and ammo or `SuitEnergy` cost. Crafted/blueprinted with a tier
+  progression; drives the same attack path as creatures/PvP. See CLIENT_COMPLETION_PLAN
+  "Player weapons: melee & ranged".
 - **(NEW, planned) Procedural creatures & aliens:** seed-derived species per planet with random
   stats/behaviour/appearance; habitat (water / lava / land / air) governs spawn, movement &
   survival; per-world abundance (none / few / many). Extends the planet-enemy system, depends on

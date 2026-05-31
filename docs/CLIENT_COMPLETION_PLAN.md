@@ -619,6 +619,31 @@ hostile), server-authoritative.
 - Sequence after fluids (for water/lava habitats) and with the art pass (for nicer creature
   models); the parametric blocky renderer works without bundled art.
 
+### Player weapons: melee & ranged — NEW (planned)
+Craftable **personal weapons** for the player character (distinct from ship weapons), to fight
+creatures and — where PvP is enabled — other players (server-authoritative):
+
+- **Melee weapons:** e.g. **machete**, **vibro-knife**, **plasma sword** — short reach, swing on
+  click, scaling damage by tier. These extend the existing **tool** model: a weapon is an item
+  with `ToolKind.Weapon` (the attack path already grants a weapon-kind damage bonus, see
+  `AttackEntity`); melee tiers raise the damage/reach and feed the same hit resolution.
+- **Ranged weapons:** e.g. **gauss projectile pistol**, **laser pistol**, **plasma blaster** —
+  longer range, fire a shot at the aimed target. Server-authoritative hit resolution (raycast /
+  target-id within range + line of sight), per-weapon **damage, range, fire-rate/cooldown**, and a
+  cost — **ammo** (projectile) or **`SuitEnergy`/energy cells** (energy weapons). Reuses the
+  `EnergyPerUse` idea already on tools.
+- **Crafting & progression:** all are **crafted/blueprinted** like other gear (`data/items.json`
+  weapons + `recipes`/blueprints, gated by tech unlocks and materials) — a clear melee→ranged and
+  low→high-tier progression (machete → plasma sword; gauss → laser → plasma blaster). Damage types
+  could interact with creature/armor resistances later.
+- **Combat integration:** drives the same authoritative damage path used for creatures (and PvP
+  corpses / loot where rules permit); the held weapon + its stats decide the outcome — the client
+  only sends the attack/fire intent (extends `AttackEntityIntent`, plus a ranged fire intent) and
+  plays the swing/shot effect. Bilingual item names/descriptions (DE/EN).
+- Reuses: the **tool/inventory/hotbar** system, **crafting + blueprints**, the **attack** path
+  (creatures/PvP), and `SuitEnergy`. Server owns damage, range, cost and hit validation. Sequence
+  with creatures + combat-loot.
+
 ### Lighting: suit lamp, placed lights & glow — NEW (planned)
 Make the dark side of the day/night cycle (and caves) playable and atmospheric:
 
