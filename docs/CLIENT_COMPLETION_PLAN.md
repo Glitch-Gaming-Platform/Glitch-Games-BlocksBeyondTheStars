@@ -249,6 +249,15 @@ presence). Allegiance: neutral by default, hostile from `Hostile`/PvP, friendly 
 (once teams exist). Client-side HUD over the authoritative entity list; sequence with M25b + the
 space-flight deepening.
 
+**Visible engines / thrusters (planned):** ships have **visible engine nozzles** — **one or more
+per ship type** (count + placement from the `ships.json` design, e.g. a scout has one, a hauler
+several) — that emit a **glowing thruster effect** in space (engine glow + particle/trail exhaust,
+in the sun/ship accent colour). The effect **scales with throttle/acceleration** (brighter/longer
+when boosting, idle dim when coasting) and points opposite the thrust; a short **flare** on
+launch/jump. Built as code/particle effects on the ship model (shared by third-person + cockpit
+views, and the planet-side launch). Part of the renderer/VFX pass; ties into the consistent-ship-
+appearance work below and the hyperspace/launch sequences.
+
 **Consistent ship appearance (important):** the player's ship must **look identical in space and
 on the planet** — same hull shape, size, colours and module props. Today the planet-side ship is
 the **voxel hull** (`StampShip` from the active `ships.json` design) and the space-side ship is a

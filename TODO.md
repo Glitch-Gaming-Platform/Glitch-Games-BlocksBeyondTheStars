@@ -120,6 +120,10 @@ consumes protocol messages that already exist.
   Space console tab (launch/return + fire at entities), planet enemies rendered as blocks +
   attack with F. Singleplayer enables free flight + PvE via launcher flags. 3D flyable cockpit
   deferred.
+- **(NEW, planned) Visible ship engines/thrusters:** ships show **visible engine nozzles** (one or
+  more per ship type, from the `ships.json` design) with a **glowing thruster VFX** in space (engine
+  glow + exhaust trail, scaling with throttle, flare on launch/jump). Shared by third-person/cockpit
+  + planet launch. Part of the renderer/VFX pass. See CLIENT_COMPLETION_PLAN (M25b).
 - **(NEW, planned) Space HUD radar:** in ship mode, a **minimap + screen-edge arrows** for nearby
   asteroids/planets/enemies/other players, **colour-coded** white=neutral, blue=friend, red=hostile.
   Uses `SpaceState` entities (carry `Hostile`) + planets; other players in the instance need their
