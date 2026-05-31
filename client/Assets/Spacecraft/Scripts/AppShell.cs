@@ -38,6 +38,7 @@ namespace Spacecraft.Client
 
         private readonly LocalServerLauncher _localServer = new LocalServerLauncher();
         private bool _hostLocal;
+        private GameObject _gameRoot;
 
         private void Awake()
         {
@@ -81,7 +82,7 @@ namespace Spacecraft.Client
             // loopback (Option A), then connects to it like any other server. Start it now so
             // it has the loading-screen window to come up before the client connects.
             _hostLocal = true;
-            if (_localServer.Start())
+            if (_localServer.Start(LocalServerLauncher.DefaultPort, Settings.ViewDistanceChunks))
             {
                 Host = _localServer.Host;
                 Port = _localServer.Port.ToString();
@@ -122,22 +123,39 @@ namespace Spacecraft.Client
 
         private void OnDestroy() => _localServer.Stop();
 
-        /// <summary>Spawns the in-game bootstrap configured from the shell + settings.</summary>
+        /// <summary>Builds the in-game rig (player + camera + world + HUD) and enters play.</summary>
         public void LaunchGame()
         {
-            var go = new GameObject("Game");
-            var boot = go.AddComponent<GameBootstrap>();
-            boot.Host = Host;
-            boot.Port = int.TryParse(Port, out var p) && p > 0 ? p : 31415;
-            boot.PlayerName = string.IsNullOrWhiteSpace(PlayerName) ? "Pilot" : PlayerName;
-            boot.German = Settings.Language == "de";
+            _gameRoot = WorldRig.Build(this);
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
             Phase = ShellPhase.InGame;
+        }
+
+        /// <summary>Tears down the in-game world, stops the local server, and returns to the menu.</summary>
+        public void ReturnToMenu()
+        {
+            if (_gameRoot != null)
+            {
+                UnityEngine.Object.Destroy(_gameRoot); // GameBootstrap.OnDestroy disconnects
+                _gameRoot = null;
+            }
+
+            StopLocalServer();
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+            Phase = ShellPhase.MainMenu;
         }
 
         private void Update()
         {
             _splash.Update();
             _loading.Update();
+
+            if (Phase == ShellPhase.InGame && Input.GetKeyDown(KeyCode.Escape))
+            {
+                ReturnToMenu();
+            }
         }
 
         private void OnGUI()

@@ -26,7 +26,7 @@ namespace Spacecraft.Client
         public int Port { get; private set; } = DefaultPort;
         public bool IsRunning => _process != null && !_process.HasExited;
 
-        public bool Start(int port = DefaultPort)
+        public bool Start(int port = DefaultPort, int viewDistanceChunks = 0)
         {
             if (IsRunning)
             {
@@ -51,11 +51,12 @@ namespace Spacecraft.Client
             string data = Path.Combine(Application.streamingAssetsPath, "data");
             Directory.CreateDirectory(saves);
 
+            string viewArg = viewDistanceChunks > 0 ? $" --view-distance {viewDistanceChunks}" : string.Empty;
             var psi = new ProcessStartInfo
             {
                 FileName = exe,
                 Arguments = $"--port {Port} --name Singleplayer --world singleplayer " +
-                            $"--max-players 1 --saves \"{saves}\" --data \"{data}\"",
+                            $"--max-players 1 --saves \"{saves}\" --data \"{data}\"" + viewArg,
                 WorkingDirectory = Path.GetDirectoryName(exe),
                 UseShellExecute = false,
                 CreateNoWindow = true,

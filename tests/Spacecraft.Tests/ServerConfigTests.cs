@@ -18,6 +18,7 @@ public sealed class ServerConfigTests
             "--saves", @"C:\sp\saves",
             "--data", @"C:\sp\data",
             "--max-players", "1",
+            "--view-distance", "3",
         });
 
         Assert.Equal(31550, config.GameplayPort);
@@ -26,8 +27,10 @@ public sealed class ServerConfigTests
         Assert.Equal(@"C:\sp\saves", config.SavesRoot);
         Assert.Equal(@"C:\sp\data", config.DataDir);
         Assert.Equal(1, config.MaxPlayers);
+        Assert.Equal(3, config.ViewDistanceChunks);
         Assert.Contains("port", applied);
         Assert.Contains("max-players", applied);
+        Assert.Contains("view-distance", applied);
     }
 
     [Fact]

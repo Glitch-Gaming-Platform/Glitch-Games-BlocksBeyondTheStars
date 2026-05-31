@@ -40,7 +40,7 @@ namespace Spacecraft.Client
                     continue;
                 }
 
-                var color = BlockColor(content, id);
+                var baseColor = BlockColor(content, id);
                 int wx = origin.X + x, wy = origin.Y + y, wz = origin.Z + z;
 
                 for (int f = 0; f < Faces.Length; f++)
@@ -51,7 +51,11 @@ namespace Spacecraft.Client
                         continue; // neighbour solid => face hidden
                     }
 
-                    AddFace(verts, tris, colors, new Vector3(x, y, z), f, color);
+                    // Bake simple directional shading per face so the blocky shapes read in 3D
+                    // without any scene lighting (the chunk shader is unlit).
+                    float s = FaceShade(f);
+                    var shaded = new Color(baseColor.r * s, baseColor.g * s, baseColor.b * s, 1f);
+                    AddFace(verts, tris, colors, new Vector3(x, y, z), f, shaded);
                 }
             }
 
@@ -64,13 +68,41 @@ namespace Spacecraft.Client
             return mesh;
         }
 
+        /// <summary>Relative brightness per face (top brightest, bottom darkest) for a lit-looking blocky world.</summary>
+        private static float FaceShade(int face) => face switch
+        {
+            0 => 1.00f, // +Y top
+            1 => 0.50f, // -Y bottom
+            2 => 0.82f, // +X
+            3 => 0.72f, // -X
+            4 => 0.66f, // +Z
+            _ => 0.76f, // -Z
+        };
+
         private static Color BlockColor(GameContent content, BlockId id)
         {
-            // Placeholder palette: deterministic colour from the block key until textures exist.
             var def = content.BlockById(id);
             if (def == null)
             {
                 return Color.magenta;
+            }
+
+            // A curated palette so the world reads intentionally until a real texture atlas
+            // lands (M27). Unknown keys fall back to a stable colour derived from the key.
+            switch (def.Key)
+            {
+                case "stone": return new Color(0.55f, 0.55f, 0.57f);
+                case "dirt": return new Color(0.45f, 0.32f, 0.20f);
+                case "basalt": return new Color(0.24f, 0.24f, 0.27f);
+                case "ice": return new Color(0.70f, 0.85f, 0.95f);
+                case "iron_ore": return new Color(0.60f, 0.50f, 0.45f);
+                case "copper_ore": return new Color(0.72f, 0.45f, 0.30f);
+                case "silicate": return new Color(0.80f, 0.78f, 0.60f);
+                case "carbon": return new Color(0.16f, 0.16f, 0.18f);
+                case "titanium_ore": return new Color(0.60f, 0.62f, 0.68f);
+                case "data_cache": return new Color(0.20f, 0.70f, 0.90f);
+                case "glass": return new Color(0.70f, 0.90f, 0.95f);
+                case "iron_wall": return new Color(0.55f, 0.57f, 0.62f);
             }
 
             int h = 0;
@@ -80,7 +112,10 @@ namespace Spacecraft.Client
             }
 
             var rng = new System.Random(h);
-            return new Color((float)rng.NextDouble(), (float)rng.NextDouble(), (float)rng.NextDouble());
+            return new Color(
+                0.35f + 0.5f * (float)rng.NextDouble(),
+                0.35f + 0.5f * (float)rng.NextDouble(),
+                0.35f + 0.5f * (float)rng.NextDouble());
         }
 
         private static void AddFace(List<Vector3> verts, List<int> tris, List<Color> colors, Vector3 p, int face, Color color)

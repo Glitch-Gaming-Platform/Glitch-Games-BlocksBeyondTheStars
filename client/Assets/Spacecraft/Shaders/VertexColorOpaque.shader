@@ -1,0 +1,48 @@
+// Minimal unlit, opaque shader that renders the mesh vertex colours (built-in render
+// pipeline). The chunk mesher bakes per-block colour + per-face shading into the vertex
+// colours, so no scene lighting or textures are needed for the blocky look (M21).
+Shader "Spacecraft/VertexColorOpaque"
+{
+    SubShader
+    {
+        Tags { "RenderType" = "Opaque" "Queue" = "Geometry" }
+        Cull Back
+        ZWrite On
+
+        Pass
+        {
+            CGPROGRAM
+            #pragma vertex vert
+            #pragma fragment frag
+            #include "UnityCG.cginc"
+
+            struct appdata
+            {
+                float4 vertex : POSITION;
+                fixed4 color : COLOR;
+            };
+
+            struct v2f
+            {
+                float4 pos : SV_POSITION;
+                fixed4 color : COLOR;
+            };
+
+            v2f vert(appdata v)
+            {
+                v2f o;
+                o.pos = UnityObjectToClipPos(v.vertex);
+                o.color = v.color;
+                return o;
+            }
+
+            fixed4 frag(v2f i) : SV_Target
+            {
+                return i.color;
+            }
+            ENDCG
+        }
+    }
+
+    Fallback "Unlit/Color"
+}

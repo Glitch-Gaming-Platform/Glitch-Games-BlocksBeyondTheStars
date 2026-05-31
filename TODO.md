@@ -88,11 +88,12 @@ Full roadmap: [docs/CLIENT_COMPLETION_PLAN.md](docs/CLIENT_COMPLETION_PLAN.md). 
 feature-complete (M0–M19); the remaining work is client-side UI + rendering + scene wiring that
 consumes protocol messages that already exist.
 
-- **M21 — Playable vertical slice ⭐** assembled in-game scene (player rig + camera + chunk
-  material + HUD via `AppShell.LaunchGame`); Singleplayer hosts the bundled server as a child
-  process (Option A — `GameServer`/`Persistence` are net8.0 + native SQLite, can't load in
-  Unity); first 32×32 block texture atlas; apply core settings; clean return to menu.
-  *Outcome: menu → Singleplayer → walk/mine/place on a textured world → quit.*
+- **M21 — Playable vertical slice ⭐ — code DONE, needs in-Editor playtest.** `WorldRig` builds
+  the in-game rig in code (player + camera + chunk material + HUD) from `AppShell.LaunchGame`;
+  Singleplayer hosts the bundled server as a child process (Option A); robust join-on-connected
+  + spawn snap; curated per-block palette + per-face shading via a built-in vertex-colour shader;
+  settings applied (sensitivity/invert-Y/view distance); Esc returns to menu. Real 32×32 texture
+  atlas deferred to M27. *Next: publish the local server + press Play to playtest.*
 - **M22** — core gameplay UI: hotbar, inventory/cargo, crafting + blueprint unlock, ship-module
   build (uGUI/UI Toolkit).
 - **M23** — star map, mission log, death/respawn + rules feedback.

@@ -76,24 +76,28 @@ problematic. Multiplayer ("Join Server") already works against the standalone se
 Each phase is independently shippable and leaves the game in a working state. Phases are
 ordered for the **fastest path to fun**; M21 is the milestone that makes it "a game".
 
-### M21 — Playable vertical slice ⭐
-> **Done ahead of M21 (Singleplayer hosting groundwork, Option A):** the server accepts
-> `--port/--saves/--data/--world/--name/--max-players` CLI overrides
-> (`ServerConfig.ApplyCommandLine`, unit-tested); `LocalServerLauncher` (Unity) starts/stops
-> the bundled server as a child process; `AppShell` launches it on "Singleplayer";
-> `scripts/publish-local-server.ps1` bundles the server into `StreamingAssets/server/`.
-> Remaining for M21: the in-game scene/rig, textures, settings application, connect readiness.
+### M21 — Playable vertical slice ⭐ — **DONE (code) / pending in-Editor playtest**
+Implemented:
+- **`WorldRig`** builds the whole in-game rig in code from `AppShell.LaunchGame` — server link
+  (`GameBootstrap`), chunk material, first-person player (CharacterController + camera +
+  `PlayerController`), `Hud`. The launcher scene needs only an `AppShell` GameObject.
+- **Singleplayer via Option A**: `ServerConfig.ApplyCommandLine` (`--port/--saves/--data/--world/
+  --name/--max-players/--view-distance`, unit-tested); `LocalServerLauncher` starts/stops the
+  bundled server; `scripts/publish-local-server.ps1` bundles it into `StreamingAssets/server/`.
+- **Robust connect**: `GameBootstrap` sends the join only once the transport is Connected, with
+  a few retries (handles the local server still starting up); snaps the player to the server's
+  authoritative spawn once.
+- **Curated per-block palette + per-face shading** baked into vertex colours via the built-in
+  `Spacecraft/VertexColorOpaque` shader (a clean blocky look without a texture atlas yet).
+- **Settings applied**: mouse sensitivity + invert-Y → `PlayerController`; view distance →
+  the local server; fullscreen/quality via `ClientSettings.Apply`.
+- **Clean return to menu** (Esc): tears down the world, disconnects, stops the local server,
+  unlocks the cursor.
+- **Outcome:** menu → Singleplayer → walk/mine/place on a shaded blocky world → Esc → menu.
 
-- Assemble one **in-game scene/prefab**: player (CharacterController + camera + `PlayerController`),
-  directional light, a **chunk material**, and the `Hud`, all spawned by `AppShell.LaunchGame`
-  (replace the bare bootstrap).
-- **Singleplayer via Option A**: a `LocalServerLauncher` that starts/stops the bundled server;
-  publish step added to `scripts/` (extend `publish-server.ps1` / `sync-client-libs.ps1`).
-- A first **block texture atlas (32×32)** + UV mapping in `ChunkMesher` (replaces flat colours).
-- Apply core **settings**: mouse sensitivity → `PlayerController`, view distance → join/stream,
-  fullscreen/quality on launch.
-- Clean **return to menu** (disconnect, tear down world + local server).
-- **Outcome:** menu → Singleplayer → walk/mine/place on a textured world → quit. *Playable.*
+Remaining before declaring M21 fully closed: an **in-Editor playtest** (publish the local
+server, press Play, verify the loop) and any fixes it surfaces. A real **32×32 texture atlas**
+(replacing the palette) is deferred to M27.
 
 ### M22 — Core gameplay UI (the survival/build loop)
 - **Hotbar** (drives the selected item; replaces hardcoded `PlaceItem`) + `SelectHotbarIntent`.

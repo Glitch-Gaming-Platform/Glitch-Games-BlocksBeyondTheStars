@@ -36,8 +36,18 @@ namespace Spacecraft.Client
         public float Oxygen { get; private set; } = 100f;
         public float SuitEnergy { get; private set; } = 100f;
 
+        /// <summary>Our own player id (from the join handshake), used to pick our state out of broadcasts.</summary>
+        public string LocalPlayerId { get; private set; }
+
+        /// <summary>The authoritative spawn the server reported for us; the rig snaps to it once.</summary>
+        public Vector3? ServerSpawn { get; private set; }
+
         private readonly Dictionary<ChunkCoord, GameObject> _chunkObjects = new Dictionary<ChunkCoord, GameObject>();
         private readonly HashSet<ChunkCoord> _dirty = new HashSet<ChunkCoord>();
+
+        private bool _joinSent;
+        private float _retryTimer;
+        private int _retries;
 
         private void Start()
         {
@@ -47,7 +57,11 @@ namespace Spacecraft.Client
             World = new ClientWorld();
 
             Network = new NetworkClient();
-            Network.JoinAccepted += m => Debug.Log($"Joined as {m.PlayerId} on planet {m.PlanetType} (seed {m.WorldSeed}).");
+            Network.JoinAccepted += m =>
+            {
+                LocalPlayerId = m.PlayerId;
+                Debug.Log($"Joined as {m.PlayerId} on planet {m.PlanetType} (seed {m.WorldSeed}).");
+            };
             Network.JoinRejected += m => Debug.LogWarning($"Join rejected: {m.Reason}");
             Network.ChunkReceived += OnChunk;
             Network.BlockChanged += OnBlockChanged;
@@ -55,13 +69,35 @@ namespace Spacecraft.Client
             Network.ActionRejected += m => Debug.Log($"Action '{m.Action}' rejected: {m.Reason}");
             Network.ServerMessageReceived += m => Debug.Log(m.Text);
 
+            // Connect now; the join handshake is sent once the transport reports Connected
+            // (UDP connect is asynchronous — sending the join before that would be dropped).
             Network.Connect(Host, Port);
-            Network.Join(PlayerName, string.IsNullOrEmpty(Password) ? null : Password);
         }
 
         private void Update()
         {
             Network?.Poll();
+
+            if (Network != null && !_joinSent)
+            {
+                if (Network.Connected)
+                {
+                    Network.Join(PlayerName, string.IsNullOrEmpty(Password) ? null : Password);
+                    _joinSent = true;
+                }
+                else
+                {
+                    // Safety net: re-attempt the connection a few times (e.g. the local
+                    // singleplayer server is still starting up).
+                    _retryTimer += Time.deltaTime;
+                    if (_retryTimer >= 2f && _retries < 6)
+                    {
+                        _retryTimer = 0f;
+                        _retries++;
+                        Network.Connect(Host, Port);
+                    }
+                }
+            }
 
             // Rebuild any chunk meshes that changed this frame.
             if (_dirty.Count > 0)
@@ -92,9 +128,16 @@ namespace Spacecraft.Client
 
         private void OnPlayerState(Spacecraft.Networking.Messages.PlayerStateUpdate m)
         {
+            // Only our own authoritative state drives the HUD and the one-time spawn snap.
+            if (!string.IsNullOrEmpty(LocalPlayerId) && m.PlayerId != LocalPlayerId)
+            {
+                return;
+            }
+
             Health = m.Health;
             Oxygen = m.Oxygen;
             SuitEnergy = m.SuitEnergy;
+            ServerSpawn ??= new Vector3(m.X, m.Y, m.Z);
         }
 
         private void RebuildChunk(ChunkCoord coord)

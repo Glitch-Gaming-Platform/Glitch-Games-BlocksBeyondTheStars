@@ -42,26 +42,23 @@ path. Without this step, use **Join Server** against a manually started server i
 
 ## Scene setup
 
-### Launcher scene (front-end shell)
+**One GameObject is all you need.** Create a scene with a single empty GameObject carrying
+**`AppShell`** and press Play.
 
 1. Open the project in Unity Hub (point it at this `client/` folder).
-2. Create a scene with a single empty GameObject carrying **`AppShell`**. Press Play: it shows
-   the splash, then the main menu (Singleplayer / Join / Settings / Credits / Quit), reads and
-   writes local settings, and spawns the in-game `GameBootstrap` on launch.
+2. New empty scene → `GameObject → Create Empty` → `Add Component → AppShell`.
+3. Press **Play**: splash → main menu (Singleplayer / Join / Settings / Credits / Quit).
+   On **Singleplayer** (after `publish-local-server.ps1`) or **Join**, `AppShell` builds the
+   whole in-game rig in code via **`WorldRig`** — server link (`GameBootstrap`), a chunk
+   material from the bundled vertex-colour shader, a first-person player (CharacterController +
+   camera + `PlayerController`) and the `Hud`. No manual player/camera/material wiring needed.
 
-### In-game (driven by the shell, or set up directly for testing)
+In-game: WASD + mouse to move/look, **left-click mine / right-click place**, **Esc** returns to
+the menu (and stops the local singleplayer server). The server validates every action; the
+client only renders the authoritative world it streams back.
 
-`AppShell.LaunchGame` adds a **`GameBootstrap`** configured from the menu + settings. To test
-the world without the shell, build the scene manually instead:
-
-   - An empty GameObject with **`GameBootstrap`** (set Host/Port/PlayerName; assign a
-     material for `ChunkMaterial`; tick **German** for the German locale).
-   - A player GameObject with a **`CharacterController`**, a child **Camera**, and the
-     **`PlayerController`** component (assign `Game` = the bootstrap object and `Camera`).
-   - The **`Hud`** component (assign `Game`).
-
-Press Play. The client connects, joins, receives chunks, meshes them, and you can walk
-around and left/right-click to mine/place (the server validates every action).
+> Use an otherwise-empty launcher scene — `WorldRig` disables any pre-existing scene cameras so
+> only the player camera renders in-game.
 
 ## Scripts (`Assets/Spacecraft/Scripts/`)
 
@@ -69,6 +66,7 @@ around and left/right-click to mine/place (the server validates every action).
 |---|---|
 | `AppShell` | Front-end state machine: splash → menu → settings → loading → in-game; owns local settings + localizer; starts/stops the local server for Singleplayer |
 | `LocalServerLauncher` | Launches/stops the bundled dedicated server as a child process for Singleplayer (Option A) |
+| `WorldRig` | Builds the in-game rig in code (player + camera + chunk material + HUD) so no manual scene wiring is needed |
 | `ClientSettings` | Local-only display/audio/input/comfort settings, persisted as JSON |
 | `SplashScreen` / `MainMenu` / `SettingsScreen` / `LoadingScreen` | IMGUI shell screens driven by `AppShell` |
 | `NetworkClient` | Wraps the shared transport + codec; sends intents, raises typed state events |

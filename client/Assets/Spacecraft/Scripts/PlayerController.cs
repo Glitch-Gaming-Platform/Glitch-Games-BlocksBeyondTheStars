@@ -17,6 +17,7 @@ namespace Spacecraft.Client
         public float JumpSpeed = 7f;
         public float Gravity = 20f;
         public float MouseSensitivity = 2f;
+        public bool InvertY = false;
         public float Reach = 6f;
 
         /// <summary>Item key used when placing blocks (would come from the selected hotbar slot).</summary>
@@ -26,11 +27,22 @@ namespace Spacecraft.Client
         private float _pitch;
         private float _verticalVelocity;
         private float _moveSendTimer;
+        private bool _spawned;
 
         private void Awake() => _controller = GetComponent<CharacterController>();
 
         private void Update()
         {
+            // Snap to the server's authoritative spawn once it is known, then take over.
+            if (!_spawned && Game != null && Game.ServerSpawn.HasValue)
+            {
+                _controller.enabled = false;
+                transform.position = Game.ServerSpawn.Value;
+                _controller.enabled = true;
+                _verticalVelocity = 0f;
+                _spawned = true;
+            }
+
             LookAround();
             Move();
             HandleInteract();
@@ -40,7 +52,7 @@ namespace Spacecraft.Client
         private void LookAround()
         {
             float mx = Input.GetAxis("Mouse X") * MouseSensitivity;
-            float my = Input.GetAxis("Mouse Y") * MouseSensitivity;
+            float my = Input.GetAxis("Mouse Y") * MouseSensitivity * (InvertY ? -1f : 1f);
             transform.Rotate(0f, mx, 0f);
             _pitch = Mathf.Clamp(_pitch - my, -89f, 89f);
             if (Camera != null)

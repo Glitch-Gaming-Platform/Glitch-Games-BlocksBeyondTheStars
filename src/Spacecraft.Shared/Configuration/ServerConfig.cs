@@ -158,6 +158,10 @@ public sealed class ServerConfig
                 case "max-players":
                     if (int.TryParse(value, out var mp)) { MaxPlayers = mp; applied.Add("max-players"); }
                     break;
+                case "view-distance":
+                case "view-distance-chunks":
+                    if (int.TryParse(value, out var vd)) { ViewDistanceChunks = vd; applied.Add("view-distance"); }
+                    break;
                 case "password":
                     ServerPassword = value; applied.Add("password");
                     break;
