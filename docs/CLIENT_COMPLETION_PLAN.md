@@ -555,6 +555,29 @@ Each world's atmosphere determines whether the suit consumes oxygen outside the 
   existing **view-distance setting** stays a client cap — the atmosphere can only reduce it,
   never force-stream more chunks.
 
+### Hunger & eating (survival) — NEW (planned)
+A survival need that makes food matter (server-authoritative; builds on the consume system):
+
+- **Hunger vital:** add `PlayerState.Hunger` (0..100, like health/oxygen). It **drains slowly**
+  over time (faster when sprinting/active), shown in the HUD next to the other vitals. While
+  **aboard the ship** (life support) it doesn't drain (or refills). Survival-only — disabled in
+  Creative and gated by a `Hunger`/survival rule.
+- **Starvation damage:** when hunger hits **0** the player takes **health damage over time** (and
+  maybe reduced stamina/speed) until they eat — it can lead to death/respawn like any hazard.
+- **Eating restores hunger:** consuming **edible** items refills hunger (and some also heal). Food
+  comes from **creatures** (e.g. `creature_meat`) and from **edible flora** — a plant can be eaten
+  **only if it has the `edible` property and is not `poisonous`**. **Poisonous** items (toxic
+  glands, poison flora) instead **harm** the player (damage / a short poison effect), so the
+  player must learn what's safe. This extends the flora **effect tags** (poison/heal/food) and the
+  creature **drop kinds** (food/poison/material) already planned.
+- **Consume system (foundation, partly here):** the `ConsumeItemIntent` + `ItemDefinition`
+  consume-effect added with the creature slice currently affects **health**; the hunger system
+  adds a **hunger** restore value to edible items (food restores hunger primarily, medicine heals)
+  and the drain/starvation tick. Plants become eat-consumable when harvested (the material drop is
+  edible if the species is food-type).
+- Server owns the hunger tick, starvation damage and what each item restores; the client shows the
+  hunger bar and sends the eat/consume intent. Sequence with creatures + flora effects.
+
 ### Procedural creatures & aliens — NEW (planned)
 Make planets feel alive with **procedurally generated lifeforms** — each world deterministically
 derives its own species from the world/planet seed, so different planets have different,
