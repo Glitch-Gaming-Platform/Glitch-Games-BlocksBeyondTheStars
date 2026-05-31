@@ -258,6 +258,10 @@ consumes protocol messages that already exist.
   starfield/warp intro + logo reveal); **renderer overhaul** (lit block shader + per‑material
   reflectivity + emissive glow + post stack: bloom/tonemap/AO/fog, better skies/water/lava,
   particles), preset‑gated. Part of M27 + a render milestone.
+- **(NEW, planned) Held tools/weapons + use animations:** the selected tool/weapon is **visible in
+  the hand** — a **first‑person viewmodel** and on the **third‑person** avatar — with **use
+  animations** (mining swing/drill, weapon swing/fire, scanner/lamp toggle, place gesture) driven by
+  the actions and synced to other players via presence. Part of M27 + avatar animation.
 - **M27 — art, icons & polish — in progress.** Procedural **block texture atlas** done
   (`BlockTextureAtlas` + UV mapping + `Spacecraft/BlockAtlas` shader, no image files). Still:
   UI icons/symbols (can also be procedural), tool/hand visuals, mining feedback, uGUI polish.

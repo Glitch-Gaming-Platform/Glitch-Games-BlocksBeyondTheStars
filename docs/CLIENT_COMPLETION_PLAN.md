@@ -891,6 +891,14 @@ Original notes (remaining work):
   placeholders — item/hotbar icons, station/compass/minimap symbols, mission & map markers,
   HUD vitals icons (health/oxygen/energy), and menu button/tab icons. Ship the UI on
   **uGUI/UI Toolkit** with a consistent visual style (the M20 colours/branding), not raw IMGUI.
+- **Held tools/weapons + use animations (planned):** the **currently selected tool/weapon is
+  visible in the player's hand** — a **first‑person viewmodel** (the held item in front of the
+  camera) **and** the **third‑person** avatar holding the same item — with **use animations**:
+  mining swing / drill, weapon swing or fire, scanner/lamp toggle, place gesture, driven by the
+  mine/place/attack/fire actions (and synced for other players via presence, so everyone sees the
+  swing). Built from the existing block/parametric models per item (a small viewmodel rig + avatar
+  arm animation), tied to the hotbar selection. Extends the first‑person tool/hand visuals below +
+  the avatar's walk/idle animation; sequence with the art pass.
 - **Avatar:** swappable part shapes/cosmetics beyond colours; walk/idle animation.
 - **Pause menu**, in-game settings, accessibility flags applied (reduced effects, larger UI),
   animated/main-menu background (optional).
