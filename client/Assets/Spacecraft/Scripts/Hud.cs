@@ -42,11 +42,18 @@ namespace Spacecraft.Client
             GUI.Label(new Rect(20, 14, 260, 18), $"📍 {loc.Get("ui.hud.location")}");
             GUI.Label(new Rect(20, 32, 260, 18), place);
 
-            // Vitals.
-            GUI.Box(new Rect(10, 62, 220, 86), GUIContent.none);
+            // Vitals (+ ship hull/shield).
+            bool ship = Game.ShipCombat != null;
+            GUI.Box(new Rect(10, 62, 220, ship ? 134 : 86), GUIContent.none);
             GUI.Label(new Rect(20, 68, 200, 20), $"{loc.Get("ui.hud.health")}: {Mathf.RoundToInt(Game.Health)}");
             GUI.Label(new Rect(20, 90, 200, 20), $"{loc.Get("ui.hud.oxygen")}: {Mathf.RoundToInt(Game.Oxygen)}");
             GUI.Label(new Rect(20, 112, 200, 20), $"{loc.Get("ui.hud.energy")}: {Mathf.RoundToInt(Game.SuitEnergy)}");
+            if (ship)
+            {
+                var c = Game.ShipCombat;
+                GUI.Label(new Rect(20, 134, 200, 20), $"{loc.Get("ui.hud.hull")}: {Mathf.RoundToInt(c.Hull)}/{Mathf.RoundToInt(c.HullMax)}");
+                GUI.Label(new Rect(20, 156, 200, 20), $"{loc.Get("ui.hud.shield")}: {Mathf.RoundToInt(c.Shield)}/{Mathf.RoundToInt(c.ShieldMax)}");
+            }
 
             DrawHotbar(loc);
             DrawShipCompass(loc);
@@ -54,7 +61,14 @@ namespace Spacecraft.Client
             // Server feedback toast (craft result, rejection, message).
             if (!string.IsNullOrEmpty(Game.LastMessage))
             {
-                GUI.Label(new Rect(10, 154, Screen.width - 20, 22), Game.LastMessage);
+                GUI.Label(new Rect(10, 204, Screen.width - 20, 22), Game.LastMessage);
+            }
+
+            // In-space indicator.
+            if (Game.InSpace)
+            {
+                var sp = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold };
+                GUI.Label(new Rect(Screen.width / 2f - 100, 8, 200, 22), loc.Get("ui.hud.in_space"), sp);
             }
 
             // Station interaction prompt (when standing next to one and no panel is open).

@@ -74,6 +74,11 @@ namespace Spacecraft.Client
                 ApplyCameraMode();
             }
 
+            if (Input.GetKeyDown(KeyCode.F))
+            {
+                AttackNearestEnemy();
+            }
+
             HandleHotbar();
             LookAround();
             Move();
@@ -86,6 +91,31 @@ namespace Spacecraft.Client
                 Game.PlayerPosition = transform.position;
                 Game.PlayerYaw = transform.eulerAngles.y;
                 HandleStations();
+            }
+        }
+
+        private void AttackNearestEnemy()
+        {
+            if (Game?.Network == null)
+            {
+                return;
+            }
+
+            string nearest = null;
+            float bestSq = 6f * 6f; // attack reach
+            foreach (var e in Game.PlanetEnemies)
+            {
+                float d = (new Vector3(e.X, e.Y, e.Z) - transform.position).sqrMagnitude;
+                if (d < bestSq)
+                {
+                    bestSq = d;
+                    nearest = e.Id;
+                }
+            }
+
+            if (nearest != null)
+            {
+                Game.Network.SendAttackEntity(nearest);
             }
         }
 

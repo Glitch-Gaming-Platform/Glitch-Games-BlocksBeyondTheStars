@@ -52,11 +52,13 @@ namespace Spacecraft.Client
             Directory.CreateDirectory(saves);
 
             string viewArg = viewDistanceChunks > 0 ? $" --view-distance {viewDistanceChunks}" : string.Empty;
+            // Singleplayer enables free space flight + PvE space combat so it's reachable solo.
+            const string spaceArgs = " --free-flight true --space-combat PvE --space-npcs Normal";
             var psi = new ProcessStartInfo
             {
                 FileName = exe,
                 Arguments = $"--port {Port} --name Singleplayer --world singleplayer " +
-                            $"--max-players 1 --saves \"{saves}\" --data \"{data}\"" + viewArg,
+                            $"--max-players 1 --saves \"{saves}\" --data \"{data}\"" + viewArg + spaceArgs,
                 WorkingDirectory = Path.GetDirectoryName(exe),
                 UseShellExecute = false,
                 CreateNoWindow = true,

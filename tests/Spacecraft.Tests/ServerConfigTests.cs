@@ -34,6 +34,18 @@ public sealed class ServerConfigTests
     }
 
     [Fact]
+    public void ApplyCommandLine_OverridesSpaceRules()
+    {
+        var config = new ServerConfig();
+        var applied = config.ApplyCommandLine(new[] { "--free-flight", "true", "--space-combat", "PvE", "--space-npcs", "Normal" });
+
+        Assert.True(config.Rules.FreeSpaceFlight);
+        Assert.Equal(SpaceCombatMode.PvE, config.Rules.SpaceCombat);
+        Assert.Equal(AlienActivity.Normal, config.Rules.SpaceNpcEnemies);
+        Assert.Contains("free-flight", applied);
+    }
+
+    [Fact]
     public void ApplyCommandLine_IgnoresUnknownKeysAndKeepsDefaults()
     {
         var config = new ServerConfig();

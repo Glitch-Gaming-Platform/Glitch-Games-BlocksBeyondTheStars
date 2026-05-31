@@ -165,6 +165,15 @@ public sealed class ServerConfig
                 case "view-distance-chunks":
                     if (int.TryParse(value, out var vd)) { ViewDistanceChunks = vd; applied.Add("view-distance"); }
                     break;
+                case "free-flight":
+                    if (bool.TryParse(value, out var ff)) { Rules.FreeSpaceFlight = ff; applied.Add("free-flight"); }
+                    break;
+                case "space-combat":
+                    if (Enum.TryParse<SpaceCombatMode>(value, ignoreCase: true, out var sc)) { Rules.SpaceCombat = sc; applied.Add("space-combat"); }
+                    break;
+                case "space-npcs":
+                    if (Enum.TryParse<AlienActivity>(value, ignoreCase: true, out var sn)) { Rules.SpaceNpcEnemies = sn; applied.Add("space-npcs"); }
+                    break;
                 case "password":
                     ServerPassword = value; applied.Add("password");
                     break;

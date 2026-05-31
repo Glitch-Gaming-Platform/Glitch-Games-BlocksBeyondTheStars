@@ -14,7 +14,7 @@ namespace Spacecraft.Client
         public ClientSettings Settings;   // for in-game character customization
         public PlayerAvatar Avatar;       // local avatar, recoloured live
 
-        private enum Tab { Inventory, Crafting, Tech, Ship, Map, Missions, Character }
+        private enum Tab { Inventory, Crafting, Tech, Ship, Map, Missions, Character, Space }
 
         private Tab _tab = Tab.Inventory;
         private bool _open;
@@ -96,6 +96,7 @@ namespace Spacecraft.Client
             TabButton(loc.Get("ui.tab.map"), Tab.Map);
             TabButton(loc.Get("ui.tab.missions"), Tab.Missions);
             TabButton(loc.Get("ui.settings.character"), Tab.Character);
+            TabButton(loc.Get("ui.tab.space"), Tab.Space);
             GUILayout.FlexibleSpace();
             GUILayout.EndHorizontal();
             GUILayout.Space(6);
@@ -110,6 +111,7 @@ namespace Spacecraft.Client
                 case Tab.Map: DrawMap(loc); break;
                 case Tab.Missions: DrawMissions(loc); break;
                 case Tab.Character: DrawCharacter(loc); break;
+                case Tab.Space: DrawSpace(loc); break;
             }
 
             GUILayout.EndScrollView();
@@ -251,6 +253,55 @@ namespace Spacecraft.Client
                 if (GUILayout.Button(loc.Get("ui.action.turn_in"), GUILayout.Width(100)))
                 {
                     Game.Network.SendTurnInMission(m.Id);
+                }
+
+                GUILayout.EndHorizontal();
+            }
+        }
+
+        private void DrawSpace(Spacecraft.Shared.Localization.Localizer loc)
+        {
+            var c = Game.ShipCombat;
+            if (c != null)
+            {
+                GUILayout.Label($"{loc.Get("ui.hud.hull")}: {Mathf.RoundToInt(c.Hull)}/{Mathf.RoundToInt(c.HullMax)}    " +
+                                $"{loc.Get("ui.hud.shield")}: {Mathf.RoundToInt(c.Shield)}/{Mathf.RoundToInt(c.ShieldMax)}");
+                GUILayout.Space(6);
+            }
+
+            if (!Game.InSpace)
+            {
+                if (GUILayout.Button(loc.Get("ui.space.enter"), GUILayout.Width(200)))
+                {
+                    Game.Network?.SendEnterSpace();
+                }
+
+                return;
+            }
+
+            if (GUILayout.Button(loc.Get("ui.space.leave"), GUILayout.Width(200)))
+            {
+                Game.Network?.SendLeaveSpace();
+            }
+
+            GUILayout.Space(6);
+            var space = Game.Space;
+            if (space == null || space.Entities.Length == 0)
+            {
+                GUILayout.Label("—");
+                return;
+            }
+
+            foreach (var e in space.Entities)
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.Label($"{e.Kind}  ({Mathf.RoundToInt(e.Hull)}/{Mathf.RoundToInt(e.HullMax)})", GUILayout.Width(300));
+
+                // Asteroids need the mining beam; hostiles need a combat cannon.
+                string weapon = e.Kind == "Asteroid" ? "asteroid_breaker" : "ship_cannon_1";
+                if (GUILayout.Button(loc.Get("ui.action.fire"), GUILayout.Width(110)))
+                {
+                    Game.Network?.SendFireWeapon(weapon, e.Id);
                 }
 
                 GUILayout.EndHorizontal();

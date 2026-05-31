@@ -68,6 +68,12 @@ namespace Spacecraft.Client
         public MissionList Missions { get; private set; }
         public ServerRules Rules { get; private set; }
 
+        // Space flight & combat (M25).
+        public ShipCombatStatus ShipCombat { get; private set; }
+        public SpaceState Space { get; private set; }       // current space instance (null when not flying)
+        public bool InSpace { get; private set; }
+        public NetCombatEntity[] PlanetEnemies { get; private set; } = System.Array.Empty<NetCombatEntity>();
+
         /// <summary>Type of the nearest station within <paramref name="range"/> blocks, or empty.</summary>
         public string NearestStationType(Vector3 pos, float range)
         {
@@ -149,6 +155,10 @@ namespace Spacecraft.Client
             Network.ShipStationsReceived += m => Stations = m.Stations;
             Network.StarMapReceived += m => StarMap = m;
             Network.MissionsReceived += m => Missions = m;
+            Network.ShipCombatStatusChanged += m => ShipCombat = m;
+            Network.SpaceStateReceived += m => { Space = m; InSpace = true; };
+            Network.SpaceClosed += m => { InSpace = false; Space = null; LastMessage = m.Reason; };
+            Network.PlanetEnemiesReceived += m => PlanetEnemies = m.Enemies;
             Network.MissionResultReceived += m => LastMessage = m.Success ? $"Mission '{m.MissionId}' complete!" : $"Mission: {m.Reason}";
             Network.RespawnNoticeReceived += m => LastMessage = m.Reason;
             Network.ServerRulesReceived += m => { Rules = m; LastMessage = $"Mode: {m.GameMode} · PvP: {m.Pvp}"; };

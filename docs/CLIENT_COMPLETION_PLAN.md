@@ -213,12 +213,33 @@ Remaining in M24 (still pending):
   server-unreachable handling in the shell.
 - Not playtestable in singleplayer (needs 2 clients / LAN).
 
-### M25 — Space flight & combat (client for M19)
-- **Enter/leave space** (`EnterSpaceIntent`/`LeaveSpaceIntent`, `SpaceState`/`SpaceClosed`).
-- Render **space entities** (asteroids/drones/UFOs), a simple flight camera/controls.
-- **Ship hull/shield HUD** (`ShipCombatStatus`), **fire weapons** (`FireWeaponIntent`,
-  `SpaceEntityDestroyed`), ship-defeat/recovery feedback.
-- **Planet enemies**: render + `AttackEntityIntent` (`PlanetEnemyList`/`PlanetEnemyDefeated`).
+### M25 — Space flight & combat (client for M19) — **DONE (code) / pending playtest**
+- **Ship hull/shield HUD** (`ShipCombatStatus`) shown in the vitals panel + Space tab.
+- **Space console** (GameMenu "Space" tab): launch/return (`EnterSpace`/`LeaveSpace`,
+  `SpaceState`/`SpaceClosed`), lists entities (asteroids/drones/UFOs) with **Fire** buttons
+  (`FireWeaponIntent`; asteroid-breaker vs ship-cannon by target). "IN SPACE" HUD indicator.
+- **Planet enemies**: rendered in 3D as blocks (`WorldEntities` from `PlanetEnemyList`),
+  attacked with **F** (nearest within reach → `AttackEntityIntent`).
+- Singleplayer enables free flight + PvE NPCs via `LocalServerLauncher` flags (new
+  `--free-flight/--space-combat/--space-npcs` overrides) so it's reachable solo.
+- Deferred: a true 3D flyable cockpit/flight camera (the server models space abstractly);
+  weapon selection UI (uses asteroid_breaker/ship_cannon_1 by target kind for now).
+
+### Ships: types, designs, expandable interiors & multiple owned ships — NEW (planned)
+Today there is one hardcoded ship. Grow this into a real ship system:
+- **Ship types & designs (craftable):** a data-driven `data/ships.json` — each type has base
+  hull/shield, module slots, a **design** (the hull block layout `StampShip` builds) and a
+  craft cost / blueprint. The current hull becomes the default "starter" design. New ships are
+  unlocked + crafted like modules/blueprints.
+- **Expandable interiors:** `StampShip` lays out **rooms per built module** so adding modules
+  visibly enlarges the ship (more/larger rooms), not just stats.
+- **Multiple owned ships + switching:** the server tracks a player's **owned ships** with one
+  **active**; a `SwitchShipIntent` swaps the active ship (re-stamps its design at the landing
+  zone, swaps modules/cargo). Only the active ship is simulated/flown.
+- **Client:** a **Hangar** UI (tab/screen) to view owned ships, craft new types/designs and
+  switch the active one. Server stays authoritative over ownership/active selection/craft.
+- Builds on M23a (ship-as-place) + the module system; needs a ship registry + persistence of
+  owned ships. Sizeable — schedule after the core client (M26–M28) or interleave per appetite.
 
 ### M26 — Audio
 - Add the Unity **audio module**; implement the master/music/sfx buses from `ClientSettings`.

@@ -116,8 +116,13 @@ consumes protocol messages that already exist.
   pending.** Server broadcasts PlayerPresence (pos + colours) + PlayerLeft; clients send colours
   on join; `RemotePlayers` renders other players as coloured avatars with nameplates. Still to
   do: docking request/accept UI, protocol-mismatch/disconnect handling in the shell.
-- **M25** — space flight & combat client (enter/leave space, entities, hull/shield HUD, weapons,
-  planet enemies) for the M19 server systems.
+- **M25 — space flight & combat client — code DONE, needs playtest.** Ship hull/shield HUD,
+  Space console tab (launch/return + fire at entities), planet enemies rendered as blocks +
+  attack with F. Singleplayer enables free flight + PvE via launcher flags. 3D flyable cockpit
+  deferred.
+- **(NEW, planned) Ships: types/designs/expandable interiors/multiple owned + switching** —
+  data-driven `ships.json`, craftable ship types, rooms-per-module interiors, owned-ships list
+  with an active ship + `SwitchShipIntent`, a Hangar UI. See CLIENT_COMPLETION_PLAN.
 - **M26** — audio (buses from `ClientSettings`, SFX + music). **M27** — art & polish (full atlas,
   tool models, pause menu, accessibility). **M28** — Windows player build + optional WebGL Lite.
 
