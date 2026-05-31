@@ -132,6 +132,9 @@ consumes protocol messages that already exist.
   automaton, placeable sources, lava damage; 3 tests) ✅. Planned: per-planet day/night +
   **weather** (clouds/rain/thunderstorms, intensity per planet), star light colour
   (white/yellow/blue/red) tinting the world. Server-authoritative.
+- **(NEW, planned) World variety:** planets vary in **size**; worlds are **single-habitat**
+  (ice/lava/forest/jungle/crystal/rock/sand/mud) **or multi-biome**; flora & creatures match the
+  biome/habitat. Extends planet types into a biome system. See CLIENT_COMPLETION_PLAN.
 - **(NEW, planned) Procedural flora:** land/water/crystalline/lava plants, seed-derived forms
   (tree/vine/bush/crystal/fungus), properties/effects (poison/heal/food/material-substitute),
   growth + regrowth (regrows unless the host block is mined). See CLIENT_COMPLETION_PLAN.

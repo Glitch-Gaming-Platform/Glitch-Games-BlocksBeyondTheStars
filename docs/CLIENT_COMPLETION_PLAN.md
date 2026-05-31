@@ -314,6 +314,26 @@ Bigger world-simulation features (server-authoritative; the client renders the r
 These are sizeable; sequence them with the art pass and the space-view work. All authoritative
 on the server (a client must not decide fluid spread, time of day or hazards).
 
+### World variety: size & biomes/habitats — NEW (planned)
+Make planets genuinely different in scale and make-up (server-authoritative generation):
+
+- **World size:** planets vary in size — small moons to large worlds — affecting the playable
+  surface extent / world bounds, chunk count and how much there is to explore. The world
+  descriptor (seed-derived, admin-overridable) carries a size; generation + streaming respect it.
+- **Single- vs multi-biome worlds:** a planet is either **single-habitat** — all **ice / lava /
+  forest / jungle / crystal / rock / sand / mud** — or **multi-biome**, with several regions
+  blended across the surface. The biome drives the **surface/sub-surface blocks**, fluids
+  (oceans on water worlds, lava seas on lava worlds), the **weather** flavour, and which **flora
+  & creatures** spawn. Extends the current planet types (`planets.json`: rocky/ice/lava) into a
+  biome system.
+- **Habitat-matched life:** creatures and flora (if any — per the abundance level) **match the
+  biome/habitat** they're in: ice fauna on ice worlds/regions, lava-dwellers in lava seas,
+  jungle creatures in jungle, crystalline growths on crystal worlds, etc. A multi-biome world
+  has different life per region; a barren world has none.
+- Server owns size + biome layout + matched spawning; clients render the varied surface,
+  flora and creatures. Foundational for the creatures/flora systems below — sequence the biome
+  generator first, then habitat-matched life.
+
 ### Procedural creatures & aliens — NEW (planned)
 Make planets feel alive with **procedurally generated lifeforms** — each world deterministically
 derives its own species from the world/planet seed, so different planets have different,
