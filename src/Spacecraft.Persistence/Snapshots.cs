@@ -37,6 +37,7 @@ public sealed class PlayerSnapshot
     public List<string> UnlockedBlueprints { get; set; } = new();
     public int KnowledgePoints { get; set; }
     public List<string> Scanned { get; set; } = new();
+    public List<InventorySlotDto> RationStore { get; set; } = new();
     public List<InventorySlotDto> Inventory { get; set; } = new();
     public List<MissionProgress> Missions { get; set; } = new();
 }
@@ -106,6 +107,7 @@ public static class StateMapper
         UnlockedBlueprints = p.UnlockedBlueprints.ToList(),
         KnowledgePoints = p.KnowledgePoints,
         Scanned = p.Scanned.ToList(),
+        RationStore = DumpInventory(p.RationStore),
         Inventory = DumpInventory(p.Inventory),
         Missions = p.Missions.Select(CloneProgress).ToList(),
     };
@@ -136,6 +138,7 @@ public static class StateMapper
         UnlockedBlueprints = new HashSet<string>(s.UnlockedBlueprints),
         KnowledgePoints = s.KnowledgePoints,
         Scanned = new HashSet<string>(s.Scanned ?? new List<string>()),
+        RationStore = RestoreInventory(Spacecraft.Shared.State.PlayerState.RationStoreSlots, s.RationStore ?? new List<InventorySlotDto>()),
         Missions = s.Missions.Select(CloneProgress).ToList(),
     };
 

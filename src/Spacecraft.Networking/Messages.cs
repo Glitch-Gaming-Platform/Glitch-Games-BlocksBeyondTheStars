@@ -154,6 +154,13 @@ public sealed class DisassembleIntent
     public string ItemKey { get; set; } = string.Empty;
 }
 
+/// <summary>Client loads food from its inventory into the suit's ration dispenser (auto-eaten when hungry).</summary>
+public sealed class LoadRationIntent
+{
+    public string ItemKey { get; set; } = string.Empty;
+    public int Count { get; set; } = 1;
+}
+
 /// <summary>Client scans a subject with the handheld scanner (creature species id / block key).</summary>
 public sealed class ScanIntent
 {

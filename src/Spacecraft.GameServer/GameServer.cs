@@ -351,20 +351,76 @@ public sealed partial class GameServer
     /// <summary>Hunger level at or below which the suit auto-consumes a stored emergency ration.</summary>
     private const float EmergencyRationThreshold = 15f;
 
-    /// <summary>If the player carries an emergency ration, consume one to top up hunger (auto-feed).</summary>
+    /// <summary>
+    /// Auto-feed when hungry: the suit's ration dispenser dispenses stored food first; failing that
+    /// a loose emergency ration in the inventory is eaten. Applies the food's hunger restore.
+    /// </summary>
     private void TryAutoEatRation(PlayerSession session)
     {
         var p = session.State;
-        if (!p.Inventory.Has("emergency_ration", 1))
+
+        // 1) The ration dispenser — eat the first stored food (any consumable that sates hunger).
+        for (int i = 0; i < p.RationStore.SlotCount; i++)
+        {
+            if (p.RationStore.Slots[i] is { } stack && !stack.IsEmpty
+                && _content.GetItem(stack.Item) is { Category: ItemCategory.Consumable } food && food.ConsumeHunger > 0f)
+            {
+                p.RationStore.Remove(stack.Item, 1);
+                p.Hunger = System.Math.Min(100f, p.Hunger + food.ConsumeHunger);
+                SendInventory(session);
+                return;
+            }
+        }
+
+        // 2) Fallback: a loose emergency ration carried in the inventory.
+        if (p.Inventory.Has("emergency_ration", 1))
+        {
+            p.Inventory.Remove("emergency_ration", 1);
+            float restore = _content.GetItem("emergency_ration")?.ConsumeHunger ?? 40f;
+            p.Hunger = System.Math.Min(100f, p.Hunger + restore);
+            SendInventory(session);
+        }
+    }
+
+    /// <summary>Loads food from the player's inventory into the suit ration dispenser (food only, up to capacity).</summary>
+    public void LoadRation(string playerId, string itemKey, int count)
+    {
+        var session = FindSessionByPlayerId(playerId);
+        if (session is null)
         {
             return;
         }
 
-        p.Inventory.Remove("emergency_ration", 1);
-        float restore = _content.GetItem("emergency_ration")?.ConsumeHunger ?? 40f;
-        p.Hunger = System.Math.Min(100f, p.Hunger + restore);
-        SendInventory(session);
+        var def = _content.GetItem(itemKey);
+        if (def is not { Category: ItemCategory.Consumable } || def.ConsumeHunger <= 0f)
+        {
+            Reject(session, "ration", "Only food can go in the ration dispenser.");
+            return;
+        }
+
+        var p = session.State;
+        int want = System.Math.Min(System.Math.Max(1, count), p.Inventory.CountOf(itemKey));
+        if (want <= 0)
+        {
+            Reject(session, "ration", "You don't have that food.");
+            return;
+        }
+
+        int leftover = p.RationStore.Add(itemKey, want, def.MaxStack); // capped by the dispenser's slots
+        int stored = want - leftover;
+        if (stored > 0)
+        {
+            p.Inventory.Remove(itemKey, stored);
+            SendInventory(session);
+        }
+        else
+        {
+            Reject(session, "ration", "The ration dispenser is full.");
+        }
     }
+
+    private void HandleLoadRation(PlayerSession session, LoadRationIntent intent)
+        => LoadRation(session.State.PlayerId, intent.ItemKey, intent.Count);
 
     /// <summary>
     /// Returns the player to the heal-tank in their ship's Medbay and restores vitals. Per
@@ -549,6 +605,7 @@ public sealed partial class GameServer
             case TradeCancelIntent: HandleTradeCancel(session); break;
             case ScanIntent scan: HandleScan(session, scan); break;
             case ScanEntityIntent scanEntity: HandleScanEntity(session, scanEntity); break;
+            case LoadRationIntent loadRation: HandleLoadRation(session, loadRation); break;
         }
     }
 

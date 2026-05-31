@@ -176,6 +176,45 @@ public sealed class HungerTests : IDisposable
         }
     }
 
+    [Fact]
+    public void RationDispenser_LoadsFood_AndAutoFeedsFromIt()
+    {
+        var server = Started(out var repo);
+        using (repo)
+        {
+            var p = server.AddLocalPlayer("Spacer");
+            p.State.AboardShip = false;
+            p.State.Position = new Vector3f(0, 64, 0);
+            p.State.Inventory.Add("berries", 3, 20);
+
+            server.LoadRation("Spacer", "berries", 3); // stock the dispenser
+            Assert.Equal(0, p.State.Inventory.CountOf("berries"));
+            Assert.Equal(3, p.State.RationStore.CountOf("berries"));
+
+            p.State.Hunger = 10f; // low → the dispenser should feed
+            server.Tick(1.0);
+
+            Assert.Equal(2, p.State.RationStore.CountOf("berries")); // one dispensed
+            Assert.True(p.State.Hunger > 18f, "Dispenser food should top up hunger.");
+        }
+    }
+
+    [Fact]
+    public void RationDispenser_RejectsNonFood()
+    {
+        var server = Started(out var repo);
+        using (repo)
+        {
+            var p = server.AddLocalPlayer("Spacer");
+            p.State.Inventory.Add("iron_ore", 5, 99);
+
+            server.LoadRation("Spacer", "iron_ore", 5);
+
+            Assert.Equal(5, p.State.Inventory.CountOf("iron_ore")); // not moved
+            Assert.Equal(0, p.State.RationStore.CountOf("iron_ore"));
+        }
+    }
+
     public void Dispose()
     {
         try

@@ -107,6 +107,8 @@ namespace Spacecraft.Client
 
         public void SendConsume(string itemKey) => Send(new ConsumeItemIntent { ItemKey = itemKey });
 
+        public void SendLoadRation(string itemKey, int count) => Send(new LoadRationIntent { ItemKey = itemKey, Count = count });
+
         public void SendDisassemble(string itemKey) => Send(new DisassembleIntent { ItemKey = itemKey });
 
         public void SendScan(string subjectType, string subjectKey) => Send(new ScanIntent { SubjectType = subjectType, SubjectKey = subjectKey });

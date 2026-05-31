@@ -50,6 +50,12 @@ public sealed class PlayerState
     /// <summary>Subjects already scanned (e.g. "creature:sp0", "block:iron_ore") — only new scans pay knowledge.</summary>
     public HashSet<string> Scanned { get; set; } = new();
 
+    /// <summary>Suit ration dispenser: food loaded here is auto-eaten when hunger runs low. Small capacity.</summary>
+    public Inventory RationStore { get; set; } = new(RationStoreSlots);
+
+    /// <summary>Number of slots in the ration dispenser.</summary>
+    public const int RationStoreSlots = 5;
+
     /// <summary>True when the player is currently aboard their ship (enables cargo crafting).</summary>
     public bool AboardShip { get; set; } = true;
 

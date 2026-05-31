@@ -1,7 +1,7 @@
 # Spacecraft — Progress & Next Steps
 
 Resume point for development. Full milestone breakdown lives in `plans/IMPLEMENTATION_PLAN.md`
-(local, git-ignored). Tests: **181 passing**. Repo pushed to `origin/main` (private).
+(local, git-ignored). Tests: **183 passing**. Repo pushed to `origin/main` (private).
 
 ## Done (committed & pushed)
 
@@ -189,9 +189,10 @@ consumes protocol messages that already exist.
   cost knowledge** (`BlueprintDefinition.KnowledgeCost`, validated + deducted in `HandleUnlock`).
   `ScanIntent`/`ScanEntityIntent` → `ScanResult`. 5 tests. Remaining: client scanner readout panel +
   aiming, Tech-tab knowledge display, upgraded scanners (see Equipment).
-- **Equipment & upgrades — emergency rations DONE; rest planned.** `emergency_ration` item
-  (craftable from food) auto-eaten by the suit when hunger ≤ threshold (`TryAutoEatRation`,
-  prevents starvation); 3 tests. Still planned: **stealth suit** (invisible to creatures, harder to
+- **Equipment & upgrades — ration dispenser DONE; rest planned.** Suit **ration dispenser**
+  (`PlayerState.RationStore`, 5 slots, persisted) you stock with food (`LoadRation`); auto-dispenses
+  stored food when hunger ≤ threshold (`TryAutoEatRation`), loose-`emergency_ration` fallback;
+  craftable ration. 5 tests. Still planned: **stealth suit** (invisible to creatures, harder to
   see for players), **improved scanner** (more knowledge), **improved drill / mining beam**, **suit
   armor + special helmets** (damage resistance + perks), **bigger oxygen tank**, **improved
   flashlight**, **multi-tier radar scanner** (animals → players → material/flora on the HUD).
@@ -305,7 +306,7 @@ Later/optional: Option B true in-process SP server (retarget to netstandard2.1);
 
 ```powershell
 dotnet build Spacecraft.sln
-dotnet test                      # expect all green (181)
+dotnet test                      # expect all green (183)
 git log --oneline -5             # latest = M20 client shell, assets & UX
 ```
 All milestones from the local plan (M0–M20) are now implemented on the server/shared side
