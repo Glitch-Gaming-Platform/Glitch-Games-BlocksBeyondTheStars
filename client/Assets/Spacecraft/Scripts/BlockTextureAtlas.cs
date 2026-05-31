@@ -169,6 +169,8 @@ namespace Spacecraft.Client
             "mud" => new Color(0.36f, 0.28f, 0.18f),
             "grass" => new Color(0.32f, 0.62f, 0.28f),
             "crystal" => new Color(0.55f, 0.75f, 0.95f),
+            "flora_plant" => new Color(0.25f, 0.70f, 0.30f),
+            "flora_crystal" => new Color(0.60f, 0.85f, 1f),
             _ => new Color(0.6f, 0.6f, 0.62f),
         };
     }

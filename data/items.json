@@ -28,6 +28,9 @@
   { "key": "sand",            "nameKey": "item.sand.name",            "category": "block",      "maxStack": 99, "placesBlock": "sand" },
   { "key": "mud",             "nameKey": "item.mud.name",             "category": "block",      "maxStack": 99, "placesBlock": "mud" },
   { "key": "crystal",         "nameKey": "item.crystal.name",         "category": "material",   "maxStack": 99, "placesBlock": "crystal" },
+  { "key": "plant_fiber",     "nameKey": "item.plant_fiber.name",     "category": "material",   "maxStack": 99 },
+  { "key": "plant_seed",      "nameKey": "item.plant_seed.name",      "category": "block",      "maxStack": 99, "placesBlock": "flora_plant" },
+  { "key": "crystal_seed",    "nameKey": "item.crystal_seed.name",    "category": "block",      "maxStack": 99, "placesBlock": "flora_crystal" },
 
   { "key": "basic_drill",     "nameKey": "item.basic_drill.name",     "category": "tool", "maxStack": 1, "descriptionKey": "item.basic_drill.desc", "tool": { "kind": "drill", "tier": 1, "energyPerUse": 0.0 } },
   { "key": "titanium_drill",  "nameKey": "item.titanium_drill.name",  "category": "tool", "maxStack": 1, "descriptionKey": "item.titanium_drill.desc", "tool": { "kind": "drill", "tier": 2, "energyPerUse": 0.5 } },

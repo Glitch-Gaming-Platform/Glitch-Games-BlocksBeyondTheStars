@@ -59,6 +59,7 @@ public sealed class WorldGenerator
         var biomes = ResolveBiomes(planet);
         var deepId = ResolveBlock(planet.DeepBlock);
         var dataCacheId = _content.GetBlock("data_cache")?.NumericId ?? BlockId.Air;
+        bool flora = planet.FloraDensity > 0;
 
         var origin = WorldConstants.ChunkOrigin(coord);
 
@@ -115,6 +116,20 @@ public sealed class WorldGenerator
                 }
 
                 chunk.Set(lx, ly, lz, block);
+            }
+
+            // Surface flora: one plant in the air cell directly above the surface (bounded —
+            // one per column, no spreading), chosen by biome surface + a density roll.
+            if (flora)
+            {
+                var floraId = FloraForSurface(surfaceId);
+                int fy = surfaceY + 1;
+                int fly = fy - origin.Y;
+                if (!floraId.IsAir && fly >= 0 && fly < WorldConstants.ChunkSize
+                    && Noise.Value01(seed + 9001, worldX, 7, worldZ) < planet.FloraDensity)
+                {
+                    chunk.Set(lx, fly, lz, floraId);
+                }
             }
         }
 
@@ -183,6 +198,41 @@ public sealed class WorldGenerator
         double n = Noise.Fbm2D(seed ^ 0x0B10E, worldX / 140.0, worldZ / 140.0, octaves: 3);
         int idx = (int)(n * count);
         return idx < 0 ? 0 : (idx >= count ? count - 1 : idx);
+    }
+
+    private bool _floraResolved;
+    private BlockId _floraPlant, _floraCrystal;
+    private System.Collections.Generic.HashSet<ushort> _plantHosts = new(), _crystalHosts = new();
+
+    /// <summary>The flora block that grows on a given surface (Air = none).</summary>
+    private BlockId FloraForSurface(BlockId surface)
+    {
+        if (!_floraResolved)
+        {
+            _floraResolved = true;
+            _floraPlant = _content.GetBlock("flora_plant")?.NumericId ?? BlockId.Air;
+            _floraCrystal = _content.GetBlock("flora_crystal")?.NumericId ?? BlockId.Air;
+            _plantHosts = HostSet("grass", "dirt", "mud");
+            _crystalHosts = HostSet("crystal", "stone", "basalt");
+        }
+
+        if (_plantHosts.Contains(surface.Value)) return _floraPlant;
+        if (_crystalHosts.Contains(surface.Value)) return _floraCrystal;
+        return BlockId.Air;
+    }
+
+    private System.Collections.Generic.HashSet<ushort> HostSet(params string[] keys)
+    {
+        var set = new System.Collections.Generic.HashSet<ushort>();
+        foreach (var k in keys)
+        {
+            if (_content.GetBlock(k) is { } d)
+            {
+                set.Add(d.NumericId.Value);
+            }
+        }
+
+        return set;
     }
 
     private BlockId ResolveBlock(string key)

@@ -92,6 +92,7 @@ public sealed partial class GameServer
         RegisterActiveShip(_ship);
         RecomputeShipCombatStats();
         InitFluids();
+        InitFlora();
         _repo.SaveShip(ShipId, _ship);
 
         BuildGalaxy();
@@ -262,6 +263,7 @@ public sealed partial class GameServer
         TickPresence(deltaSeconds);
         TickFluids(deltaSeconds);
         TickWeather(deltaSeconds);
+        TickFlora(deltaSeconds);
         StreamChunks();
 
         _sinceAutoSave += deltaSeconds;
@@ -683,6 +685,11 @@ public sealed partial class GameServer
         }
 
         Broadcast(new BlockChanged { X = pos.X, Y = pos.Y, Z = pos.Z, Block = BlockId.AirValue });
+        if (IsFlora(current.Value))
+        {
+            ScheduleFloraRegrow(pos, current.Value); // regrows if the host stays intact
+        }
+
         OnBlockMined(session, def.Key);
         SendInventory(session);
     }
@@ -719,6 +726,13 @@ public sealed partial class GameServer
         if (!session.State.IsAdmin && IsLandingZoneBlockedForOther(session.State.PlayerId, pos))
         {
             Reject(session, "place", "This is another player's protected landing zone.");
+            return;
+        }
+
+        // Seeds / flora only take on a suitable host block (mud, grass, crystal, ...).
+        if (IsFlora(blockDef.NumericId.Value) && !IsValidFloraHost(blockDef.NumericId.Value, pos))
+        {
+            Reject(session, "place", "This plant needs suitable ground beneath it.");
             return;
         }
 

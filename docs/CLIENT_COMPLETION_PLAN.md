@@ -326,6 +326,48 @@ Boardable **space stations** that exist in a system, **near planets**:
 - Server owns station placement, interiors, vendor stock/prices and mission boards; clients
   render the station + interior and use dock/board/trade/mission interactions.
 
+### Planet settlements & NPC towns — NEW (planned)
+Some planets are **inhabited** — settlements you can walk into, populated by NPCs (the
+planet-side counterpart to space stations), server-authoritative:
+
+- **Where & whether:** only **some** worlds have settlements (seed + planet/biome derived,
+  admin-overridable) — barren/hostile worlds none, hospitable ones one or more. Placement is on
+  buildable surface near the surface height, on a flattened/foundation footprint so buildings sit
+  cleanly on the terrain. The settlement is **protected** like a landing zone (can't be griefed/
+  mined).
+- **Two tiers:**
+  - **Primitive villages** — small clusters of simple **single-storey** huts/shelters (a few
+    blocky buildings, basic materials matching the biome: wood/mud/stone), a handful of NPCs.
+  - **Modern settlements** — larger towns with **multi-storey buildings** (towers/blocks with
+    floors, interiors, lifts/stairs), streets, more services and a denser population.
+- **Inhabitants:** NPCs are **humans or aliens** (alien look reuses the parametric creature/
+  avatar builder + palettes; humans reuse the avatar rig). Mix and density follow the tier and
+  the world's biodiversity/abundance level. NPCs idle/wander within the settlement (not full AI);
+  some are interactive.
+- **Services (like stations):** **mission boards** (take local missions — M13/M23), **NPC
+  traders** (buy/sell resources & gear — the same trading system as stations), and later
+  repair/refuel, quartermaster/respawn-friendly points, lore/dialogue NPCs. Bigger/modern
+  settlements have more vendors and mission boards than primitive villages.
+- **Generation:** procedural building layout from a small set of **building templates** per tier
+  (footprint + height + door/window pattern), stamped as voxel structures (like `StampShip`),
+  scaled by settlement size; deterministic from the seed so it streams like normal chunks.
+- **Ruins of abandoned settlements:** some worlds instead (or also) have **derelict settlements**
+  — the same village/town building templates generated in a **ruined** state: partial/collapsed
+  structures (missing blocks, holes, rubble, overgrown with flora, weathered materials), **no
+  living NPCs** (or only hostile scavengers/creatures squatting them). They're **explorable loot
+  spots** rather than service hubs: scattered **salvage/loot containers** (resources, data caches,
+  rare gear), occasional **derelict mission/lore terminals**, and a creepier, abandoned mood.
+  Generated deterministically from the seed by taking a settlement layout and applying a
+  **decay/damage pass** (remove a fraction of blocks, scatter rubble, swap intact→worn blocks,
+  let flora reclaim it). Unlike live settlements they're **not protection-gated** — the player can
+  mine/scavenge them freely. Reuses the same building templates + voxel stamping; ties into loot
+  containers (combat-loot system), creatures (squatters) and flora (overgrowth).
+- Reuses: voxel structure stamping (ship/station), **station-interaction** prompts (M23a-2) for
+  boards/vendors, missions (M13/M23), trading (with stations), and the avatar/creature renderer
+  for NPCs. Server owns settlement placement, buildings, NPC roster, vendor stock and mission
+  boards; clients render them and use the walk-up interactions. Sequence with **space stations +
+  trading + creatures** (shared systems).
+
 ### Ships: types, designs, expandable interiors & multiple owned ships — **slice DONE / extras planned**
 Implemented (server + data + minimal UI): data-driven `data/ships.json` (starter/hauler/scout)
 + `ShipDefinition` in content; an owned-ships registry with an active ship; `CraftShip`
@@ -431,6 +473,15 @@ Each world's atmosphere determines whether the suit consumes oxygen outside the 
 - Client: show the atmosphere/breathable state in the HUD (e.g. the oxygen icon dimmed when
   breathable). Small server slice on top of the existing oxygen system — implement with the
   atmosphere/asteroid work.
+- **View distance varies with atmosphere:** a planet's atmosphere also sets a **visibility /
+  fog distance** — a thick/hazy atmosphere (e.g. swamp, dense weather) sees **less far** (near
+  fog), a thin one sees **farther**, and an **airless** body (asteroid/no-atmo) has the
+  **clearest** view (space-like, far fog). Carried as a per-planet **fog/visibility range** in
+  the atmosphere descriptor (`WorldEnvironment`), scaled further by current **weather intensity**
+  (storms cut visibility). The client applies it as camera fog distance/colour (tinted by the sun
+  colour); this is presentation, but the range is **server-supplied** so all clients agree. The
+  existing **view-distance setting** stays a client cap — the atmosphere can only reduce it,
+  never force-stream more chunks.
 
 ### Procedural creatures & aliens — NEW (planned)
 Make planets feel alive with **procedurally generated lifeforms** — each world deterministically
@@ -491,9 +542,24 @@ Make the dark side of the day/night cycle (and caves) playable and atmospheric:
   change — schedule with the lighting + art pass; until then the global tint approximates
   lighting without true reflections.
 
-### Procedural flora — NEW (planned)
-Plants/growths across the worlds, **procedurally generated per planet from the seed** (like the
-creatures), server-authoritative:
+### Procedural flora — **slice DONE / extras planned**
+Implemented (server + worldgen + data): **surface flora** seeded by the `WorldGenerator` on
+suitable surfaces of flora planets — `flora_plant` on grass/dirt/mud, `flora_crystal` on
+crystal/stone/basalt — one plant per column, gated by a per-planet `FloraDensity` roll (jungle
+densest, rocky sparse; barren planets get none). New `flora_plant`/`flora_crystal` blocks
+(+ atlas colours) and `plant_fiber`/`plant_seed`/`crystal_seed` items + bilingual locale keys.
+**Harvest** drops the species **material** (fibre / crystal), not seeds. **Bounded regrowth**
+(`GameServerFlora`): a harvested plant **regrows on its cell after a delay only while its host
+block underneath is intact** — mine the ground and it won't return; growth is capped (one plant
+per host cell, never spreading). **Seeds replant** flora on a **valid host** only
+(`HandlePlace` rejects flora on unsuitable ground; `CanPlantFlora`/`IsValidFloraHost`). 6 flora
+tests (worldgen seeds on flora planet / none on barren, host validation, regrow-with-host /
+no-regrow-without-host). Still planned (below): per-species procedural **form/appearance**,
+habitat **water/lava** flora (needs submerged/lava placement), **effects** (poison/heal/food),
+and a **maturity → produces-seeds** state (seeds harvestable only from a matured, producing
+plant — today seeds are a separate craftable/found item).
+
+Original notes (remaining work):
 
 - **Habitat types:** **land, water, crystalline, and lava** flora — each only grows on/in the
   matching substrate (land plants on dirt/stone, water plants submerged, crystalline on rock,

@@ -79,4 +79,7 @@ public sealed class PlanetType
 
     /// <summary>Soft world radius in blocks (0 = effectively unbounded). Informational for now.</summary>
     public int WorldRadius { get; set; }
+
+    /// <summary>0..1 chance of surface flora per eligible column (0 = no plants). Bounded: one plant per cell.</summary>
+    public double FloraDensity { get; set; }
 }

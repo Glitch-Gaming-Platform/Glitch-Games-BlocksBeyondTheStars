@@ -1,7 +1,7 @@
 # Spacecraft — Progress & Next Steps
 
 Resume point for development. Full milestone breakdown lives in `plans/IMPLEMENTATION_PLAN.md`
-(local, git-ignored). Tests: **86 passing**. Repo pushed to `origin/main` (private).
+(local, git-ignored). Tests: **117 passing**. Repo pushed to `origin/main` (private).
 
 ## Done (committed & pushed)
 
@@ -154,9 +154,25 @@ consumes protocol messages that already exist.
 - **(NEW, planned) Lighting:** suit/helmet lamp (light cone via a player-light term in the block
   shaders), later placed light blocks + ship exterior lights, and emissive glow (crystals,
   bioluminescent creatures). See CLIENT_COMPLETION_PLAN "Lighting".
-- **(NEW, planned) Procedural flora:** land/water/crystalline/lava plants, seed-derived forms
-  (tree/vine/bush/crystal/fungus), properties/effects (poison/heal/food/material-substitute),
-  growth + regrowth (regrows unless the host block is mined). See CLIENT_COMPLETION_PLAN.
+- **Procedural flora — slice DONE.** `WorldGenerator` seeds **surface flora** on suitable
+  surfaces by per-planet `FloraDensity` (flora_plant on grass/dirt/mud, flora_crystal on
+  crystal/stone/basalt; barren planets none). New flora blocks + `plant_fiber`/`plant_seed`/
+  `crystal_seed` items + locales + atlas colours. **Harvest drops the material** (fibre/crystal);
+  **bounded regrowth** — regrows on its cell only while the host block below survives
+  (`GameServerFlora`), capped at one plant per cell (no spread); **seeds replant** on a valid
+  host only (`HandlePlace` host check). 6 flora tests. Planned: procedural form/appearance,
+  water/lava flora, effects (poison/heal/food), maturity→produces-seeds. See plan.
+- **(NEW, planned) Planet settlements & NPC towns:** some worlds have settlements — **primitive
+  villages** (single-storey huts) or **modern towns** (multi-storey buildings) — populated by
+  **human or alien NPCs**, with **mission boards** + **NPC traders** (like space stations, but
+  planet-side). Also **ruins of abandoned settlements**: the same templates in a decayed state
+  (collapsed/overgrown, no living NPCs), explorable for **salvage/loot** rather than services.
+  Reuses voxel stamping + station interactions + missions + trading + loot + the avatar/creature
+  renderer. See CLIENT_COMPLETION_PLAN "Planet settlements & NPC towns".
+- **(NEW, planned) Atmosphere-based view distance:** a planet's atmosphere sets a **fog/
+  visibility range** (hazy/thick → see less far; thin → farther; airless → clearest), scaled by
+  weather intensity, server-supplied via `WorldEnvironment`; the client applies it as camera fog
+  (the view-distance setting stays a client cap). Folded into Atmosphere & breathability. See plan.
 - **(NEW, planned) Procedural creatures & aliens:** seed-derived species per planet with random
   stats/behaviour/appearance; habitat (water / lava / land / air) governs spawn, movement &
   survival; per-world abundance (none / few / many). Extends the planet-enemy system, depends on
@@ -177,7 +193,7 @@ Later/optional: Option B true in-process SP server (retarget to netstandard2.1);
 
 ```powershell
 dotnet build Spacecraft.sln
-dotnet test                      # expect all green (86)
+dotnet test                      # expect all green (117)
 git log --oneline -5             # latest = M20 client shell, assets & UX
 ```
 All milestones from the local plan (M0–M20) are now implemented on the server/shared side
