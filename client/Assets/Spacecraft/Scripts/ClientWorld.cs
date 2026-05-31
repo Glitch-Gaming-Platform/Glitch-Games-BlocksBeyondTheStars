@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Spacecraft.Shared.Geometry;
 using Spacecraft.Shared.Primitives;
 using Spacecraft.Shared.World;
 

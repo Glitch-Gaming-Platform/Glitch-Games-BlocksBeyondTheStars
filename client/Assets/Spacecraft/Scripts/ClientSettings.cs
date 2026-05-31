@@ -74,7 +74,10 @@ namespace Spacecraft.Client
         public void Apply()
         {
             Screen.fullScreen = Fullscreen;
-            AudioListener.volume = Mathf.Clamp01(MasterVolume);
+
+            // Audio buses (master/music/sfx) are applied once the audio layer lands; the audio
+            // module is intentionally not referenced yet (the shell is silent — see
+            // docs/CLIENT_SHELL_AND_ASSETS.md). MasterVolume is persisted for that future use.
 
             int levels = QualitySettings.names != null ? QualitySettings.names.Length : 0;
             if (levels > 0)
