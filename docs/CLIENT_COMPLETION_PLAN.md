@@ -368,6 +368,28 @@ planet-side counterpart to space stations), server-authoritative:
   boards; clients render them and use the walk-up interactions. Sequence with **space stations +
   trading + creatures** (shared systems).
 
+### Crashed ship wrecks — NEW (planned)
+**Rare** abandoned/crashed spaceships scattered on planet surfaces — small landmark dungeons:
+
+- **Rarity & placement:** a **rare** seed-derived feature (much rarer than settlements) — most
+  worlds have none; occasionally one (or a few on large worlds). Stamped as a **derelict voxel
+  ship hull** (reuse the ship designs from `ships.json` / `StampShip`) in a **crashed** pose:
+  tilted/half-buried in the terrain, with a **decay/damage pass** (breaches in the hull, missing
+  blocks, scorch/scattered debris and a small impact crater/scrape around it).
+- **Explorable & lootable:** no living crew (or only **hostile scavengers/creatures** nesting in
+  it); the player walks into the broken hull to **salvage** — **loot containers** (resources,
+  components, rare gear), a **cargo hold** to empty, recoverable **ship modules/blueprints**, and
+  occasional **data caches / distress-log lore terminals**. Not protection-gated — free to
+  scavenge and dismantle.
+- **Variety:** different **ship types/sizes** (matching `ships.json`) and origins (human or
+  **alien** wrecks, alien ones using alien block/palette variants) so wrecks feel distinct;
+  bigger wrecks hold more loot and more squatters.
+- Reuses: ship voxel stamping + the **decay pass** shared with settlement **ruins**, **loot
+  containers** (combat-loot system), **creatures** (squatters) and missions (a wreck can be a
+  mission objective — "investigate the distress signal"). Server owns wreck placement, the
+  decayed layout, loot tables and squatter spawns; clients just render + use loot/interact.
+  Sequence with **settlements/ruins + combat-loot + creatures** (shared systems).
+
 ### Ships: types, designs, expandable interiors & multiple owned ships — **slice DONE / extras planned**
 Implemented (server + data + minimal UI): data-driven `data/ships.json` (starter/hauler/scout)
 + `ShipDefinition` in content; an owned-ships registry with an active ship; `CraftShip`

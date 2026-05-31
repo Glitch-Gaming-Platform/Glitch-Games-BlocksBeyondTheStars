@@ -169,6 +169,11 @@ consumes protocol messages that already exist.
   (collapsed/overgrown, no living NPCs), explorable for **salvage/loot** rather than services.
   Reuses voxel stamping + station interactions + missions + trading + loot + the avatar/creature
   renderer. See CLIENT_COMPLETION_PLAN "Planet settlements & NPC towns".
+- **(NEW, planned) Crashed ship wrecks:** **rare** abandoned/crashed ships on planet surfaces —
+  derelict voxel hulls (from `ships.json`) in a crashed pose (tilted/half-buried, breached via a
+  decay pass), explorable for **salvage/loot** (containers, cargo, modules, data/lore), with
+  hostile scavengers and human/alien variants. Reuses ship stamping + the ruins decay pass +
+  loot + creatures + missions. See CLIENT_COMPLETION_PLAN "Crashed ship wrecks".
 - **(NEW, planned) Atmosphere-based view distance:** a planet's atmosphere sets a **fog/
   visibility range** (hazy/thick → see less far; thin → farther; airless → clearest), scaled by
   weather intensity, server-supplied via `WorldEnvironment`; the client applies it as camera fog
