@@ -418,6 +418,20 @@ Original notes:
   flora and creatures. Foundational for the creatures/flora systems below — sequence the biome
   generator first, then habitat-matched life.
 
+### Atmosphere & breathability — NEW (planned)
+Each world's atmosphere determines whether the suit consumes oxygen outside the ship:
+
+- A per-planet **atmosphere type**: **breathable** (no suit oxygen drain — the player can roam
+  freely), **non-breathable/toxic** (suit oxygen **drains** outside the ship, as today), or
+  **none** (airless — drains; used by the landable asteroids). Add `PlanetType.Atmosphere`.
+- Server oxygen rule (in the environment tick) keys off the **current planet's atmosphere**:
+  breathable → regenerate/no drain even on the surface; toxic/none → drain at the configured
+  rate (the existing `OxygenConsumption`/`OxygenEnabled` rules still gate it globally). Aboard
+  the ship always regenerates (life support).
+- Client: show the atmosphere/breathable state in the HUD (e.g. the oxygen icon dimmed when
+  breathable). Small server slice on top of the existing oxygen system — implement with the
+  atmosphere/asteroid work.
+
 ### Procedural creatures & aliens — NEW (planned)
 Make planets feel alive with **procedurally generated lifeforms** — each world deterministically
 derives its own species from the world/planet seed, so different planets have different,

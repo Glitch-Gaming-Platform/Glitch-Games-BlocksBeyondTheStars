@@ -138,6 +138,9 @@ consumes protocol messages that already exist.
 - **(NEW, planned) Combat loot:** destroyed ships (player/NPC) drop (part of) their cargo as
   tractor-collectable salvage; planet PvP leaves a **lootable corpse** with the victim's full
   carried inventory (victim respawns without it) that persists until emptied. Rules-gated. See plan.
+- **(NEW, planned) Atmosphere & breathability:** per-planet atmosphere — breathable (no suit
+  oxygen drain), toxic/non-breathable (drains), or none/airless; the oxygen tick keys off it.
+  Small slice on the existing oxygen system. See CLIENT_COMPLETION_PLAN.
 - **(NEW, planned) Landable asteroids:** big asteroids you can land on — airless (suit oxygen),
   space sky + visible system sun (its colour tints the surface), no weather/day-night; almost no
   life except a rare crystal biome/creatures. See CLIENT_COMPLETION_PLAN.
