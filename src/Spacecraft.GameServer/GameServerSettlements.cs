@@ -35,6 +35,9 @@ public sealed partial class GameServer
     /// <summary>Whether a settlement was stamped on this world.</summary>
     public bool HasSettlement => _settlementStamped;
 
+    /// <summary>Whether the stamped settlement is a ruin (abandoned — no NPCs, scavengeable loot).</summary>
+    public bool SettlementRuined => _settlementRuined;
+
     private void StampSettlement()
     {
         var planet = _world.Planet;
@@ -125,6 +128,10 @@ public sealed partial class GameServer
         }
 
         _settlementStamped = true;
+
+        // Inhabited settlements are populated with NPCs at their vendor/board/npc markers.
+        SpawnSettlementNpcs(rng);
+
         _log.Info($"Settlement '{_settlementName}' ({tier}{(ruined ? ", ruined" : "")}) stamped at ({ax}, {groundY}, {az}) with {_settlementMarkers.Count} markers.");
     }
 
