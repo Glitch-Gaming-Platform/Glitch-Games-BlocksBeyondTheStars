@@ -485,8 +485,21 @@ Bigger world-simulation features (server-authoritative; the client renders the r
   (no weather) via `PlanetType.Weather`. Sun colour comes from the active star system. Broadcast
   via `WorldEnvironment` (join/change/periodic). Client `Sky` drives a **global shader tint**
   (`_Sc_Light`, multiplied into the block shaders so the unlit world responds), the sky colour
-  and a rotating sun light; time advances locally between updates. Still planned (below): cloud/
-  rain/storm **particles + lightning**, ambient weather sound, biome-flavoured variants.
+  and a rotating sun light; time advances locally between updates. Still planned (below): **blocky
+  voxel clouds** (see next bullet), rain/storm **particles + lightning**, ambient weather sound,
+  biome-flavoured variants.
+- **Blocky voxel clouds (planned):** clouds are **made of cubes** (klötzchen, matching the voxel
+  look) — not flat sprites — assembled into soft cloud clumps that **float above the surface and
+  slowly drift** across the sky (wind direction/speed, faster/denser in worse weather). They are
+  **non-solid / pass-through**: the player (and ships) **walk and fly straight through them** — no
+  collision, render-only — and they don't block mining/placing. **Per-planet colour:** clouds are
+  tinted by the world (white on Earth-like worlds, **yellow** on a sulphur/desert world, **blue**
+  on an ice/ocean world, ashen-grey on a lava world, …) — a `cloudColor` on the planet/environment
+  (or derived from the atmosphere + sun colour), carried in `WorldEnvironment`. Cloud **cover/
+  density** scales with the weather state + intensity (clear → few/none, overcast/storm → many/
+  dark). Client-side, code-built cube clusters (like the avatar/creatures, no art asset);
+  server stays authoritative over the weather state that drives cover. Sequence with the weather
+  particles + art pass.
 - **Day/night & weather, per planet:** a server world-time clock drives sunrise → day →
   sunset → night; **each planet type** has its own day length and **weather profile**. Weather
   states: **clear, clouds, rain, thunderstorm** (with lightning), plus planet-flavoured variants
