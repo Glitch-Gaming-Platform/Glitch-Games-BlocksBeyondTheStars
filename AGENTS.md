@@ -23,7 +23,7 @@ LAN/self-hosting and anti-cheat correct by construction.
 
 ## Tech stack (decided)
 
-- **Client:** Unity 2022 LTS, C#. Lives in `client/` (open in the Unity Editor).
+- **Client:** Unity 6 LTS (6000.4.x), C#. Lives in `client/` (open in the Unity Editor).
 - **Server:** .NET 8, standalone console host. **No Unity runtime on the server.**
 - **Admin/API:** ASP.NET Core 8 (Minimal API).
 - **DB:** SQLite by default (portable, Raspberry Pi friendly); PostgreSQL later.

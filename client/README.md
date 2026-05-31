@@ -5,7 +5,9 @@ reports and sends player *intents*. It never decides game outcomes.
 
 ## Requirements
 
-- Unity **2022.3 LTS** (see `ProjectSettings/ProjectVersion.txt`).
+- Unity **6 LTS** (6000.4.9f1; see `ProjectSettings/ProjectVersion.txt`). The project was
+  started on 2022.3 LTS and migrated to Unity 6 — on first open Unity finalizes the project
+  files (and the exact editor-revision hash) automatically.
 - A running Spacecraft server (`dotnet run --project ../src/Spacecraft.GameServer`).
 
 ## One-time setup

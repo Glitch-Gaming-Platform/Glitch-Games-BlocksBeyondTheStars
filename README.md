@@ -34,7 +34,7 @@ oxygen, damage, blueprints or travel.
 
 | Area | Choice |
 |---|---|
-| Client | Unity 2022 LTS + C# (Windows) — see [`client/`](client/) |
+| Client | Unity 6 LTS (6000.4.x) + C# (Windows) — see [`client/`](client/) |
 | Server | .NET 8, standalone console host (no Unity runtime) |
 | Admin UI | ASP.NET Core 8 minimal API + HTML dashboard |
 | Database | SQLite (default, portable, Raspberry Pi friendly); PostgreSQL later |
