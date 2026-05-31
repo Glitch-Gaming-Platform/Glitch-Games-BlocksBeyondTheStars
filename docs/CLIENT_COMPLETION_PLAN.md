@@ -871,9 +871,21 @@ Give the existing `hand_scanner` tool (and a new ship scanner) a real readout:
   each asteroid's loot/tier, so a `ScanEntityIntent { entityId }` returns a **resource summary**
   (e.g. "iron + titanium" / "barren"). Resource-bearing asteroids can then be flagged on the space
   **radar** (ties into the radar plan). Server-authoritative over the hidden contents.
+- **Knowledge points from scanning (research):** scanning something **for the first time** grants
+  **knowledge points** — a research currency. The server tracks a **per-player set of already-
+  scanned subjects** (by species id / flora id / block key / asteroid type) so only **new**
+  discoveries pay out (re-scanning a known thing gives nothing); points are added to a persisted
+  `PlayerState.KnowledgePoints`. Rarer/more-dangerous subjects are worth more.
+- **Blueprints additionally cost knowledge points:** `UnlockBlueprintIntent` now also requires a
+  **`BlueprintDefinition.KnowledgeCost`** (on top of the existing material `unlockCost`) — so the
+  player must **explore + scan** to research enough to unlock advanced gear, not just gather
+  materials. Server validates both the materials and the knowledge balance, deducts both on unlock.
+  Shown in the Tech tab (knowledge total + each blueprint's knowledge cost). Ties scanning directly
+  into progression.
 - Server stays authoritative over anything the player shouldn't already know (asteroid contents,
-  exact hidden stats); the rest is a client readout over synced data. Sequence with the creature/
-  flora systems (done) + the space radar + the UI pass.
+  exact hidden stats), the first-scan ledger, the knowledge balance and the unlock cost; the rest
+  is a client readout over synced data. Sequence with the creature/flora systems (done) + the space
+  radar + the UI pass.
 
 ### Lighting: suit lamp, placed lights & glow — NEW (planned)
 Make the dark side of the day/night cycle (and caves) playable and atmospheric:

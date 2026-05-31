@@ -189,6 +189,11 @@ consumes protocol messages that already exist.
   `ScanIntent` only for hidden info; costs a little `SuitEnergy`. A **ship scanner module** scans a
   targeted **asteroid** and reveals whether it holds **resources** (server knows the loot;
   `ScanEntityIntent`), flagged on the radar. See CLIENT_COMPLETION_PLAN "Scanners".
+- **(NEW, planned) Knowledge points (research):** scanning something **for the first time** grants
+  **knowledge points** (server tracks a per-player first-scan ledger; persisted
+  `PlayerState.KnowledgePoints`). **Blueprints additionally cost knowledge** (`BlueprintDefinition.
+  KnowledgeCost`) on top of materials — so unlocking advanced gear requires exploring + scanning,
+  not just mining. Server validates + deducts both. Shown in the Tech tab. See CLIENT_COMPLETION_PLAN.
 - **(NEW, planned) Lighting:** suit/helmet lamp (light cone via a player-light term in the block
   shaders), later placed light blocks + ship exterior lights, and emissive glow (crystals,
   bioluminescent creatures). See CLIENT_COMPLETION_PLAN "Lighting".
