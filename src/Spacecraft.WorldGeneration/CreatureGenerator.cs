@@ -1,0 +1,195 @@
+using System.Collections.Generic;
+using Spacecraft.Shared.Definitions;
+
+namespace Spacecraft.WorldGeneration;
+
+/// <summary>
+/// Deterministically derives a planet's roster of <see cref="CreatureSpecies"/> from the world
+/// seed + planet (technical requirements / `anf_space_flight.md` §12). Same seed + planet → the
+/// same species every run, so the roster never needs storing. How many species a world has comes
+/// from its <see cref="PlanetType.CreatureAbundance"/> (none / few / many); habitats are biased by
+/// the planet (lava worlds get lava-dwellers, wet worlds get aquatic life). The roster skews
+/// **non-hostile** so a world is never all-hostile.
+/// </summary>
+public static class CreatureGenerator
+{
+    public static IReadOnlyList<CreatureSpecies> GenerateRoster(PlanetType planet, long worldSeed)
+    {
+        int count = AbundanceCount(planet.CreatureAbundance);
+        var list = new List<CreatureSpecies>(count);
+        if (count == 0)
+        {
+            return list;
+        }
+
+        long planetSeed = worldSeed ^ WorldGenerator.StableHash(planet.Key);
+        bool allowWater = HasWaterLife(planet);
+        bool allowLava = HasLavaLife(planet);
+
+        const long golden = unchecked((long)0x9E3779B97F4A7C15UL);
+        for (int i = 0; i < count; i++)
+        {
+            long s = unchecked(planetSeed ^ ((long)i * golden));
+            var rng = new System.Random(unchecked((int)(s ^ (s >> 32))));
+            list.Add(MakeSpecies(i, rng, allowWater, allowLava));
+        }
+
+        return list;
+    }
+
+    private static int AbundanceCount(string? abundance) => (abundance ?? "few").ToLowerInvariant() switch
+    {
+        "none" => 0,
+        "many" => 6,
+        _ => 3, // "few" / unknown
+    };
+
+    private static CreatureSpecies MakeSpecies(int index, System.Random rng, bool allowWater, bool allowLava)
+    {
+        var habitat = PickHabitat(rng, allowWater, allowLava);
+        var temperament = (CreatureTemperament)Weighted(rng,
+            (int)CreatureTemperament.Passive, 35,
+            (int)CreatureTemperament.Skittish, 25,
+            (int)CreatureTemperament.Territorial, 20,
+            (int)CreatureTemperament.Aggressive, 15,
+            (int)CreatureTemperament.PackHunter, 5);
+        var activity = (CreatureActivity)Weighted(rng,
+            (int)CreatureActivity.Diurnal, 40,
+            (int)CreatureActivity.Nocturnal, 30,
+            (int)CreatureActivity.Crepuscular, 20,
+            (int)CreatureActivity.Cathemeral, 10);
+
+        bool hostile = temperament is CreatureTemperament.Aggressive or CreatureTemperament.PackHunter;
+        float size = 0.6f + (float)rng.NextDouble() * 1.6f;
+
+        var (dropKind, dropItem, dropCount) = PickDrop(rng);
+
+        return new CreatureSpecies
+        {
+            Id = "sp" + index,
+            NameKey = "creature.generic.name",
+            Habitat = habitat,
+            Activity = activity,
+            Temperament = temperament,
+
+            Size = size,
+            MaxHealth = 10f + size * 8f + (hostile ? 10f : 0f),
+            Speed = 1.5f + (float)rng.NextDouble() * 2.5f,
+            AttackDamage = hostile ? 2f + (float)rng.NextDouble() * 5f : 0f,
+
+            Legs = PickLegs(rng, habitat),
+            HasWings = habitat == CreatureHabitat.Air || rng.NextDouble() < 0.1,
+            HasTail = rng.NextDouble() < 0.5,
+            BodySegments = 1 + rng.Next(3),
+            ColorRgb = PickColor(rng, habitat),
+            Glows = habitat == CreatureHabitat.Lava || rng.NextDouble() < (activity == CreatureActivity.Nocturnal ? 0.3 : 0.12),
+
+            DropItem = dropItem,
+            DropCount = dropCount,
+            DropKind = dropKind,
+        };
+    }
+
+    private static CreatureHabitat PickHabitat(System.Random rng, bool allowWater, bool allowLava)
+    {
+        // Land/air always possible; water/lava only on suitable worlds.
+        var weights = new List<(int Value, int Weight)>
+        {
+            ((int)CreatureHabitat.Land, 50),
+            ((int)CreatureHabitat.Air, 20),
+        };
+        if (allowWater) weights.Add(((int)CreatureHabitat.Water, 20));
+        if (allowLava) weights.Add(((int)CreatureHabitat.Lava, 10));
+        return (CreatureHabitat)WeightedList(rng, weights);
+    }
+
+    private static (CreatureDropKind, string, int) PickDrop(System.Random rng)
+    {
+        int kind = Weighted(rng,
+            (int)CreatureDropKind.Food, 50,
+            (int)CreatureDropKind.Poison, 30,
+            (int)CreatureDropKind.Material, 20); // material substitute is the rare one
+        return (CreatureDropKind)kind switch
+        {
+            CreatureDropKind.Food => (CreatureDropKind.Food, "creature_meat", 1 + rng.Next(2)),
+            CreatureDropKind.Poison => (CreatureDropKind.Poison, "toxic_gland", 1),
+            _ => (CreatureDropKind.Material, MaterialSubstitute(rng), 1 + rng.Next(2)),
+        };
+    }
+
+    /// <summary>A real building resource a creature can yield instead of mining (rare).</summary>
+    private static string MaterialSubstitute(System.Random rng)
+    {
+        string[] mats = { "carbon", "silicate", "copper_ore", "iron_ore" };
+        return mats[rng.Next(mats.Length)];
+    }
+
+    private static int PickLegs(System.Random rng, CreatureHabitat habitat) => habitat switch
+    {
+        CreatureHabitat.Water => 0,
+        CreatureHabitat.Air => 2,
+        _ => new[] { 2, 4, 6 }[rng.Next(3)],
+    };
+
+    private static int PickColor(System.Random rng, CreatureHabitat habitat)
+    {
+        // Habitat-tinted base hue + jitter, packed RGB.
+        int r, g, b;
+        int j() => rng.Next(-30, 31);
+        switch (habitat)
+        {
+            case CreatureHabitat.Water: r = 60; g = 130; b = 200; break;
+            case CreatureHabitat.Lava: r = 210; g = 90; b = 40; break;
+            case CreatureHabitat.Air: r = 200; g = 200; b = 170; break;
+            default: r = 110; g = 150; b = 80; break; // land
+        }
+
+        r = Clamp8(r + j());
+        g = Clamp8(g + j());
+        b = Clamp8(b + j());
+        return (r << 16) | (g << 8) | b;
+    }
+
+    private static int Clamp8(int v) => v < 0 ? 0 : (v > 255 ? 255 : v);
+
+    private static bool HasWaterLife(PlanetType planet)
+    {
+        string key = planet.Key.ToLowerInvariant();
+        string surface = (planet.SurfaceBlock ?? string.Empty).ToLowerInvariant();
+        return key is "swamp" or "jungle" or "varied" or "ice"
+               || surface is "mud" or "grass" or "ice";
+    }
+
+    private static bool HasLavaLife(PlanetType planet)
+    {
+        string key = planet.Key.ToLowerInvariant();
+        return key == "lava" || (planet.SurfaceBlock ?? string.Empty).ToLowerInvariant() == "basalt";
+    }
+
+    // --- Weighted picks (deterministic from the RNG) ---
+
+    private static int Weighted(System.Random rng, params int[] valueWeightPairs)
+    {
+        var list = new List<(int, int)>();
+        for (int i = 0; i + 1 < valueWeightPairs.Length; i += 2)
+        {
+            list.Add((valueWeightPairs[i], valueWeightPairs[i + 1]));
+        }
+
+        return WeightedList(rng, list);
+    }
+
+    private static int WeightedList(System.Random rng, List<(int Value, int Weight)> weights)
+    {
+        int total = 0;
+        foreach (var (_, w) in weights) total += w;
+        int roll = rng.Next(total);
+        foreach (var (value, w) in weights)
+        {
+            roll -= w;
+            if (roll < 0) return value;
+        }
+
+        return weights[weights.Count - 1].Value;
+    }
+}

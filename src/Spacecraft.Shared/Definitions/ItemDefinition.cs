@@ -34,4 +34,10 @@ public sealed class ItemDefinition
 
     /// <summary>Tool properties when <see cref="Category"/> is <see cref="ItemCategory.Tool"/>.</summary>
     public ToolProperties? Tool { get; set; }
+
+    /// <summary>
+    /// Health change when this item is consumed (<see cref="ItemCategory.Consumable"/> only):
+    /// positive = food/medicine that heals, negative = poison that harms. 0 = not eat-consumable.
+    /// </summary>
+    public float ConsumeHealth { get; set; }
 }

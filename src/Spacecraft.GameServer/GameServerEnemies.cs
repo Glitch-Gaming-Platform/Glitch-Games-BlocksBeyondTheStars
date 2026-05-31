@@ -91,7 +91,7 @@ public sealed partial class GameServer
         });
     }
 
-    /// <summary>Player attacks a planet enemy with the held tool/weapon. Server resolves the hit.</summary>
+    /// <summary>Player attacks a planet enemy or creature with the held tool/weapon. Server resolves the hit.</summary>
     public void AttackEntity(string playerId, string entityId)
     {
         var session = FindSessionByPlayerId(playerId);
@@ -100,15 +100,25 @@ public sealed partial class GameServer
             return;
         }
 
-        var enemy = _planetEnemies.FirstOrDefault(e => e.Id == entityId);
-        if (enemy is null)
+        if (_planetEnemies.FirstOrDefault(e => e.Id == entityId) is { } enemy)
         {
-            Reject(session, "attack", "No such target.");
+            AttackCombatEntity(session, enemy, _planetEnemies, isCreature: false);
             return;
         }
 
+        if (_creatures.FirstOrDefault(e => e.Id == entityId) is { } creature)
+        {
+            AttackCombatEntity(session, creature, _creatures, isCreature: true);
+            return;
+        }
+
+        Reject(session, "attack", "No such target.");
+    }
+
+    private void AttackCombatEntity(PlayerSession session, CombatEntity target, List<CombatEntity> list, bool isCreature)
+    {
         var p = session.State;
-        if (p.Position.DistanceSquared(enemy.Position) > EnemyAttackReach * EnemyAttackReach)
+        if (p.Position.DistanceSquared(target.Position) > EnemyAttackReach * EnemyAttackReach)
         {
             Reject(session, "attack", "Target is out of reach.");
             return;
@@ -117,24 +127,31 @@ public sealed partial class GameServer
         // Any tool deals damage; higher tiers (and the Weapon kind) hit harder.
         var tool = ActiveTool(p);
         float damage = 15f + tool.Tier * 10f + (tool.Kind == ToolKind.Weapon ? 15f : 0f);
-        enemy.Hull -= damage;
+        target.Hull -= damage;
 
-        if (enemy.Hull > 0f)
+        if (target.Hull > 0f)
         {
-            BroadcastPlanetEnemies();
+            if (isCreature) BroadcastCreatures(); else BroadcastPlanetEnemies();
             return;
         }
 
-        _planetEnemies.Remove(enemy);
+        list.Remove(target);
         var pool = new MaterialPool(_content, p, _ship);
-        foreach (var drop in enemy.Loot)
+        foreach (var drop in target.Loot)
         {
             pool.Add(drop.Item, drop.Count);
         }
 
         SendInventory(session);
-        Broadcast(new PlanetEnemyDefeated { Id = enemy.Id });
-        BroadcastPlanetEnemies();
+        if (isCreature)
+        {
+            BroadcastCreatures();
+        }
+        else
+        {
+            Broadcast(new PlanetEnemyDefeated { Id = target.Id });
+            BroadcastPlanetEnemies();
+        }
     }
 
     private void BroadcastPlanetEnemies()

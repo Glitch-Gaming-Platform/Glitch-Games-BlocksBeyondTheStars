@@ -1,0 +1,90 @@
+namespace Spacecraft.Shared.Definitions;
+
+/// <summary>Where a creature lives — governs spawning, movement and survival.</summary>
+public enum CreatureHabitat
+{
+    Land,
+    Water,
+    Lava,
+    Air,
+}
+
+/// <summary>When a creature is active; the rest of the cycle it sleeps/rests.</summary>
+public enum CreatureActivity
+{
+    Diurnal,     // active by day
+    Nocturnal,   // active by night
+    Crepuscular, // active at dawn/dusk
+    Cathemeral,  // active any time
+}
+
+/// <summary>
+/// How a creature behaves toward the player. Only <see cref="Aggressive"/> and
+/// <see cref="PackHunter"/> roam and attack on sight — the rest are not hostile, so a world is
+/// never all-hostile.
+/// </summary>
+public enum CreatureTemperament
+{
+    Passive,      // ignores the player (grazes/wanders)
+    Skittish,     // flees the player
+    Territorial,  // only retaliates if attacked (no roaming damage)
+    Aggressive,   // hunts nearby players
+    PackHunter,   // hunts in groups
+}
+
+/// <summary>
+/// What a defeated/harvested creature yields, mirroring the flora property tags. Rarely a
+/// creature is a building-material substitute; more often it is edible (food) or poisonous.
+/// </summary>
+public enum CreatureDropKind
+{
+    Material, // a building-resource substitute (so creatures can replace some mining) — rare
+    Food,     // edible: consuming it restores health
+    Poison,   // toxic: consuming it harms the player
+}
+
+/// <summary>
+/// A procedurally generated creature species (technical requirements / `anf_space_flight.md`
+/// §12). Every world deterministically derives its own roster of species from the world seed +
+/// planet, so different planets host different, surprising lifeforms. The descriptor is sent to
+/// clients so the parametric blocky <c>CreatureBuilder</c> renders the same creature everywhere.
+/// Server-authoritative: only the server generates species, spawns them and resolves combat.
+/// </summary>
+public sealed class CreatureSpecies
+{
+    /// <summary>Stable per-world id, e.g. "sp0".</summary>
+    public string Id { get; set; } = string.Empty;
+
+    /// <summary>Bilingual display-name key (generated species use a generic fallback name).</summary>
+    public string NameKey { get; set; } = "creature.generic.name";
+
+    public CreatureHabitat Habitat { get; set; }
+    public CreatureActivity Activity { get; set; }
+    public CreatureTemperament Temperament { get; set; }
+
+    // --- Stats ---
+    public float Size { get; set; } = 1f;
+    public float MaxHealth { get; set; } = 20f;
+    public float Speed { get; set; } = 2f;
+
+    /// <summary>Damage dealt per second to a nearby player — only while hostile AND active.</summary>
+    public float AttackDamage { get; set; }
+
+    // --- Appearance (parametric blocky body for the client renderer) ---
+    public int Legs { get; set; } = 4;
+    public bool HasWings { get; set; }
+    public bool HasTail { get; set; }
+    public int BodySegments { get; set; } = 1;
+    public int ColorRgb { get; set; } = 0xFFFFFF;
+
+    /// <summary>Bioluminescent — glows in the dark (ties into the lighting system).</summary>
+    public bool Glows { get; set; }
+
+    // --- Harvest (drop + its property kind) ---
+    public string DropItem { get; set; } = string.Empty;
+    public int DropCount { get; set; } = 1;
+    public CreatureDropKind DropKind { get; set; } = CreatureDropKind.Food;
+
+    /// <summary>Only Aggressive/PackHunter creatures roam and deal proximity damage.</summary>
+    public bool Hostile => Temperament is CreatureTemperament.Aggressive or CreatureTemperament.PackHunter;
+}

@@ -19,7 +19,7 @@
 
   { "key": "data_fragment",   "nameKey": "item.data_fragment.name",   "category": "component",  "maxStack": 20 },
   { "key": "oxygen_tank_1",   "nameKey": "item.oxygen_tank_1.name",   "category": "consumable", "maxStack": 10, "descriptionKey": "item.oxygen_tank_1.desc" },
-  { "key": "medpack",         "nameKey": "item.medpack.name",         "category": "consumable", "maxStack": 20, "descriptionKey": "item.medpack.desc" },
+  { "key": "medpack",         "nameKey": "item.medpack.name",         "category": "consumable", "maxStack": 20, "descriptionKey": "item.medpack.desc", "consumeHealth": 50 },
 
   { "key": "glass",           "nameKey": "item.glass.name",           "category": "block",      "maxStack": 99, "placesBlock": "glass" },
   { "key": "iron_wall",       "nameKey": "item.iron_wall.name",       "category": "block",      "maxStack": 99, "placesBlock": "iron_wall" },
@@ -31,6 +31,8 @@
   { "key": "plant_fiber",     "nameKey": "item.plant_fiber.name",     "category": "material",   "maxStack": 99 },
   { "key": "plant_seed",      "nameKey": "item.plant_seed.name",      "category": "block",      "maxStack": 99, "placesBlock": "flora_plant" },
   { "key": "crystal_seed",    "nameKey": "item.crystal_seed.name",    "category": "block",      "maxStack": 99, "placesBlock": "flora_crystal" },
+  { "key": "creature_meat",   "nameKey": "item.creature_meat.name",   "category": "consumable", "maxStack": 20, "descriptionKey": "item.creature_meat.desc", "consumeHealth": 25 },
+  { "key": "toxic_gland",     "nameKey": "item.toxic_gland.name",     "category": "consumable", "maxStack": 20, "descriptionKey": "item.toxic_gland.desc", "consumeHealth": -20 },
 
   { "key": "basic_drill",     "nameKey": "item.basic_drill.name",     "category": "tool", "maxStack": 1, "descriptionKey": "item.basic_drill.desc", "tool": { "kind": "drill", "tier": 1, "energyPerUse": 0.0 } },
   { "key": "titanium_drill",  "nameKey": "item.titanium_drill.name",  "category": "tool", "maxStack": 1, "descriptionKey": "item.titanium_drill.desc", "tool": { "kind": "drill", "tier": 2, "energyPerUse": 0.5 } },

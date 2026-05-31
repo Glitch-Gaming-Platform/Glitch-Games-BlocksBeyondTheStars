@@ -93,6 +93,7 @@ public sealed partial class GameServer
         RecomputeShipCombatStats();
         InitFluids();
         InitFlora();
+        InitCreatures();
         _repo.SaveShip(ShipId, _ship);
 
         BuildGalaxy();
@@ -264,6 +265,7 @@ public sealed partial class GameServer
         TickFluids(deltaSeconds);
         TickWeather(deltaSeconds);
         TickFlora(deltaSeconds);
+        TickCreatures(deltaSeconds);
         StreamChunks();
 
         _sinceAutoSave += deltaSeconds;
@@ -493,6 +495,7 @@ public sealed partial class GameServer
             case SetAppearanceIntent appearance: HandleSetAppearance(session, appearance); break;
             case CraftShipIntent craftShip: HandleCraftShip(session, craftShip); break;
             case SwitchShipIntent switchShip: HandleSwitchShip(session, switchShip); break;
+            case ConsumeItemIntent consume: HandleConsume(session, consume); break;
         }
     }
 
@@ -553,6 +556,7 @@ public sealed partial class GameServer
         SendShipStations(session);
         SendOwnedShips(session);
         SendEnvironment(session);
+        SendCreatures(session);
         SendExistingPresences(session); // show already-online players to the newcomer
 
         _log.Info($"Player '{name}' joined (connection {connectionId}).");

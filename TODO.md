@@ -1,7 +1,7 @@
 # Spacecraft — Progress & Next Steps
 
 Resume point for development. Full milestone breakdown lives in `plans/IMPLEMENTATION_PLAN.md`
-(local, git-ignored). Tests: **117 passing**. Repo pushed to `origin/main` (private).
+(local, git-ignored). Tests: **127 passing**. Repo pushed to `origin/main` (private).
 
 ## Done (committed & pushed)
 
@@ -204,10 +204,16 @@ consumes protocol messages that already exist.
   weapon damage/range/fire-rate and ammo or `SuitEnergy` cost. Crafted/blueprinted with a tier
   progression; drives the same attack path as creatures/PvP. See CLIENT_COMPLETION_PLAN
   "Player weapons: melee & ranged".
-- **(NEW, planned) Procedural creatures & aliens:** seed-derived species per planet with random
-  stats/behaviour/appearance; habitat (water / lava / land / air) governs spawn, movement &
-  survival; per-world abundance (none / few / many). Extends the planet-enemy system, depends on
-  fluids for aquatic/lava life. See CLIENT_COMPLETION_PLAN "Procedural creatures & aliens".
+- **Procedural creatures & aliens — slice DONE (server).** Seed-derived **species roster** per
+  world (`CreatureGenerator`, sized by `PlanetType.CreatureAbundance` none/few/many) — each species
+  has stats, **temperament** (mostly **non-hostile**), **activity** (diurnal/nocturnal/… + sleep),
+  **habitat** (land/water/lava/air), parametric appearance, and a **drop** tagged food/poison/
+  material-substitute. `GameServerCreatures` spawns fauna near surface players (habitat-gated);
+  **only hostile + awake** creatures damage, and only where hostility rules allow (peaceful = safe).
+  Kills drop the species item (shared `AttackEntity`); a **consume system** (`ConsumeItemIntent` +
+  `ItemDefinition.ConsumeHealth`) makes **food heal / poison harm**. Sent via `CreatureList`/
+  `NetCreature`. 10 tests. Planned: client `CreatureBuilder` render, richer AI/movement,
+  territorial retaliation, fluid-volume spawning, hunger loop.
 - **M26 — audio — procedural SFX DONE.** Audio module enabled; `ClientAudio` plays code-generated
   tones for mine/place/craft/reject/ship-hit via the master×SFX bus. Recorded SFX + music later.
 - **M27 — art, icons & polish — in progress.** Procedural **block texture atlas** done
@@ -224,7 +230,7 @@ Later/optional: Option B true in-process SP server (retarget to netstandard2.1);
 
 ```powershell
 dotnet build Spacecraft.sln
-dotnet test                      # expect all green (117)
+dotnet test                      # expect all green (127)
 git log --oneline -5             # latest = M20 client shell, assets & UX
 ```
 All milestones from the local plan (M0–M20) are now implemented on the server/shared side

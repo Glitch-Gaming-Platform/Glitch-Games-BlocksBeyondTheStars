@@ -22,6 +22,9 @@ public sealed class CombatEntity
     public string Id { get; set; } = string.Empty;
     public CombatEntityKind Kind { get; set; }
     public bool Hostile { get; set; }
+
+    /// <summary>For planet fauna: the procedural species id this entity is an instance of.</summary>
+    public string SpeciesId { get; set; } = string.Empty;
     public float Hull { get; set; }
     public float HullMax { get; set; }
     public Vector3f Position { get; set; }

@@ -128,6 +128,12 @@ public sealed class AttackEntityIntent
     public string EntityId { get; set; } = string.Empty;
 }
 
+/// <summary>Client eats/uses a consumable item (food heals, poison harms). The server applies it.</summary>
+public sealed class ConsumeItemIntent
+{
+    public string ItemKey { get; set; } = string.Empty;
+}
+
 /// <summary>Client uses a ship station it is standing next to (medbay heal-tank, cockpit, quarters, ...).</summary>
 public sealed class UseStationIntent
 {
@@ -429,6 +435,43 @@ public sealed class PlanetEnemyList
 public sealed class PlanetEnemyDefeated
 {
     public string Id { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// A live procedural creature near the player, with enough of its species descriptor for the
+/// client's parametric blocky renderer to draw it (appearance) and label it (habitat/behaviour).
+/// </summary>
+public sealed class NetCreature
+{
+    public string Id { get; set; } = string.Empty;
+    public string SpeciesId { get; set; } = string.Empty;
+    public string NameKey { get; set; } = "creature.generic.name";
+
+    public bool Hostile { get; set; }
+    public bool Asleep { get; set; }
+    public float Hull { get; set; }
+    public float HullMax { get; set; }
+    public float X { get; set; }
+    public float Y { get; set; }
+    public float Z { get; set; }
+
+    // Species traits (string enums) + parametric appearance.
+    public string Habitat { get; set; } = "Land";
+    public string Activity { get; set; } = "Diurnal";
+    public string Temperament { get; set; } = "Passive";
+    public float Size { get; set; } = 1f;
+    public int Legs { get; set; } = 4;
+    public bool HasWings { get; set; }
+    public bool HasTail { get; set; }
+    public int BodySegments { get; set; } = 1;
+    public int ColorRgb { get; set; } = 0xFFFFFF;
+    public bool Glows { get; set; }
+}
+
+/// <summary>Snapshot of live creatures (fauna) near the player on the planet surface.</summary>
+public sealed class CreatureList
+{
+    public NetCreature[] Creatures { get; set; } = System.Array.Empty<NetCreature>();
 }
 
 /// <summary>Where the player's ship hull stands in the world (for the HUD minimap / compass).</summary>

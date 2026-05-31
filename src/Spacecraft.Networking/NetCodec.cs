@@ -46,6 +46,7 @@ public static class NetCodec
         Register(23, typeof(SetAppearanceIntent));
         Register(24, typeof(CraftShipIntent));
         Register(25, typeof(SwitchShipIntent));
+        Register(26, typeof(ConsumeItemIntent));
 
         // Server -> Client
         Register(50, typeof(JoinAccepted));
@@ -76,6 +77,7 @@ public static class NetCodec
         Register(75, typeof(PlayerLeft));
         Register(76, typeof(OwnedShips));
         Register(77, typeof(WorldEnvironment));
+        Register(78, typeof(CreatureList));
     }
 
     private static void Register(byte tag, Type type)

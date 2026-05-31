@@ -82,4 +82,10 @@ public sealed class PlanetType
 
     /// <summary>0..1 chance of surface flora per eligible column (0 = no plants). Bounded: one plant per cell.</summary>
     public double FloraDensity { get; set; }
+
+    /// <summary>
+    /// How much life this world has: "none" (barren), "few" or "many". Drives how many
+    /// procedural <see cref="CreatureSpecies"/> the world derives and the live spawn caps.
+    /// </summary>
+    public string CreatureAbundance { get; set; } = "few";
 }

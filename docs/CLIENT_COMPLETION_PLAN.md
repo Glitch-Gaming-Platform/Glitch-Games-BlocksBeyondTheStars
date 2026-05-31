@@ -586,7 +586,29 @@ A survival need that makes food matter (server-authoritative; builds on the cons
 - Server owns the hunger tick, starvation damage and what each item restores; the client shows the
   hunger bar and sends the eat/consume intent. Sequence with creatures + flora effects.
 
-### Procedural creatures & aliens — NEW (planned)
+### Procedural creatures & aliens — **slice DONE (server) / client render + extras planned**
+Implemented (server + worldgen + data): a seed-derived **species roster per world**
+(`CreatureGenerator`) sized by the planet's **biodiversity** (`PlanetType.CreatureAbundance`:
+none → 0, few → 3, many → 6). Each `CreatureSpecies` carries **stats** (size/health/speed/attack),
+**temperament** (passive/skittish/territorial/aggressive/pack-hunter), an **activity cycle**
+(diurnal/nocturnal/crepuscular/cathemeral), a **habitat** (land/water/lava/air), parametric
+**appearance** (legs/wings/tail/segments/colour/glow) and a **drop** tagged food / poison /
+material-substitute. The roster skews **non-hostile** (most species don't attack). Server
+(`GameServerCreatures`): live creatures spawn near surface players within a biodiversity cap,
+habitat-gated (water/lava species only spawn in that fluid); **only hostile + awake** creatures
+deal proximity damage (they **sleep** in their off-phase via the day/night clock) and **only where
+the hostility rules allow** (peaceful servers keep wildlife harmless, §12.4). Defeating one
+(`AttackEntity`, now shared with planet enemies) drops its **species material** — a building
+resource (substitute), `creature_meat` (food) or `toxic_gland` (poison). A **consume system**
+(`ConsumeItemIntent` + `ItemDefinition.ConsumeHealth`) makes **food heal** and **poison harm**
+(also wires `medpack`). Sent to clients via `CreatureList`/`NetCreature` (full descriptor for the
+future parametric renderer). 10 creature tests; suite 127 green. Still planned (below): the **client
+`CreatureBuilder`** that renders the descriptor, richer **AI/movement** (wander/flee/hunt/flock),
+**territorial retaliation**, water/lava-volume spawning beyond the player's cell, and the
+hunger/eating survival loop (separate plan).
+
+Original notes (remaining work):
+
 Make planets feel alive with **procedurally generated lifeforms** — each world deterministically
 derives its own species from the world/planet seed, so different planets have different,
 surprising aliens. Extends the M25 planet-enemy system into a full creature system (passive +
