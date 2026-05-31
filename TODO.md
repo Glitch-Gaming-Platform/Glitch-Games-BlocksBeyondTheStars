@@ -138,6 +138,12 @@ consumes protocol messages that already exist.
 - **(NEW, planned) Combat loot:** destroyed ships (player/NPC) drop (part of) their cargo as
   tractor-collectable salvage; planet PvP leaves a **lootable corpse** with the victim's full
   carried inventory (victim respawns without it) that persists until emptied. Rules-gated. See plan.
+- **(NEW, planned) Landable asteroids:** big asteroids you can land on — airless (suit oxygen),
+  space sky + visible system sun (its colour tints the surface), no weather/day-night; almost no
+  life except a rare crystal biome/creatures. See CLIENT_COMPLETION_PLAN.
+- **(NEW, planned) Space stations:** boardable stations near planets, small→huge, with landing
+  hangars, rooms, NPC traders/aliens and mission boards. Reuses docking + ship-as-place +
+  missions + a new trading system. See CLIENT_COMPLETION_PLAN.
 - **World variety — slice DONE.** Biome-aware `WorldGenerator`: single-biome planets + multi-biome
   worlds (surface per column from noise; **biome count randomised per world from the seed**); new
   blocks sand/mud/grass/crystal + new planet types (desert/jungle/crystal/swamp/varied);

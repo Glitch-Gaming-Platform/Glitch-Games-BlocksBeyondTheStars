@@ -297,6 +297,35 @@ PvP settings; never in protected zones):
   the respawn. Clients render salvage drops / a corpse container and use the tractor / an open-
   container interaction.
 
+### Landable asteroids — NEW (planned)
+Big asteroids you can **land on** and walk around — tiny airless worlds:
+
+- A new celestial-body kind **large asteroid** in systems; you fly to it (free flight / star map)
+  and **land** like on a planet. Generated as a small body (low `WorldRadius`, rocky surface).
+- **No atmosphere:** outside the ship the suit's oxygen drains (no regen), so it's a hazard run.
+  **No weather**, **no day/night atmosphere** — the **sky is always space (black + stars)** even
+  on the surface, but the **system's sun is visible** and its **colour tints the asteroid**
+  (reuse `_Sc_Light` + the system sun colour; a fixed/slow sun, no cycle).
+- **Life:** essentially none — **at most rare crystal creatures** and a **rare crystal biome**
+  (crystalline growths). Mostly a mining/exploration spot.
+- Server marks the body `Airless` + `SpaceSky` + crystal-biased generation; the client skips the
+  day/night sky there and keeps the starfield + sun.
+
+### Space stations — NEW (planned)
+Boardable **space stations** that exist in a system, **near planets**:
+
+- Stations of **varying size — small to huge** — placed in the system (orbit / near a planet),
+  reachable via free flight / the star map; you **dock** (M18) and **board** to walk inside.
+- **Interiors:** landing **hangars**, multiple **rooms/corridors**, with interactive points —
+  **NPC traders** (buy/sell resources & gear), **aliens/other NPCs**, **mission boards** (take
+  station missions), repair/refuel, maybe shared storage. Built as voxel/prefab interiors and
+  scaled by station size; bigger stations have more hangars/rooms/vendors.
+- Reuses existing patterns: docking (M18), the **ship-as-place** interior + station-interaction
+  system (M23a-2), missions (M13/M23), and a new **trading** system (vendor inventories + prices,
+  server-authoritative). NPCs tie into the creature/AI work.
+- Server owns station placement, interiors, vendor stock/prices and mission boards; clients
+  render the station + interior and use dock/board/trade/mission interactions.
+
 ### Ships: types, designs, expandable interiors & multiple owned ships — **slice DONE / extras planned**
 Implemented (server + data + minimal UI): data-driven `data/ships.json` (starter/hauler/scout)
 + `ShipDefinition` in content; an owned-ships registry with an active ship; `CraftShip`
