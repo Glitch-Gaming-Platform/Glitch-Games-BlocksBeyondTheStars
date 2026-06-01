@@ -115,10 +115,19 @@ namespace Spacecraft.Client
             space.Game = boot;
             space.Camera = cam;
 
+            // Space radar HUD (M27 polish).
+            var radar = root.AddComponent<SpaceRadar>();
+            radar.Game = boot;
+            radar.Camera = cam;
+
             // Day/night + weather + sun colour (World systems).
             var sky = root.AddComponent<Sky>();
             sky.Game = boot;
             sky.Camera = cam;
+
+            // Weather overlay (rain + lightning, M27 polish).
+            var weather = root.AddComponent<WeatherFx>();
+            weather.Game = boot;
 
             // Procedural creatures / fauna (World systems §12).
             var creatures = root.AddComponent<CreatureView>();

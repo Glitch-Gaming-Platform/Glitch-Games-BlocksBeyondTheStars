@@ -26,6 +26,7 @@ namespace Spacecraft.Client
 
         private GameObject _root;
         private GameObject _ship;
+        private Transform _exhaust;
         private AudioSource _engine;
         private readonly Dictionary<string, GameObject> _entities = new Dictionary<string, GameObject>();
 
@@ -88,6 +89,15 @@ namespace Spacecraft.Client
             {
                 _engine.volume = Mathf.MoveTowards(_engine.volume, _phase == Phase.Cruise ? 0.25f : 0.12f, Time.deltaTime * 0.5f);
                 _engine.pitch = 1f + 0.2f * Mathf.Clamp01(Mathf.Abs(Input.GetAxis("Vertical")));
+            }
+
+            // Thruster exhaust stretches + flickers with throttle.
+            if (_exhaust != null)
+            {
+                float throttle = _phase == Phase.Cruise ? Mathf.Clamp01(Input.GetAxis("Vertical")) : 0.15f;
+                float len = 0.6f + throttle * 2.6f + Mathf.Sin(Time.time * 28f) * 0.12f;
+                _exhaust.localScale = new Vector3(0.6f, 0.6f, len);
+                _exhaust.localPosition = new Vector3(0f, 0f, -2.0f - len * 0.5f);
             }
         }
 
@@ -229,6 +239,7 @@ namespace Spacecraft.Client
 
             _entities.Clear();
             _ship = null;
+            _exhaust = null;
             _active = false;
             Game.SpaceViewActive = false;
         }
@@ -283,6 +294,10 @@ namespace Spacecraft.Client
             Cube("WingR", ship.transform, new Vector3(1.3f, 0f, -0.3f), new Vector3(1.2f, 0.2f, 1.4f), hull);
             Cube("Cockpit", ship.transform, new Vector3(0f, 0.5f, 1.2f), new Vector3(0.9f, 0.6f, 1.0f), glass);
             Cube("Engine", ship.transform, new Vector3(0f, 0f, -1.9f), new Vector3(1.0f, 0.7f, 0.5f), engine);
+
+            // Glowing thruster exhaust (stretches with throttle in Update).
+            var ex = Cube("Exhaust", ship.transform, new Vector3(0f, 0f, -2.4f), new Vector3(0.6f, 0.6f, 1f), Unlit(new Color(0.6f, 0.85f, 1f)));
+            _exhaust = ex.transform;
             return ship;
         }
 
