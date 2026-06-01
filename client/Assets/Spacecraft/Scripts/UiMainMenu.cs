@@ -40,10 +40,25 @@ namespace Spacecraft.Client
             UiKit.AddButton(root, bx, by + gap * 3f, bw, bh, shell.L("ui.menu.credits"), () => shell.GoTo(ShellPhase.Credits));
             UiKit.AddButton(root, bx, by + gap * 4f, bw, bh, shell.L("ui.menu.quit"), shell.Quit);
 
-            // --- Tagline ---
-            UiKit.AddText(root, 90f, 1000f, 760f, 28f, shell.L("ui.splash.tagline"), 20, UiKit.CyanDim, TextAnchor.MiddleLeft, FontStyle.Bold);
+            // --- World / server info panel (bottom-right, decorative) ---
+            UiKit.AddPanel(root, 1290f, 650f, 590f, 250f, UiKit.PanelFill);
+            UiKit.AddText(root, 1314f, 666f, 540f, 24f, "WORLD / SERVER INFO", 16, UiKit.Cyan, TextAnchor.MiddleLeft, FontStyle.Bold);
+            AddInfo(root, 706f, "MODE: SURVIVAL", "Gather resources, craft, build, survive.");
+            AddInfo(root, 770f, "MULTIPLAYER READY", "Play with friends or host your own server.");
+            AddInfo(root, 834f, "PROCEDURAL WORLDS", "Infinite worlds, unique every time.");
+
+            // --- Bottom bar ---
+            UiKit.AddText(root, 90f, 1030f, 400f, 26f, "JOIN THE COMMUNITY", 16, UiKit.CyanDim, TextAnchor.MiddleLeft, FontStyle.Bold);
+            UiKit.AddText(root, 660f, 1030f, 600f, 26f, shell.L("ui.splash.tagline"), 18, UiKit.Cyan, TextAnchor.MiddleCenter, FontStyle.Bold);
+            UiKit.AddText(root, 1480f, 1030f, 400f, 26f, "WISHLIST ON STEAM!", 16, UiKit.Cyan, TextAnchor.MiddleRight, FontStyle.Bold);
 
             return canvas.gameObject;
+        }
+
+        private static void AddInfo(Transform root, float y, string title, string desc)
+        {
+            UiKit.AddText(root, 1314f, y, 540f, 22f, title, 17, UiKit.TextCol, TextAnchor.MiddleLeft, FontStyle.Bold);
+            UiKit.AddText(root, 1314f, y + 24f, 540f, 22f, desc, 14, UiKit.CyanDim, TextAnchor.MiddleLeft);
         }
     }
 }

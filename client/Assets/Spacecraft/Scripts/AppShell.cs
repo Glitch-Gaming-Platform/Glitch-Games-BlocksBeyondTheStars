@@ -203,13 +203,17 @@ namespace Spacecraft.Client
         }
 
         private GameObject _uiMenu;
+        private GameObject _uiLoading;
+
+        /// <summary>Time-based loading progress (0..1) for the uGUI loading bar.</summary>
+        public float LoadingProgress => _loading.Progress;
 
         private void Update()
         {
             _splash.Update();
             _loading.Update();
 
-            // The main menu is uGUI (M27): spawn it for the MainMenu phase, tear it down otherwise.
+            // The main menu + loading are uGUI (M27): spawn each for its phase, tear it down otherwise.
             if (Phase == ShellPhase.MainMenu && _uiMenu == null)
             {
                 _uiMenu = UiMainMenu.Build(this);
@@ -218,6 +222,16 @@ namespace Spacecraft.Client
             {
                 Destroy(_uiMenu);
                 _uiMenu = null;
+            }
+
+            if (Phase == ShellPhase.Loading && _uiLoading == null)
+            {
+                _uiLoading = UiLoading.Build(this);
+            }
+            else if (Phase != ShellPhase.Loading && _uiLoading != null)
+            {
+                Destroy(_uiLoading);
+                _uiLoading = null;
             }
 
             if (Input.GetKeyDown(KeyCode.Escape))
@@ -266,7 +280,7 @@ namespace Spacecraft.Client
                 case ShellPhase.MainMenu: break; // uGUI (UiMainMenu) draws this phase
                 case ShellPhase.Settings: _settings.Draw(); break;
                 case ShellPhase.Credits: DrawCredits(); break;
-                case ShellPhase.Loading: _loading.Draw(); break;
+                case ShellPhase.Loading: break; // uGUI (UiLoading) draws this phase
                 case ShellPhase.InGame: break; // GameBootstrap + Hud own the screen
             }
         }

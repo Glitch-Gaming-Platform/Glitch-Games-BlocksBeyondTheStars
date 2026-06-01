@@ -15,6 +15,9 @@ namespace Spacecraft.Client
         /// <summary>How long to hold the loading screen before launching (raised when hosting a local server).</summary>
         public float MinShow = 0.6f;
 
+        /// <summary>Time-based load progress 0..1 (no real asset/world progress reported yet).</summary>
+        public float Progress => MinShow <= 0f ? 1f : Mathf.Clamp01(_elapsed / MinShow);
+
         public LoadingScreen(AppShell shell) => _shell = shell;
 
         public void Update()

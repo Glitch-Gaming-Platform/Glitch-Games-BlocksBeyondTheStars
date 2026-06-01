@@ -22,6 +22,30 @@ namespace Spacecraft.Client
         private static Font _font;
         private static Sprite _panelSprite;
         private static Sprite _buttonSprite;
+        private static Sprite _solidSprite;
+
+        /// <summary>A plain white sprite (tint via Image.color) — used for fills/bars.</summary>
+        public static Sprite SolidSprite
+        {
+            get
+            {
+                if (_solidSprite == null)
+                {
+                    var tex = new Texture2D(4, 4, TextureFormat.RGBA32, false);
+                    var px = new Color[16];
+                    for (int i = 0; i < px.Length; i++)
+                    {
+                        px[i] = Color.white;
+                    }
+
+                    tex.SetPixels(px);
+                    tex.Apply();
+                    _solidSprite = Sprite.Create(tex, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 100f);
+                }
+
+                return _solidSprite;
+            }
+        }
 
         public static Font Font =>
             _font != null ? _font
@@ -73,6 +97,19 @@ namespace Spacecraft.Client
             var img = go.AddComponent<Image>();
             img.sprite = PanelSprite;
             img.type = Image.Type.Sliced;
+            img.color = color;
+            img.raycastTarget = false;
+            return img;
+        }
+
+        public static Image AddImage(Transform parent, float x, float y, float w, float h, Sprite sprite, Color color, Image.Type type = Image.Type.Simple)
+        {
+            var go = new GameObject("Image", typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            Place(go, x, y, w, h);
+            var img = go.AddComponent<Image>();
+            img.sprite = sprite;
+            img.type = type;
             img.color = color;
             img.raycastTarget = false;
             return img;
