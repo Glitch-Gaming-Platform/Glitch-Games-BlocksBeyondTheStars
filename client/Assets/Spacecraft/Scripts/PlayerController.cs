@@ -33,6 +33,8 @@ namespace Spacecraft.Client
         private float _verticalVelocity;
         private float _moveSendTimer;
         private bool _spawned;
+        private Vector3 _spawnPos;
+        private bool _settling;
         private bool _wasGrounded = true;
         private float _stepTimer;
 
@@ -56,11 +58,25 @@ namespace Spacecraft.Client
             // Snap to the server's authoritative spawn once it is known, then take over.
             if (!_spawned && Game != null && Game.ServerSpawn.HasValue)
             {
-                _controller.enabled = false;
-                transform.position = Game.ServerSpawn.Value;
-                _controller.enabled = true;
-                _verticalVelocity = 0f;
+                _spawnPos = Game.ServerSpawn.Value;
+                SnapTo(_spawnPos);
                 _spawned = true;
+                _settling = true; // hold near spawn until the ground/ship chunk streams in
+            }
+
+            // While terrain is still streaming the spawn chunk may have no collider yet, so the
+            // player would fall straight through. Keep pulling them back to spawn until they land on
+            // real ground — prevents spawning underground in a cave when chunks load slowly (builds).
+            if (_settling && Game != null)
+            {
+                if (_controller.isGrounded)
+                {
+                    _settling = false;
+                }
+                else if (transform.position.y < _spawnPos.y - 3f)
+                {
+                    SnapTo(_spawnPos);
+                }
             }
 
             // The space view owns the camera and freezes on-foot control entirely.
@@ -327,6 +343,15 @@ namespace Spacecraft.Client
 
             Game.SelectedHotbarSlot = slot;
             Game.Network?.SendSelectHotbar(slot);
+        }
+
+        /// <summary>Teleports the player (CharacterController toggled so the move isn't blocked) and zeroes fall speed.</summary>
+        private void SnapTo(Vector3 pos)
+        {
+            _controller.enabled = false;
+            transform.position = pos;
+            _controller.enabled = true;
+            _verticalVelocity = 0f;
         }
 
         private void ApplyGravityOnly()
