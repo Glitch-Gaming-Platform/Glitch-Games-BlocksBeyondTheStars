@@ -16,6 +16,7 @@ namespace Spacecraft.Client
         public Camera Camera;
 
         private static readonly int LightId = Shader.PropertyToID("_Sc_Light");
+        private static readonly int SunDirId = Shader.PropertyToID("_Sc_SunDir");
 
         private Light _sun;
         private float _time;        // local 0..1 day fraction
@@ -95,6 +96,8 @@ namespace Spacecraft.Client
                 _sun.color = sunColor;
                 _sun.intensity = brightness;
                 _sun.transform.rotation = Quaternion.Euler(time * 360f - 90f, 160f, 0f);
+                // The lit block shader reads the sun direction from this global (direction TO the sun).
+                Shader.SetGlobalVector(SunDirId, -_sun.transform.forward);
             }
         }
 
