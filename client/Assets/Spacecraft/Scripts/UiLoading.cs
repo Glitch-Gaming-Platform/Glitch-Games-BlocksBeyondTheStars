@@ -20,10 +20,12 @@ namespace Spacecraft.Client
             UiKit.AddPanel(root, 40f, 40f, 280f, 200f, UiKit.PanelFill);
             UiKit.AddText(root, 60f, 54f, 250f, 22f, shell.L("ui.menu.system_check"), 16, UiKit.Cyan, TextAnchor.MiddleLeft, FontStyle.Bold);
             string[] sysKeys = { "ui.sys.engines", "ui.sys.shields", "ui.sys.life_support", "ui.sys.comms", "ui.sys.navigation" };
+            string[] sysIcons = { "sys_engines", "sys_shields", "sys_life", "sys_comms", "sys_nav" };
             for (int i = 0; i < sysKeys.Length; i++)
             {
                 float yy = 92f + i * 28f;
-                UiKit.AddText(root, 60f, yy, 190f, 22f, shell.L(sysKeys[i]), 15, UiKit.TextCol);
+                UiKit.AddIcon(root, 46f, yy, 18f, sysIcons[i]);
+                UiKit.AddText(root, 72f, yy, 178f, 22f, shell.L(sysKeys[i]), 15, UiKit.TextCol);
                 UiKit.AddText(root, 250f, yy, 50f, 22f, shell.L("ui.sys.ok"), 15, UiKit.Ok, TextAnchor.MiddleLeft, FontStyle.Bold);
             }
 

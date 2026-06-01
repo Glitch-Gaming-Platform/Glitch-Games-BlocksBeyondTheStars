@@ -176,7 +176,7 @@ namespace Spacecraft.Client
             AddText(parent, x, y, w, h, text, size, new Color(0.93f, 0.97f, 1f), TextAnchor.MiddleLeft, FontStyle.Bold);
         }
 
-        public static Button AddButton(Transform parent, float x, float y, float w, float h, string label, System.Action onClick)
+        public static Button AddButton(Transform parent, float x, float y, float w, float h, string label, System.Action onClick, string icon = null)
         {
             var go = new GameObject("Button", typeof(RectTransform));
             go.transform.SetParent(parent, false);
@@ -200,7 +200,13 @@ namespace Spacecraft.Client
                 btn.onClick.AddListener(() => onClick());
             }
 
-            AddText(go.transform, 18f, 0f, w - 28f, h, label, 22, TextCol, TextAnchor.MiddleLeft, FontStyle.Bold);
+            float textX = 18f;
+            if (!string.IsNullOrEmpty(icon) && AddIcon(go.transform, 14f, (h - 30f) / 2f, 30f, icon) != null)
+            {
+                textX = 56f;
+            }
+
+            AddText(go.transform, textX, 0f, w - textX - 10f, h, label, 22, TextCol, TextAnchor.MiddleLeft, FontStyle.Bold);
             return btn;
         }
 

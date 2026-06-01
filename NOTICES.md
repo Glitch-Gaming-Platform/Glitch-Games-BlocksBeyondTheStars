@@ -13,8 +13,13 @@ for the exact prompts and `docs/SOUND_DESIGN.md` for the catalogue. They are AI-
 for the generating account's plan. Background **music** and the remaining UI/feedback cues stay
 **generated procedurally in code** (`ClientMusic`, `ClientAudio`).
 
-**No third-party textures, models or fonts** are bundled — all visuals remain runtime-generated
-(vertex/atlas block colours, code-built avatars, procedural icons/IMGUI). See
+**UI icons:** `client/Assets/Resources/icons/*.png` (14 files) are **AI-generated** with the
+**OpenAI** image API (`gpt-image-1-mini`, transparent cyan line icons — see
+`tools/ai-assets/gen_icons.py`); they are AI-synthesised images, use governed by the OpenAI
+usage terms for the generating account.
+
+**No third-party models or fonts** are bundled — the rest of the visuals remain runtime-generated
+(vertex/atlas block colours, code-built avatars + logo, procedural UI panels). See
 `docs/CLIENT_SHELL_AND_ASSETS.md` for the placeholder strategy and asset folder layout.
 
 When real assets are added, list each here as:
