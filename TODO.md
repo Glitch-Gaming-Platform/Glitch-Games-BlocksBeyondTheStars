@@ -361,6 +361,12 @@ consumes protocol messages that already exist.
 - **(NEW, to verify) Space stations + NPCs:** confirm space stations are actually anchored/placed
   in-world and reachable, and whether they are **populated with NPCs** (station NPC population is
   currently listed as planned).
+- **(NEW, design question) More professional look with effects:** a polish pass to lift the overall
+  look — clarify target tier + ordering first (preset-gated). Directions: post stack (bloom on
+  emissives/sun, tonemap + per-biome colour grading, AO, subtle vignette/film grain), anti-aliasing,
+  god rays from the sun, soft shadows, animated emissive water/lava, atmospheric scattering + nicer
+  skies/denser stars, particles (dust/sparks/muzzle/engine trails), camera feel (head-bob, FOV kick,
+  impact shake), UI motion (transitions, holographic scanlines/glow).
 - **(NEW, design question) Crafting/Tech/Ships menu redesign:** the Tab menu's Crafting, Tech and Ship
   tabs are cluttered + hard to scan. Clarify a clearer design first, then build (likely uGUI). Directions
   to explore: category sidebar (tools/weapons/blocks/modules/equipment), search/filter, a "craftable now"
