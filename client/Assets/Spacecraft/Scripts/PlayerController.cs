@@ -33,6 +33,8 @@ namespace Spacecraft.Client
         private float _verticalVelocity;
         private float _moveSendTimer;
         private bool _spawned;
+        private bool _wasGrounded = true;
+        private float _stepTimer;
 
         private void Awake() => _controller = GetComponent<CharacterController>();
 
@@ -117,6 +119,7 @@ namespace Spacecraft.Client
                 return;
             }
 
+            PlayWeaponSound();
             string nearest = null;
             float bestSq = 6f * 6f; // attack reach
             foreach (var e in Game.PlanetEnemies)
@@ -167,6 +170,7 @@ namespace Spacecraft.Client
 
             if (nearest != null)
             {
+                ClientAudio.Instance?.Cue("loot");
                 Game.Network.SendLootContainer(nearest);
             }
         }
@@ -258,7 +262,10 @@ namespace Spacecraft.Client
                 case "cockpit": Menu?.OpenMap(); break;
                 case "workshop": Menu?.OpenCrafting(); break;
                 case "cargo": Menu?.OpenInventory(); break;
-                default: Game.Network?.SendUseStation(Game.NearbyStation); break; // medbay, quarters
+                default:
+                    if (Game.NearbyStation == "medbay") ClientAudio.Instance?.Cue("heal");
+                    Game.Network?.SendUseStation(Game.NearbyStation);
+                    break; // medbay, quarters
             }
         }
 
@@ -331,8 +338,14 @@ namespace Spacecraft.Client
             float v = Input.GetAxis("Vertical");
             Vector3 move = (transform.right * h + transform.forward * v) * MoveSpeed;
 
-            if (_controller.isGrounded)
+            bool grounded = _controller.isGrounded;
+            if (grounded)
             {
+                if (Input.GetButtonDown("Jump"))
+                {
+                    ClientAudio.Instance?.Cue("jump", 0.6f);
+                }
+
                 _verticalVelocity = Input.GetButton("Jump") ? JumpSpeed : -1f;
             }
             else
@@ -342,6 +355,65 @@ namespace Spacecraft.Client
 
             move.y = _verticalVelocity;
             _controller.Move(move * Time.deltaTime);
+
+            // Footsteps while walking on the ground; landing thud after a fall.
+            if (grounded && Mathf.Abs(h) + Mathf.Abs(v) > 0.1f)
+            {
+                _stepTimer -= Time.deltaTime;
+                if (_stepTimer <= 0f)
+                {
+                    _stepTimer = 0.45f;
+                    ClientAudio.Instance?.Cue(SurfaceStep(), 0.45f);
+                }
+            }
+            else
+            {
+                _stepTimer = 0f;
+            }
+
+            if (grounded && !_wasGrounded)
+            {
+                ClientAudio.Instance?.Cue("land", 0.6f);
+            }
+
+            _wasGrounded = grounded;
+        }
+
+        /// <summary>Picks the footstep clip from the block under the player's feet (key heuristic).</summary>
+        private string SurfaceStep()
+        {
+            if (Game?.World == null || Game.Content == null)
+            {
+                return "step_rock";
+            }
+
+            var p = transform.position;
+            var def = Game.Content.BlockById(Game.World.GetBlock(
+                Mathf.FloorToInt(p.x), Mathf.FloorToInt(p.y - 0.5f), Mathf.FloorToInt(p.z)));
+            string k = def?.Key ?? string.Empty;
+            if (k.Contains("iron") || k.Contains("metal") || k.Contains("steel")) return "step_metal";
+            if (k.Contains("sand")) return "step_sand";
+            if (k.Contains("grass")) return "step_grass";
+            if (k.Contains("snow") || k.Contains("ice")) return "step_snow";
+            return "step_rock";
+        }
+
+        /// <summary>Plays the firing/swing sound for the currently held weapon (if any).</summary>
+        private void PlayWeaponSound()
+        {
+            var audio = ClientAudio.Instance;
+            if (audio == null)
+            {
+                return;
+            }
+
+            switch (Game.ItemInSlot(Game.SelectedHotbarSlot))
+            {
+                case "gauss_pistol": audio.Cue("weapon_gauss"); break;
+                case "laser_pistol": audio.Cue("weapon_laser"); break;
+                case "plasma_blaster": audio.Cue("weapon_plasma"); break;
+                default: audio.Cue("melee_swing"); break; // melee weapons, tools, fists
+            }
         }
 
         private void HandleInteract()

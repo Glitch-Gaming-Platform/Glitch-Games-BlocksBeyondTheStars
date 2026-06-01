@@ -1,39 +1,57 @@
+using System.Collections.Generic;
 using Spacecraft.Networking.Messages;
 using UnityEngine;
 
 namespace Spacecraft.Client
 {
     /// <summary>
-    /// Procedural sound effects (M26): short tones generated in code (no bundled audio assets
-    /// yet) played on gameplay events — mining/placing, craft success/failure, rejections and
-    /// ship hits. Respects the master/SFX volumes from <see cref="ClientSettings"/>. Real
-    /// recorded SFX + music replace these later (see CLIENT_COMPLETION_PLAN / NOTICES).
+    /// The game's audio router (M26). Loads the bundled SFX from <c>Resources/audio</c> and plays
+    /// them on gameplay events; falls back to a few code-synth tones where no recording exists
+    /// (craft / reject / scan). Other components reach it through the static <see cref="Instance"/>
+    /// — <see cref="Cue"/> for 2D one-shots, <see cref="At"/> for 3D positional sounds (creatures),
+    /// <see cref="SetAmbience"/> for the looping weather bed. Respects master/SFX volumes from
+    /// <see cref="ClientSettings"/>. Recorded SFX are ElevenLabs-generated (see NOTICES / SOUND_DESIGN).
     /// </summary>
     public sealed class ClientAudio : MonoBehaviour
     {
         public GameBootstrap Game;
         public ClientSettings Settings;
 
-        private AudioSource _src;
-        private AudioSource _hum;   // looping ship ambience, faded in while aboard
-        private AudioClip _dig, _place, _ok, _err, _hit, _blip;
+        /// <summary>Set in Awake so any component can play a cue without a wired reference.</summary>
+        public static ClientAudio Instance { get; private set; }
+
+        private readonly Dictionary<string, AudioClip> _clips = new Dictionary<string, AudioClip>();
+        private AudioSource _src;       // 2D one-shots
+        private AudioSource _ambience;  // looping weather bed
+        private AudioSource _hum;       // looping ship interior hum (procedural)
+
+        private AudioClip _ok, _err, _blip; // procedural fallbacks (no recorded equivalent)
+
         private bool _subscribed;
-        private float _lastHull = -1f;
+        private float _lastHull = -1f, _lastShield = -1f;
+        private string _ambienceId = string.Empty;
+        private float _thunderTimer;
+        private readonly System.Random _rng = new System.Random();
 
         private void Awake()
         {
+            Instance = this;
+
+            foreach (var clip in Resources.LoadAll<AudioClip>("audio"))
+            {
+                _clips[clip.name] = clip;
+            }
+
             _src = gameObject.AddComponent<AudioSource>();
             _src.playOnAwake = false;
-            _src.spatialBlend = 0f; // 2D UI/feedback sounds
+            _src.spatialBlend = 0f;
 
-            _dig = Tone(180f, 0.08f, 0.4f);
-            _place = Tone(330f, 0.07f, 0.4f);
-            _ok = Tone(660f, 0.12f, 0.4f);
-            _err = Tone(110f, 0.20f, 0.5f);
-            _hit = Tone(90f, 0.16f, 0.6f);
-            _blip = Tone(900f, 0.06f, 0.35f); // scanner readout
+            _ambience = gameObject.AddComponent<AudioSource>();
+            _ambience.playOnAwake = false;
+            _ambience.loop = true;
+            _ambience.spatialBlend = 0f;
+            _ambience.volume = 0f;
 
-            // A low, looping hull hum that fades in while the player is aboard the ship.
             _hum = gameObject.AddComponent<AudioSource>();
             _hum.playOnAwake = true;
             _hum.loop = true;
@@ -41,64 +59,175 @@ namespace Spacecraft.Client
             _hum.clip = Hum();
             _hum.volume = 0f;
             _hum.Play();
+
+            _ok = Tone(660f, 0.12f, 0.4f);
+            _err = Tone(110f, 0.20f, 0.5f);
+            _blip = Tone(900f, 0.06f, 0.35f);
         }
 
         private void Update()
         {
             if (!_subscribed && Game?.Network != null)
             {
-                Game.Network.BlockChanged += OnBlock;
-                Game.Network.CraftCompleted += m => Play(m.Success ? _ok : _err);
-                Game.Network.ActionRejected += _ => Play(_err);
-                Game.Network.ShipCombatStatusChanged += OnShip;
-                Game.Network.ScanResultReceived += _ => Play(_blip);
+                var n = Game.Network;
+                n.BlockChanged += OnBlock;
+                n.CraftCompleted += m => Play2D(m.Success ? _ok : _err);
+                n.ActionRejected += _ => Play2D(_err);
+                n.ScanResultReceived += _ => Play2D(_blip);
+                n.ShipCombatStatusChanged += OnShip;
+                n.SpaceEntityDestroyed += _ => Cue("asteroid_break");
+                n.SpaceClosed += m => { if (m.ShipDisabled) Cue("ship_destroyed"); };
+                n.WorldEnvironmentReceived += OnEnvironment;
                 _subscribed = true;
             }
 
-            // Ship ambience swells while aboard, fades out on foot.
+            float sfx = SfxVol();
+
+            // Ship interior hum swells while aboard, fades out on foot.
             if (_hum != null)
             {
-                float master = Settings?.MasterVolume ?? 0.8f;
-                float sfx = Settings?.SfxVolume ?? 0.8f;
-                float target = (Game != null && Game.Aboard) ? master * sfx * 0.45f : 0f;
+                float target = (Game != null && Game.Aboard) ? sfx * 0.45f : 0f;
                 _hum.volume = Mathf.MoveTowards(_hum.volume, target, Time.deltaTime * 0.6f);
             }
-        }
 
-        private void OnBlock(BlockChanged m) => Play(m.Block == 0 ? _dig : _place); // 0 = air ⇒ mined
-
-        private void OnShip(ShipCombatStatus s)
-        {
-            if (_lastHull >= 0f && s.Hull < _lastHull - 0.1f)
+            // Weather bed fades to a level scaled by weather intensity.
+            if (_ambience != null && _ambience.clip != null)
             {
-                Play(_hit);
+                float intensity = Game?.Environment?.Intensity ?? 0.4f;
+                float target = sfx * Mathf.Clamp(0.2f + 0.45f * intensity, 0.18f, 0.6f);
+                _ambience.volume = Mathf.MoveTowards(_ambience.volume, target, Time.deltaTime * 0.5f);
             }
 
-            _lastHull = s.Hull;
+            // Occasional thunder during storms.
+            if (Game?.Environment != null && Game.Environment.Weather == "storm")
+            {
+                _thunderTimer -= Time.deltaTime;
+                if (_thunderTimer <= 0f)
+                {
+                    _thunderTimer = 8f + (float)_rng.NextDouble() * 12f;
+                    Cue("thunder_" + (1 + _rng.Next(3)));
+                }
+            }
         }
 
-        private void Play(AudioClip clip)
+        // --- public cue API (used by other components via Instance) ---
+
+        /// <summary>Plays a 2D one-shot by clip name (no-op if missing).</summary>
+        public void Cue(string id, float vol = 1f)
         {
-            if (clip == null)
+            if (_clips.TryGetValue(id, out var clip))
+            {
+                Play2D(clip, vol);
+            }
+        }
+
+        /// <summary>Plays a 3D positional one-shot by clip name, with an optional pitch (creatures).</summary>
+        public void At(string id, Vector3 pos, float pitch = 1f, float vol = 1f)
+        {
+            if (!_clips.TryGetValue(id, out var clip) || clip == null)
             {
                 return;
             }
 
+            var go = new GameObject("sfx_" + id);
+            go.transform.position = pos;
+            var src = go.AddComponent<AudioSource>();
+            src.clip = clip;
+            src.spatialBlend = 1f;
+            src.minDistance = 4f;
+            src.maxDistance = 45f;
+            src.pitch = pitch;
+            src.volume = Mathf.Clamp01(vol * SfxVol());
+            src.Play();
+            Destroy(go, clip.length / Mathf.Max(0.1f, pitch) + 0.2f);
+        }
+
+        /// <summary>Switches the looping weather/ambience bed (crossfades via the volume in Update).</summary>
+        public void SetAmbience(string id)
+        {
+            if (_ambience == null || id == _ambienceId || !_clips.TryGetValue(id, out var clip))
+            {
+                return;
+            }
+
+            _ambienceId = id;
+            _ambience.clip = clip;
+            _ambience.volume = 0f;
+            _ambience.Play();
+        }
+
+        private void OnEnvironment(WorldEnvironment e)
+        {
+            string id = e.Weather switch
+            {
+                "storm" => "storm_loop",
+                "rain" => "rain_loop",
+                "clouds" => "wind_strong",
+                _ => "wind_light",
+            };
+            SetAmbience(id);
+        }
+
+        private void OnBlock(BlockChanged m)
+        {
+            if (m.Block == 0)
+            {
+                // Mined → a random material variant for variety (material-accurate later).
+                string[] v = { "mine_stone", "mine_metal", "mine_crystal", "mine_dirt" };
+                Cue(v[_rng.Next(v.Length)]);
+            }
+            else
+            {
+                Cue("place_block");
+            }
+        }
+
+        private void OnShip(ShipCombatStatus s)
+        {
+            if (_lastShield >= 0f && s.Shield < _lastShield - 0.1f)
+            {
+                Cue("ship_shield_hit");
+            }
+            else if (_lastHull >= 0f && s.Hull < _lastHull - 0.1f)
+            {
+                Cue("ship_hull_hit");
+            }
+
+            _lastHull = s.Hull;
+            _lastShield = s.Shield;
+        }
+
+        private void Play2D(AudioClip clip, float vol = 1f)
+        {
+            if (clip != null)
+            {
+                _src.PlayOneShot(clip, Mathf.Clamp01(vol * SfxVol()));
+            }
+        }
+
+        private float SfxVol()
+        {
             float master = Settings?.MasterVolume ?? 0.8f;
             float sfx = Settings?.SfxVolume ?? 0.8f;
-            _src.PlayOneShot(clip, Mathf.Clamp01(master * sfx));
+            return master * sfx;
         }
 
         private void OnDestroy()
         {
+            if (Instance == this)
+            {
+                Instance = null;
+            }
+
             if (_subscribed && Game?.Network != null)
             {
                 Game.Network.BlockChanged -= OnBlock;
                 Game.Network.ShipCombatStatusChanged -= OnShip;
+                Game.Network.WorldEnvironmentReceived -= OnEnvironment;
             }
         }
 
-        /// <summary>Generates a short decaying sine tone as an <see cref="AudioClip"/>.</summary>
+        /// <summary>Generates a short decaying sine tone as a fallback <see cref="AudioClip"/>.</summary>
         private static AudioClip Tone(float frequency, float duration, float volume)
         {
             const int rate = 44100;
@@ -108,7 +237,7 @@ namespace Spacecraft.Client
             for (int i = 0; i < samples; i++)
             {
                 float t = i / (float)rate;
-                float envelope = Mathf.Exp(-t * 12f); // quick percussive decay
+                float envelope = Mathf.Exp(-t * 12f);
                 data[i] = Mathf.Sin(2f * Mathf.PI * frequency * t) * envelope * volume;
             }
 
@@ -120,7 +249,7 @@ namespace Spacecraft.Client
         private static AudioClip Hum()
         {
             const int rate = 44100;
-            const float duration = 2f; // 80 Hz and 120 Hz complete whole cycles in 2 s ⇒ seamless
+            const float duration = 2f;
             int samples = Mathf.CeilToInt(rate * duration);
             var clip = AudioClip.Create("hum", samples, 1, rate, false);
             var data = new float[samples];
@@ -129,7 +258,7 @@ namespace Spacecraft.Client
             {
                 float t = i / (float)rate;
                 float s = Mathf.Sin(2f * Mathf.PI * 80f * t) * 0.5f + Mathf.Sin(2f * Mathf.PI * 120f * t) * 0.22f;
-                s += (float)(rng.NextDouble() * 2 - 1) * 0.03f; // faint air hiss
+                s += (float)(rng.NextDouble() * 2 - 1) * 0.03f;
                 data[i] = s * 0.5f;
             }
 

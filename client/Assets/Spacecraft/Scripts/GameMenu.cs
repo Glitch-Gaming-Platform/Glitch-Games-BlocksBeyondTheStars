@@ -380,6 +380,7 @@ namespace Spacecraft.Client
                 string weapon = e.Kind == "Asteroid" ? "asteroid_breaker" : "ship_cannon_1";
                 if (GUILayout.Button(loc.Get("ui.action.fire"), GUILayout.Width(110)))
                 {
+                    ClientAudio.Instance?.Cue("ship_weapon");
                     Game.Network?.SendFireWeapon(weapon, e.Id);
                 }
 

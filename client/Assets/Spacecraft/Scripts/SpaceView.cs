@@ -26,6 +26,7 @@ namespace Spacecraft.Client
 
         private GameObject _root;
         private GameObject _ship;
+        private AudioSource _engine;
         private readonly Dictionary<string, GameObject> _entities = new Dictionary<string, GameObject>();
 
         private Transform _camPrevParent;
@@ -63,6 +64,7 @@ namespace Spacecraft.Client
             {
                 _phase = Phase.Landing;
                 _seq = 0f;
+                ClientAudio.Instance?.Cue("ship_landing");
             }
 
             if (Input.GetKeyDown(KeyCode.V))
@@ -80,6 +82,13 @@ namespace Spacecraft.Client
             }
 
             PlaceCamera();
+
+            // Engine loop: swells in cruise, throttle nudges the pitch.
+            if (_engine != null)
+            {
+                _engine.volume = Mathf.MoveTowards(_engine.volume, _phase == Phase.Cruise ? 0.25f : 0.12f, Time.deltaTime * 0.5f);
+                _engine.pitch = 1f + 0.2f * Mathf.Clamp01(Mathf.Abs(Input.GetAxis("Vertical")));
+            }
         }
 
         private void UpdateSequence(bool rising)
@@ -171,6 +180,19 @@ namespace Spacecraft.Client
 
             BuildScene();
 
+            // Launch roar + a looping engine bed for the flight.
+            ClientAudio.Instance?.Cue("ship_launch");
+            var engClip = Resources.Load<AudioClip>("audio/engine_idle");
+            if (engClip != null)
+            {
+                _engine = gameObject.AddComponent<AudioSource>();
+                _engine.clip = engClip;
+                _engine.loop = true;
+                _engine.spatialBlend = 0f;
+                _engine.volume = 0f;
+                _engine.Play();
+            }
+
             _camPrevParent = Camera.transform.parent;
             _camPrevLocalPos = Camera.transform.localPosition;
             _camPrevLocalRot = Camera.transform.localRotation;
@@ -197,6 +219,12 @@ namespace Spacecraft.Client
             {
                 Destroy(_root);
                 _root = null;
+            }
+
+            if (_engine != null)
+            {
+                Destroy(_engine);
+                _engine = null;
             }
 
             _entities.Clear();

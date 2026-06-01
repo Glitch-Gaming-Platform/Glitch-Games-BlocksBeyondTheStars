@@ -6,12 +6,16 @@ asset here **with its licence** before bundling it.
 
 ## Bundled assets (textures, models, audio, fonts)
 
-**None.** The client ships **no third-party art or audio files**. All visuals are
-runtime-generated placeholders (flat/vertex block colours, code-built avatars, IMGUI text) and
-all sound effects are **generated procedurally in code** (`ClientAudio`); there is no texture
-atlas, model, sound/music file or custom font bundled. See
-`docs/CLIENT_SHELL_AND_ASSETS.md` for the placeholder strategy and the asset folder layout
-real assets will drop into later.
+**Sound effects:** `client/Assets/Resources/audio/*.mp3` (92 files) are **AI-generated** with the
+**ElevenLabs** text-to-sound-effects API by the project owner — see `tools/ai-assets/gen_batch.py`
+for the exact prompts and `docs/SOUND_DESIGN.md` for the catalogue. They are AI-synthesised audio
+(not third-party copyrighted recordings); use is governed by the **ElevenLabs Terms of Service**
+for the generating account's plan. Background **music** and the remaining UI/feedback cues stay
+**generated procedurally in code** (`ClientMusic`, `ClientAudio`).
+
+**No third-party textures, models or fonts** are bundled — all visuals remain runtime-generated
+(vertex/atlas block colours, code-built avatars, procedural icons/IMGUI). See
+`docs/CLIENT_SHELL_AND_ASSETS.md` for the placeholder strategy and asset folder layout.
 
 When real assets are added, list each here as:
 

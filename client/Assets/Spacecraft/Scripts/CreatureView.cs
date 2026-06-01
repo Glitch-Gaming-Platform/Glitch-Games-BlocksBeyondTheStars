@@ -18,6 +18,9 @@ namespace Spacecraft.Client
         {
             public GameObject Root;
             public Vector3 Target;
+            public string Bank;   // creature_{size}_{disposition} voice bank
+            public float Pitch;   // shifted by body size for per-creature variety
+            public float NextCall; // Time.time of the next idle vocalisation
         }
 
         private readonly Dictionary<string, Entry> _creatures = new Dictionary<string, Entry>();
@@ -39,13 +42,27 @@ namespace Spacecraft.Client
                     var root = new GameObject("Creature_" + c.SpeciesId);
                     root.transform.position = pos;
                     new CreatureBuilder().Build(root, c);
-                    entry = new Entry { Root = root, Target = pos };
+                    entry = new Entry
+                    {
+                        Root = root,
+                        Target = pos,
+                        Bank = Bank(c),
+                        Pitch = Mathf.Clamp(1.5f - 0.35f * c.Size, 0.7f, 1.6f),
+                        NextCall = Time.time + Random.Range(2f, 6f),
+                    };
                     _creatures[c.Id] = entry;
                 }
 
                 entry.Target = pos;
                 // Smoothly chase the authoritative position (creatures may wander later).
                 entry.Root.transform.position = Vector3.Lerp(entry.Root.transform.position, entry.Target, Time.deltaTime * 8f);
+
+                // Periodic idle vocalisation, spatialised at the creature, pitched by its size.
+                if (Time.time >= entry.NextCall)
+                {
+                    entry.NextCall = Time.time + Random.Range(5f, 12f);
+                    ClientAudio.Instance?.At(entry.Bank + "_idle", entry.Root.transform.position, entry.Pitch, 0.8f);
+                }
             }
 
             if (_creatures.Count > seen.Count)
@@ -61,10 +78,19 @@ namespace Spacecraft.Client
 
                 foreach (var id in stale)
                 {
-                    Destroy(_creatures[id].Root);
+                    var e = _creatures[id];
+                    ClientAudio.Instance?.At(e.Bank + "_die", e.Root.transform.position, e.Pitch, 0.9f);
+                    Destroy(e.Root);
                     _creatures.Remove(id);
                 }
             }
+        }
+
+        /// <summary>Voice bank for a creature: size tier (small/medium/large) x disposition (calm/hostile).</summary>
+        private static string Bank(NetCreature c)
+        {
+            string size = c.Size < 0.8f ? "small" : c.Size < 1.6f ? "medium" : "large";
+            return $"creature_{size}_{(c.Hostile ? "hostile" : "calm")}";
         }
     }
 }
