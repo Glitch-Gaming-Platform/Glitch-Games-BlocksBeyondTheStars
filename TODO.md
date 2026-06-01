@@ -372,6 +372,11 @@ consumes protocol messages that already exist.
   to explore: category sidebar (tools/weapons/blocks/modules/equipment), search/filter, a "craftable now"
   filter, recipe cards (icon + name + ingredient have/need counts, craftable highlighted / missing greyed),
   Tech unlocks as a visual tree, Ship tab as ship cards (stats + cost).
+- **(NEW, planned) Avatar overhaul:** appearance **reflects equipped gear** (armor chest/legs/helmet,
+  suit, lamp, jetpack visible on the body + to other players); **improved avatar model + textures**
+  (better proportions, skinning); **avatar animations** (idle/walk/run/jump/mine/attack/place + tool-use);
+  and a **dedicated avatar texture/skin designer** (menu-based, exports skin JSON/texture, merges in like
+  the other content editors). Builds on the existing `PlayerAvatar` + per-part colour settings.
 - **(NEW, to scope) Animations status:** review existing vs planned — player (walk/mine/attack/place),
   NPC (idle/gesture/walk), equipment-use, and weapon/equipment VFX — and plan the first animation pass.
 - **(NEW, planned) Content editors + merge:** a menu-based **ship-type editor** (build a ship from
