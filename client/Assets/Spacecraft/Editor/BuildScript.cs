@@ -2,6 +2,7 @@
 using System.IO;
 using Spacecraft.Client;
 using UnityEditor;
+using UnityEditor.Build;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 
@@ -37,6 +38,7 @@ namespace Spacecraft.Client.EditorTools
         {
             EnsureLauncherScene();
             EnsureShadersIncluded();
+            EnsureAppIcon();
 
             string outDir = GetArg("-spacecraftOut") ?? "Build/Windows";
             Directory.CreateDirectory(outDir);
@@ -107,6 +109,48 @@ namespace Spacecraft.Client.EditorTools
 
             so.ApplyModifiedProperties();
             AssetDatabase.SaveAssets();
+        }
+
+        private const string IconAssetPath = "Assets/Spacecraft/Icon/spacecraft_icon.png";
+
+        /// <summary>
+        /// Embeds the application icon into Spacecraft.exe and sets the product/company name. The source
+        /// PNG (<see cref="IconAssetPath"/>, regenerate via tools/ai-assets/gen_app_icon.py) is loaded as
+        /// an imported asset (NOT an in-memory texture — PlayerSettings stores an asset reference, which a
+        /// transient Texture2D can't satisfy, and the asset must live outside any Editor folder or the
+        /// player build strips it). It's assigned to every standalone icon size so Windows shows it in
+        /// Explorer and the taskbar.
+        /// </summary>
+        public static void EnsureAppIcon()
+        {
+            PlayerSettings.companyName = "Spacecraft";
+            PlayerSettings.productName = "Spacecraft";
+
+            string absPath = Path.Combine(Application.dataPath, "Spacecraft", "Icon", "spacecraft_icon.png");
+            if (!File.Exists(absPath))
+            {
+                Debug.LogWarning($"App icon not found at {absPath}; building without a custom .exe icon.");
+                return;
+            }
+
+            AssetDatabase.ImportAsset(IconAssetPath, ImportAssetOptions.ForceUpdate);
+            var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(IconAssetPath);
+            if (tex == null)
+            {
+                Debug.LogWarning($"App icon asset could not be loaded from {IconAssetPath}; building without a custom .exe icon.");
+                return;
+            }
+
+            var sizes = PlayerSettings.GetIconSizes(NamedBuildTarget.Standalone, IconKind.Application);
+            var icons = new Texture2D[sizes.Length == 0 ? 1 : sizes.Length];
+            for (int i = 0; i < icons.Length; i++)
+            {
+                icons[i] = tex; // Unity rescales the single source to each required size.
+            }
+
+            PlayerSettings.SetIcons(NamedBuildTarget.Standalone, icons, IconKind.Application);
+            AssetDatabase.SaveAssets();
+            Debug.Log($"App icon embedded ({icons.Length} sizes) from {IconAssetPath}.");
         }
 
         /// <summary>Creates and saves the launcher scene (one AppShell object) if it doesn't exist.</summary>
