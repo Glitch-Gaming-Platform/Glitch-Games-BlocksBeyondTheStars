@@ -372,10 +372,11 @@ consumes protocol messages that already exist.
   skies/denser stars, particles (dust/sparks/muzzle/engine trails), camera feel (head-bob, FOV kick,
   impact shake), UI motion (transitions, holographic scanlines/glow).
 - **(NEW, design question) Crafting/Tech/Ships menu redesign:** the Tab menu's Crafting, Tech and Ship
-  tabs are cluttered + hard to scan. Clarify a clearer design first, then build (likely uGUI). Directions
-  to explore: category sidebar (tools/weapons/blocks/modules/equipment), search/filter, a "craftable now"
-  filter, recipe cards (icon + name + ingredient have/need counts, craftable highlighted / missing greyed),
-  Tech unlocks as a visual tree, Ship tab as ship cards (stats + cost).
+  tabs are cluttered + hard to scan. **Read `plans/ux_verbesserung.md` first** (the full UX concept:
+  location-based interaction, show what's possible/missing/next, previews, recipe cards w/ have-need
+  materials, tech tree as a visual net, ship-expansion preview) and reflect it in the plan. Clarify the
+  design, then build (likely uGUI). Directions: category sidebar (tools/weapons/blocks/modules/equipment),
+  search/filter, a "craftable now" filter, recipe cards, Tech as a visual tree, Ship tab as ship cards.
 - **(NEW, planned) Avatar overhaul:** appearance **reflects equipped gear** (armor chest/legs/helmet,
   suit, lamp, jetpack visible on the body + to other players); **improved avatar model + textures**
   (better proportions, skinning); **avatar animations** (idle/walk/run/jump/mine/attack/place + tool-use);
