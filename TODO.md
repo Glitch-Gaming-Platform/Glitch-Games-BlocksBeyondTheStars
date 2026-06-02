@@ -358,6 +358,10 @@ consumes protocol messages that already exist.
 - **(KNOWN BUG, to fix) Space travel lands on origin:** flying from space to a different planet lands
   the player back on the **departure** planet instead of the destination — investigate the leave-space/
   land flow + destination/system switch + target `WorldEnvironment`. (Reported 2026-06-02.)
+- **(NEW, to verify) World alive on entry:** ensure **flora + fauna are already present** when the
+  player enters a world — flora **grown to a sufficient density** at world-gen (not sparse then filling
+  in slowly via bounded regrowth) and **fauna spawned** near the spawn area (creatures currently spawn
+  over time near surface players). Check the initial population happens at gen/entry, not gradually.
 - **(NEW, to verify) Space stations + NPCs:** confirm space stations are actually anchored/placed
   in-world and reachable, and whether they are **populated with NPCs** (station NPC population is
   currently listed as planned).
