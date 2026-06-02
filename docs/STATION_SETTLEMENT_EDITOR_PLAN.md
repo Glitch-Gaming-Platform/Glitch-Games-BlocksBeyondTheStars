@@ -188,10 +188,13 @@ Add **template pools** the placers consult *before* falling back to procedural �
     **perimeter fence**, and **alien theming** (alien materials + denser growth). Stations — **type-specific
     interiors** (hub consoles, market counter, medbay heal tank, quarters bunks, hangar crates, corridor
     guide lights) + corner ceiling lights in every room.
-  - **Remaining:** station **module-shape** variety (long corridors / round domes) + **exterior** detail
-    (solar panels, antennae, docking arms, tubes — needs the structure bounds to reserve head/edge room);
-    more settlement **size tiers** (hamlet → city) wired at the placement call site; biome-specific
-    settlement theming beyond material.
+  - **DONE (slice 2):** station **exterior detail** — a reserved hull margin + solar-panel wings on
+    exposed faces, roof antennae with beacon tips, and a stepped **command dome** on the hub. Settlements
+    gained **four size tiers** (hamlet → village → town → city) chosen weighted at the placement site,
+    with tier-fitting name suffixes.
+  - **Remaining:** station **module-shape** variety (genuinely different module footprints — long
+    corridors / round modules — needs the shared-wall grid to flex); docking-arm/connector tubes between
+    stations; biome-specific settlement theming beyond the base material.
 
 P1 delivers the requested **"world-gen picks from a list of hand-designed types in addition to
 procedural"** even before the editors exist (author a couple of templates by hand / via the ship-editor-
