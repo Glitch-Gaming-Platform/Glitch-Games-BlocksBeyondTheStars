@@ -386,14 +386,17 @@ consumes protocol messages that already exist.
   **emissive glow**, **HDR nebula skies + atmospheric scattering + god rays**, a **water/lava shader** with
   planar reflections, **GPU detail scatter**, translucency, decals, reflection probes, AA/camera feel.
   Phased + preset-gated; **Phase 0 = decide Built-in RP vs URP migration** (gates SSR/TAA/volumetrics).
-- **(NEW, planned) Crafting/Tech/Ship menu redesign — plan in [docs/CRAFTING_TECH_SHIP_UI_PLAN.md](docs/CRAFTING_TECH_SHIP_UI_PLAN.md).**
-  Redesign the three flat-list tabs to the UX concept (`plans/ux_verbesserung.md`): a **3-pane** screen
-  (category sidebar + card list + detail), **search** + **"craftable now"** filter, **ingredient have/need**
-  (pooled inventory + cargo), **why-blocked** messaging, **tech as a visual tree**, **ship cards** (stats +
-  cost). **Decided:** built in **uGUI** (DPI/resolution-independent — good on high-DPI *and* normal monitors
-  via CanvasScaler + clamped UiScale), **AI category icons**, **location-bound** (Crafting=workshop,
-  Tech=lab, Ship=console), all three together. Needs a small backend add: **sync unlocked blueprints** to
-  the client. Phased P1 foundation → P2 Crafting → P3 Tech → P4 Ship → P5 icons/polish.
+- **Crafting/Tech/Ship menu redesign — DONE** (`1439713`, `ac31c1e`; plan in
+  [docs/CRAFTING_TECH_SHIP_UI_PLAN.md](docs/CRAFTING_TECH_SHIP_UI_PLAN.md)). A **uGUI 3-pane** screen
+  (`CraftingTechShipUI`, DPI/resolution-independent) replacing the three flat lists: category sidebar +
+  searchable card list + detail. **Crafting** (categories, search, "craftable now" filter, ingredient
+  have/need pooled from inventory + cargo, required station/blueprint, why-blocked reason). **Tech**
+  (tiered progression tree by prerequisite depth, status colours, prereqs + unlock cost in detail).
+  **Ship** (module cards, fleet switch, craftable-ship cards with full stats). **Location-bound**
+  (workshop/lab/console — lab + console station tiles added to the ship). Backend syncs
+  `UnlockedBlueprints` to the client; 11 AI category icons; bilingual. *Remaining polish: drawn
+  node-edge graph for Tech, "missing material → where to get it" popover, success animations, the
+  other tabs still IMGUI.*
 - **(NEW, planned) Avatar overhaul:** appearance **reflects equipped gear** (armor chest/legs/helmet,
   suit, lamp, jetpack visible on the body + to other players); **improved avatar model + textures**
   (better proportions, skinning); **avatar animations** (idle/walk/run/jump/mine/attack/place + tool-use);
