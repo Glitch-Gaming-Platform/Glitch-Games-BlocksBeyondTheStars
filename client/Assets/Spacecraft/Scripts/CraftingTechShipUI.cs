@@ -217,13 +217,13 @@ namespace Spacecraft.Client
                     break;
                 case Mode.Inventory:
                     list.Clear();
-                    list.Add(("personal", L("ui.inventory.title"), "cat_all"));
-                    list.Add(("cargo", L("ui.cargo.title"), "cat_modules"));
+                    list.Add(("personal", L("ui.inventory.title"), "cat_inventory"));
+                    list.Add(("cargo", L("ui.cargo.title"), "cat_cargo"));
                     break;
                 case Mode.Missions:
                     list.Clear();
-                    list.Add(("available", L("ui.missions.available"), "cat_tech"));
-                    list.Add(("active", L("ui.missions.active"), "cat_fleet"));
+                    list.Add(("available", L("ui.missions.available"), "cat_mission"));
+                    list.Add(("active", L("ui.missions.active"), "cat_tech"));
                     break;
                 case Mode.Map:
                     list.Clear();
@@ -231,7 +231,7 @@ namespace Spacecraft.Client
                     {
                         foreach (var sys in Game.StarMap.Systems)
                         {
-                            list.Add(("sys:" + sys.Name, "★ " + sys.Name, "cat_buildship"));
+                            list.Add(("sys:" + sys.Name, "★ " + sys.Name, "cat_planet"));
                         }
                     }
 
@@ -242,7 +242,7 @@ namespace Spacecraft.Client
                     break;
                 case Mode.Space:
                     list.Clear();
-                    list.Add(("space", L("ui.tab.space"), "cat_buildship"));
+                    list.Add(("space", L("ui.tab.space"), "cat_target"));
                     break;
             }
 
@@ -459,7 +459,7 @@ namespace Spacecraft.Client
             {
                 bool here = b.Id == map.ActiveLocationId;
                 string status = here ? L("ui.map.here") : $"{b.Kind}  {b.Status}";
-                AddCard(y, b.Name, here ? "cat_all" : "cat_buildship", status, here ? UiKit.Cyan : UiKit.CyanDim,
+                AddCard(y, b.Name, "cat_planet", status, here ? UiKit.Cyan : UiKit.CyanDim,
                     "body:" + b.Id, () => { _selected = "body:" + b.Id; RebuildDetail(); });
                 y += 88f;
             }
@@ -481,7 +481,7 @@ namespace Spacecraft.Client
             foreach (var m in missions)
             {
                 string status = m.Objectives.Length > 0 ? $"{m.Objectives[0].Progress}/{m.Objectives[0].Required}" : string.Empty;
-                AddCard(y, m.Title, "cat_tech", status, UiKit.CyanDim, "mis:" + m.Id, () => { _selected = "mis:" + m.Id; RebuildDetail(); });
+                AddCard(y, m.Title, "cat_mission", status, UiKit.CyanDim, "mis:" + m.Id, () => { _selected = "mis:" + m.Id; RebuildDetail(); });
                 y += 88f;
             }
 
@@ -533,7 +533,7 @@ namespace Spacecraft.Client
             {
                 foreach (var e in space.Entities)
                 {
-                    AddCard(y, e.Kind, "cat_weapons", $"{Mathf.RoundToInt(e.Hull)}/{Mathf.RoundToInt(e.HullMax)}", new Color(1f, 0.6f, 0.5f),
+                    AddCard(y, e.Kind, "cat_target", $"{Mathf.RoundToInt(e.Hull)}/{Mathf.RoundToInt(e.HullMax)}", new Color(1f, 0.6f, 0.5f),
                         "ent:" + e.Id, () => { _selected = "ent:" + e.Id; RebuildDetail(); });
                     y += 88f;
                 }

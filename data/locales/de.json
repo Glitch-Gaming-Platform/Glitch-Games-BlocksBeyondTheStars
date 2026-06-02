@@ -312,6 +312,8 @@
   "ui.tech.materials_missing": "Material fehlt",
   "ui.tech.unlockable": "Freischaltbar",
   "ui.tech.tier": "Stufe",
+  "ui.toggle.on": "An",
+  "ui.toggle.off": "Aus",
   "ui.crafting.missing": "Fehlende Materialien",
   "ui.inventory.title": "Inventar",
   "ui.cargo.title": "Frachtraum",

@@ -50,6 +50,12 @@ ICONS = [
     ("cat_fleet", "two small spaceships side by side"),
     ("cat_buildship", "a rocket with a plus sign"),
     ("cat_tech", "a tech tree of connected nodes"),
+    # Semantic icons for the inventory / map / missions / space tabs.
+    ("cat_inventory", "a backpack"),
+    ("cat_cargo", "a cargo crate box"),
+    ("cat_planet", "a ringed planet"),
+    ("cat_mission", "a clipboard with a checklist"),
+    ("cat_target", "a crosshair target reticle"),
 ]
 
 

@@ -198,6 +198,8 @@ namespace Spacecraft.Client
 
         private GameObject _uiMenu;
         private GameObject _uiLoading;
+        private GameObject _uiSettings;
+        private GameObject _uiCredits;
         private GameObject _editorRoot;
 
         /// <summary>Opens the standalone ship-type editor (build a ship design + save it).</summary>
@@ -261,6 +263,27 @@ namespace Spacecraft.Client
                 _uiLoading = null;
             }
 
+            // Settings + credits are uGUI now too (the whole shell is one design).
+            if (Phase == ShellPhase.Settings && _uiSettings == null)
+            {
+                _uiSettings = UiSettings.Build(this);
+            }
+            else if (Phase != ShellPhase.Settings && _uiSettings != null)
+            {
+                Destroy(_uiSettings);
+                _uiSettings = null;
+            }
+
+            if (Phase == ShellPhase.Credits && _uiCredits == null)
+            {
+                _uiCredits = UiCredits.Build(this);
+            }
+            else if (Phase != ShellPhase.Credits && _uiCredits != null)
+            {
+                Destroy(_uiCredits);
+                _uiCredits = null;
+            }
+
             if (Input.GetKeyDown(KeyCode.Escape))
             {
                 if (Phase == ShellPhase.InGame)
@@ -292,16 +315,19 @@ namespace Spacecraft.Client
             GUI.color = prev;
         }
 
+        /// <summary>Returns from the credits screen to the main menu.</summary>
+        public void CloseCredits() => Phase = ShellPhase.MainMenu;
+
         private void OnGUI()
         {
             switch (Phase)
             {
                 case ShellPhase.Splash: _splash.Draw(); break;
-                case ShellPhase.MainMenu: break; // uGUI (UiMainMenu) draws this phase
-                case ShellPhase.Settings: _settings.Draw(); break;
-                case ShellPhase.Credits: DrawCredits(); break;
-                case ShellPhase.Loading: break; // uGUI (UiLoading) draws this phase
-                case ShellPhase.InGame: break; // GameBootstrap + Hud own the screen
+                case ShellPhase.MainMenu: break;  // uGUI (UiMainMenu)
+                case ShellPhase.Settings: break;  // uGUI (UiSettings)
+                case ShellPhase.Credits: break;   // uGUI (UiCredits)
+                case ShellPhase.Loading: break;   // uGUI (UiLoading)
+                case ShellPhase.InGame: break;    // GameBootstrap + Hud own the screen
             }
         }
 
