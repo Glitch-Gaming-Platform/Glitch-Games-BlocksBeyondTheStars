@@ -313,20 +313,24 @@ namespace Spacecraft.Client
             }
 
             string speciesId = null;
+            Vector3 scanPos = default;
             float bestSq = Reach * Reach;
             foreach (var c in Game.Creatures)
             {
-                float d = (new Vector3(c.X, c.Y, c.Z) - transform.position).sqrMagnitude;
+                var cp = new Vector3(c.X, c.Y, c.Z);
+                float d = (cp - transform.position).sqrMagnitude;
                 if (d < bestSq)
                 {
                     bestSq = d;
                     speciesId = c.SpeciesId;
+                    scanPos = cp;
                 }
             }
 
             if (speciesId != null)
             {
                 Game.Network.SendScan("creature", speciesId);
+                Weapons?.Pulse(scanPos, new Color(0.4f, 0.85f, 1f));
                 return;
             }
 
@@ -341,6 +345,7 @@ namespace Spacecraft.Client
             if (def != null)
             {
                 Game.Network.SendScan("block", def.Key);
+                Weapons?.Pulse(new Vector3(b.x + 0.5f, b.y + 0.5f, b.z + 0.5f), new Color(0.4f, 0.85f, 1f));
             }
         }
 
@@ -504,6 +509,7 @@ namespace Spacecraft.Client
             if (grounded && !_wasGrounded)
             {
                 ClientAudio.Instance?.Cue("land", 0.6f);
+                Weapons?.Dust(transform.position);
             }
 
             _wasGrounded = grounded;

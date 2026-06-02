@@ -45,6 +45,32 @@ namespace Spacecraft.Client
             }
         }
 
+        /// <summary>An expanding horizontal ring of bits — a scanner ping.</summary>
+        public void Pulse(Vector3 at, Color color)
+        {
+            const int n = 16;
+            for (int i = 0; i < n; i++)
+            {
+                float a = i / (float)n * Mathf.PI * 2f;
+                var p = Cube("Pulse", at, Vector3.one * 0.08f, color);
+                var s = p.AddComponent<Spark>();
+                s.Vel = new Vector3(Mathf.Cos(a), 0.15f, Mathf.Sin(a)) * 4.2f;
+                s.Gravity = false;
+                s.LifeOverride = 0.45f;
+            }
+        }
+
+        /// <summary>A low dust puff (landing / footfall).</summary>
+        public void Dust(Vector3 at, int count = 7)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                var p = Cube("Dust", at + Vector3.up * 0.05f, Vector3.one * 0.1f, new Color(0.62f, 0.57f, 0.47f));
+                var s = p.AddComponent<Spark>();
+                s.Vel = new Vector3(Random.Range(-1.5f, 1.5f), Random.Range(0.3f, 1.2f), Random.Range(-1.5f, 1.5f));
+            }
+        }
+
         private static GameObject Cube(string name, Vector3 pos, Vector3 scale, Color color)
         {
             var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -96,19 +122,32 @@ namespace Spacecraft.Client
         private sealed class Spark : MonoBehaviour
         {
             public Vector3 Vel;
-            private const float Life = 0.45f;
+            public bool Gravity = true;
+            public float LifeOverride;
+            private float _life = 0.45f;
             private float _t;
             private Vector3 _scale0;
 
-            private void Start() => _scale0 = transform.localScale;
+            private void Start()
+            {
+                _scale0 = transform.localScale;
+                if (LifeOverride > 0f)
+                {
+                    _life = LifeOverride;
+                }
+            }
 
             private void Update()
             {
                 _t += Time.deltaTime;
-                Vel += Vector3.down * 9f * Time.deltaTime;
+                if (Gravity)
+                {
+                    Vel += Vector3.down * 9f * Time.deltaTime;
+                }
+
                 transform.position += Vel * Time.deltaTime;
-                transform.localScale = _scale0 * Mathf.Max(0f, 1f - _t / Life);
-                if (_t >= Life)
+                transform.localScale = _scale0 * Mathf.Max(0f, 1f - _t / _life);
+                if (_t >= _life)
                 {
                     Destroy(gameObject);
                 }
