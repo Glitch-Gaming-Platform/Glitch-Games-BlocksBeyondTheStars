@@ -22,6 +22,7 @@ public sealed class GameContent
     private readonly Dictionary<string, BlueprintDefinition> _blueprints;
     private readonly Dictionary<string, ShipModuleDefinition> _shipModules;
     private readonly Dictionary<string, ShipDefinition> _ships;
+    private readonly Dictionary<string, ShipLayout> _shipLayouts;
     private readonly Dictionary<string, PlanetType> _planets;
     private readonly Dictionary<string, MissionDefinition> _missions;
     private readonly BlockDefinition?[] _blocksById;
@@ -45,7 +46,8 @@ public sealed class GameContent
         IDictionary<GameLocale, Dictionary<string, string>> locales,
         IEnumerable<PlanetType>? planets = null,
         IEnumerable<MissionDefinition>? missions = null,
-        IEnumerable<ShipDefinition>? ships = null)
+        IEnumerable<ShipDefinition>? ships = null,
+        IEnumerable<ShipLayout>? shipLayouts = null)
     {
         _blocks = blocks.ToDictionary(b => b.Key);
         _items = items.ToDictionary(i => i.Key);
@@ -53,6 +55,7 @@ public sealed class GameContent
         _blueprints = blueprints.ToDictionary(b => b.Key);
         _shipModules = shipModules.ToDictionary(m => m.Key);
         _ships = (ships ?? Enumerable.Empty<ShipDefinition>()).ToDictionary(s => s.Key);
+        _shipLayouts = (shipLayouts ?? Enumerable.Empty<ShipLayout>()).ToDictionary(l => l.Key);
         _planets = (planets ?? Enumerable.Empty<PlanetType>()).ToDictionary(p => p.Key);
         _missions = (missions ?? Enumerable.Empty<MissionDefinition>()).ToDictionary(m => m.Id);
         _locales = new Dictionary<GameLocale, Dictionary<string, string>>(locales);
@@ -96,6 +99,7 @@ public sealed class GameContent
     public BlueprintDefinition? GetBlueprint(string key) => _blueprints.TryGetValue(key, out var b) ? b : null;
     public ShipModuleDefinition? GetShipModule(string key) => _shipModules.TryGetValue(key, out var m) ? m : null;
     public ShipDefinition? GetShip(string key) => _ships.TryGetValue(key, out var s) ? s : null;
+    public ShipLayout? GetShipLayout(string? key) => !string.IsNullOrEmpty(key) && _shipLayouts.TryGetValue(key, out var l) ? l : null;
     public PlanetType? GetPlanet(string key) => _planets.TryGetValue(key, out var p) ? p : null;
     public MissionDefinition? GetMission(string id) => _missions.TryGetValue(id, out var m) ? m : null;
 

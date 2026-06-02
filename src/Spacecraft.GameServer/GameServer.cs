@@ -239,6 +239,7 @@ public sealed partial class GameServer
         _stations.Clear();
         _shipExtra.Clear();
         _shipStamped = false;
+        _shipIsLayout = false;
         _healTank = default;
     }
 

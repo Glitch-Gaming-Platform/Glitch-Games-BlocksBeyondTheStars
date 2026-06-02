@@ -36,4 +36,8 @@ public sealed class ShipDefinition
 
     /// <summary>Modules the ship is built with.</summary>
     public List<string> StartModules { get; set; } = new();
+
+    /// <summary>Optional voxel layout key (a <see cref="ShipLayout"/> in <c>data/ship_layouts/</c>): when
+    /// set, the server stamps that exact design instead of the parametric box. Null = parametric box.</summary>
+    public string? Layout { get; set; }
 }

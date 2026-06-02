@@ -1,4 +1,5 @@
 using Spacecraft.Networking.Messages;
+using Spacecraft.Shared.Definitions;
 using Spacecraft.Shared.Geometry;
 using Spacecraft.Shared.Primitives;
 
@@ -26,6 +27,7 @@ public sealed partial class GameServer
     private Vector3i _shipAnchor;
     private Vector3f _healTank;
     private bool _shipStamped;
+    private bool _shipIsLayout; // true when the ship was stamped from a designed voxel layout
     private readonly List<(string Type, Vector3f Pos)> _stations = new();
 
     // Exterior cosmetic blocks (wings, rear engine nozzles, cockpit canopy) that give the landed
@@ -53,6 +55,15 @@ public sealed partial class GameServer
 
         // Hull size from the active ship's design (data/ships.json), falling back to the starter.
         var design = _content.GetShip(_ship.ShipType) ?? _content.GetShip("starter");
+
+        // A designed ship (ship editor) carries a voxel layout — stamp that exact shape, not the box.
+        var layout = _content.GetShipLayout(design?.Layout);
+        if (layout != null && layout.Cells.Count > 0)
+        {
+            StampShipLayout(cx, cz, y0, layout);
+            return;
+        }
+
         if (design != null)
         {
             _shipHalfX = System.Math.Max(2, design.InteriorWidth / 2);
@@ -151,6 +162,83 @@ public sealed partial class GameServer
         _shipStamped = true;
         _log.Info($"Ship hull placed at ({cx}, {y0}, {cz}) with {_stations.Count} stations.");
     }
+
+    /// <summary>Stamps a designed voxel ship (from the ship editor) centred on the landing zone: places
+    /// each cell's hull/glass/light/engine block, opens hatch cells, and registers station markers.</summary>
+    private void StampShipLayout(int cx, int cz, int y0, ShipLayout layout)
+    {
+        var wall = _content.GetBlock("iron_wall")?.NumericId ?? BlockId.Air;
+        var glass = _content.GetBlock("glass")?.NumericId ?? wall;
+        var dark = _content.GetBlock("carbon")?.NumericId ?? _content.GetBlock("basalt")?.NumericId ?? wall;
+        if (wall.IsAir)
+        {
+            _log.Info("Designed ship not placed: 'iron_wall' block missing from content.");
+            return;
+        }
+
+        int ox = cx - layout.Width / 2;
+        int oz = cz - layout.Length / 2;
+
+        _shipHalfX = System.Math.Max(2, layout.Width / 2);
+        _shipHalfZ = System.Math.Max(2, layout.Length / 2);
+        _shipHeight = System.Math.Max(3, layout.Height);
+        _shipExtra.Clear();
+        _stations.Clear();
+        _shipIsLayout = true;
+        Vector3f? medbay = null;
+
+        foreach (var cell in layout.Cells)
+        {
+            int wx = ox + cell.X, wy = y0 + cell.Y, wz = oz + cell.Z;
+            var p = new Vector3i(wx, wy, wz);
+
+            switch (cell.Id)
+            {
+                case "hatch":
+                    _world.SetBlock(p, BlockId.Air); // the entry opening
+                    continue;
+                case "glass":
+                case "light": // placeholder until a real emissive light block exists (P2)
+                    _world.SetBlock(p, glass);
+                    _shipExtra.Add(p);
+                    continue;
+                case "engine":
+                    _world.SetBlock(p, dark);
+                    _shipExtra.Add(p);
+                    continue;
+            }
+
+            if (cell.Kind == "station")
+            {
+                AddStation(cell.Id, wx, wy, wz, StationBlockKey(cell.Id));
+                _shipExtra.Add(p);
+                if (cell.Id == "medbay")
+                {
+                    medbay = new Vector3f(wx + 0.5f, wy + 1f, wz + 0.5f);
+                }
+
+                continue;
+            }
+
+            // Hull (iron_wall) and anything unknown → solid hull.
+            _world.SetBlock(p, wall);
+            _shipExtra.Add(p);
+        }
+
+        _shipAnchor = new Vector3i(cx, y0, cz);
+        _healTank = medbay ?? new Vector3f(cx + 0.5f, y0 + 2f, cz + 0.5f);
+        _shipStamped = true;
+        _log.Info($"Designed ship '{layout.Key}' stamped at ({cx}, {y0}, {cz}) — {layout.Cells.Count} cells, {_stations.Count} stations.");
+    }
+
+    private static string StationBlockKey(string station) => station switch
+    {
+        "medbay" => "ice",
+        "cockpit" => "data_cache",
+        "workshop" => "stone",
+        "quarters" => "carbon",
+        _ => "iron_wall",
+    };
 
     private void AddStation(string type, int x, int y, int z, string blockKey)
     {
@@ -260,6 +348,13 @@ public sealed partial class GameServer
         if (!_shipStamped)
         {
             return false;
+        }
+
+        // A designed (layout) ship protects exactly its placed cells (its shape is irregular); the
+        // parametric box ship protects its whole hull box plus the exterior silhouette cells.
+        if (_shipIsLayout)
+        {
+            return _shipExtra.Contains(p);
         }
 
         int cx = _shipAnchor.X, y0 = _shipAnchor.Y, cz = _shipAnchor.Z;

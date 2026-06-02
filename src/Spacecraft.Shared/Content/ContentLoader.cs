@@ -38,6 +38,7 @@ public static class ContentLoader
         var blueprints = LoadArray<BlueprintDefinition>(Path.Combine(dataDir, "blueprints.json"));
         var modules = LoadArray<ShipModuleDefinition>(Path.Combine(dataDir, "ship_modules.json"));
         var ships = LoadArray<ShipDefinition>(Path.Combine(dataDir, "ships.json"));
+        var shipLayouts = LoadShipLayouts(Path.Combine(dataDir, "ship_layouts"));
         var planets = LoadArray<PlanetType>(Path.Combine(dataDir, "planets.json"));
         var missions = LoadArray<Spacecraft.Shared.Missions.MissionDefinition>(Path.Combine(dataDir, "missions.json"));
 
@@ -55,9 +56,31 @@ public static class ContentLoader
             }
         }
 
-        var content = new GameContent(blocks, items, recipes, blueprints, modules, locales, planets, missions, ships);
+        var content = new GameContent(blocks, items, recipes, blueprints, modules, locales, planets, missions, ships, shipLayouts);
         content.Validate();
         return content;
+    }
+
+    /// <summary>Loads every voxel ship layout from <c>data/ship_layouts/*.json</c> (key = file name).</summary>
+    private static List<ShipLayout> LoadShipLayouts(string dir)
+    {
+        var result = new List<ShipLayout>();
+        if (!Directory.Exists(dir))
+        {
+            return result;
+        }
+
+        foreach (var file in Directory.GetFiles(dir, "*.json"))
+        {
+            var layout = JsonSerializer.Deserialize<ShipLayout>(File.ReadAllText(file), JsonOptions);
+            if (layout != null)
+            {
+                layout.Key = Path.GetFileNameWithoutExtension(file);
+                result.Add(layout);
+            }
+        }
+
+        return result;
     }
 
     private static List<T> LoadArray<T>(string path)
