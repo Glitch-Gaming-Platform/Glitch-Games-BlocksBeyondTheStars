@@ -14,9 +14,14 @@ namespace Spacecraft.Client
         private Camera _cam;
         private Transform _stars;
         private Transform _planet;
+        private Transform _clouds;
         private Transform _moon;
         private Transform _ship;
         private readonly Transform[] _asteroids = new Transform[7];
+        private Renderer _beacon;
+        private Material _engineMat;
+        private Transform _engineGlowL, _engineGlowR;
+        private Light _engineLight;
         private float _t;
 
         private void Awake()
@@ -38,6 +43,7 @@ namespace Spacecraft.Client
 
             _planet = MakeSphere("Planet", new Vector3(11f, -3f, 34f), 26f,
                 Lit(new Color(0.30f, 0.50f, 0.70f), iceTex, new Vector2(4f, 2f))).transform;
+            _clouds = BuildCloudShell(_planet);
             _moon = MakeSphere("Moon", new Vector3(-16f, 11f, 60f), 5f,
                 Lit(new Color(0.60f, 0.60f, 0.64f), rock, new Vector2(2f, 1f))).transform;
 
@@ -70,10 +76,29 @@ namespace Spacecraft.Client
                 _planet.localRotation = Quaternion.Euler(8f, _t * 1.6f, 0f);
             }
 
+            if (_clouds != null)
+            {
+                _clouds.localRotation = Quaternion.Euler(0f, _t * 2.6f, 0f); // drift relative to the surface
+            }
+
             if (_ship != null)
             {
                 _ship.localPosition = new Vector3(-2.5f, -1.5f + Mathf.Sin(_t * 0.6f) * 0.35f, 9f);
                 _ship.localRotation = Quaternion.Euler(6f + Mathf.Sin(_t * 0.5f) * 2f, 28f + Mathf.Sin(_t * 0.3f) * 3f, -3f);
+
+                // Blinking beacon.
+                if (_beacon != null)
+                {
+                    bool on = Mathf.Sin(_t * 4f) > 0.4f;
+                    _beacon.sharedMaterial.color = on ? new Color(1f, 0.35f, 0.35f) : new Color(0.3f, 0.06f, 0.06f);
+                }
+
+                // Engine flicker: glow length + light intensity pulse.
+                float pulse = 0.8f + Mathf.Sin(_t * 14f) * 0.12f + Mathf.Sin(_t * 5f) * 0.08f;
+                if (_engineGlowL != null) _engineGlowL.localScale = new Vector3(0.5f, 0.5f, 1.4f * pulse);
+                if (_engineGlowR != null) _engineGlowR.localScale = new Vector3(0.5f, 0.5f, 1.4f * pulse);
+                if (_engineMat != null) _engineMat.color = new Color(0.5f, 0.85f, 1f) * (0.9f + pulse * 0.2f);
+                if (_engineLight != null) _engineLight.intensity = 1.8f + pulse * 0.8f;
             }
 
             for (int i = 0; i < _asteroids.Length; i++)
@@ -122,7 +147,71 @@ namespace Spacecraft.Client
             Cube("Cockpit", ship, new Vector3(0f, 0.5f, 1.5f), new Vector3(1.1f, 0.6f, 1.3f), glass);
             Cube("EngL", ship, new Vector3(-0.7f, 0f, -2.4f), new Vector3(0.7f, 0.7f, 0.6f), engine);
             Cube("EngR", ship, new Vector3(0.7f, 0f, -2.4f), new Vector3(0.7f, 0.7f, 0.6f), engine);
+
+            // Navigation lights: red to port (left), green to starboard (right), white headlights up front.
+            Cube("NavRed", ship, new Vector3(-2.25f, 0.05f, -0.4f), Vector3.one * 0.28f, Unlit(new Color(1f, 0.25f, 0.25f)));
+            Cube("NavGreen", ship, new Vector3(2.25f, 0.05f, -0.4f), Vector3.one * 0.28f, Unlit(new Color(0.3f, 1f, 0.4f)));
+            Cube("HeadL", ship, new Vector3(-0.5f, -0.15f, 2.15f), Vector3.one * 0.22f, Unlit(new Color(1f, 1f, 0.92f)));
+            Cube("HeadR", ship, new Vector3(0.5f, -0.15f, 2.15f), Vector3.one * 0.22f, Unlit(new Color(1f, 1f, 0.92f)));
+
+            // Blinking top beacon.
+            _beacon = Cube("Beacon", ship, new Vector3(0f, 0.7f, 0.2f), Vector3.one * 0.2f, Unlit(new Color(1f, 0.3f, 0.3f))).GetComponent<Renderer>();
+
+            // Glowing engine exhaust trails + a pulsing point light.
+            _engineMat = Unlit(new Color(0.5f, 0.85f, 1f));
+            _engineGlowL = Cube("GlowL", ship, new Vector3(-0.7f, 0f, -3.1f), new Vector3(0.5f, 0.5f, 1.4f), _engineMat).transform;
+            _engineGlowR = Cube("GlowR", ship, new Vector3(0.7f, 0f, -3.1f), new Vector3(0.5f, 0.5f, 1.4f), _engineMat).transform;
+
+            var lightGo = new GameObject("EngineLight");
+            lightGo.transform.SetParent(ship, false);
+            lightGo.transform.localPosition = new Vector3(0f, 0f, -3f);
+            _engineLight = lightGo.AddComponent<Light>();
+            _engineLight.type = LightType.Point;
+            _engineLight.color = new Color(0.5f, 0.85f, 1f);
+            _engineLight.range = 14f;
+            _engineLight.intensity = 2.2f;
+            _engineLight.shadows = LightShadows.None;
             return ship;
+        }
+
+        private Transform BuildCloudShell(Transform planet)
+        {
+            var shell = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            shell.name = "CloudShell";
+            StripCollider(shell);
+            shell.transform.SetParent(planet, false);
+            shell.transform.localPosition = Vector3.zero;
+            shell.transform.localScale = Vector3.one * 1.04f;
+
+            var shader = Shader.Find("Spacecraft/Cloud") ?? Shader.Find("Unlit/Transparent");
+            var mat = new Material(shader) { mainTexture = CloudTexture() };
+            mat.renderQueue = 3000;
+            mat.SetColor(Shader.PropertyToID("_Color"), new Color(0.95f, 0.97f, 1f, 0.7f));
+            shell.GetComponent<Renderer>().sharedMaterial = mat;
+            return shell.transform;
+        }
+
+        private static Texture2D CloudTexture()
+        {
+            const int n = 128;
+            var tex = new Texture2D(n, n, TextureFormat.RGBA32, true) { wrapMode = TextureWrapMode.Repeat, filterMode = FilterMode.Bilinear };
+            var px = new Color[n * n];
+            for (int y = 0; y < n; y++)
+            {
+                for (int x = 0; x < n; x++)
+                {
+                    float u = x / (float)n * Mathf.PI * 2f, v = y / (float)n * Mathf.PI * 2f;
+                    float f = 0.5f + 0.25f * Mathf.Sin(u * 3f + Mathf.Sin(v * 2f))
+                                   + 0.15f * Mathf.Sin(v * 4f + Mathf.Cos(u * 3f))
+                                   + 0.10f * Mathf.Sin((u + v) * 5f);
+                    float a = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((f - 0.55f) * 3f));
+                    px[y * n + x] = new Color(1f, 1f, 1f, a);
+                }
+            }
+
+            tex.SetPixels(px);
+            tex.Apply(true);
+            return tex;
         }
 
         private static GameObject MakeSphere(string name, Vector3 pos, float scale, Material mat)

@@ -448,11 +448,25 @@ consumes protocol messages that already exist.
   **stations** + **hatch** + **lights** + **engine**, name the design and set its stats + blueprint cost
   + craft cost, then **save it as a ship type**; a `merge_ship.py` folds the export into `data/ships.json`
   + a voxel layout that `StampShip` stamps. Phased (editor MVP → new elements → integration → polish).
-- **(NEW, planned) Station + town/village editors + template world-gen — see [docs/STATION_SETTLEMENT_EDITOR_PLAN.md](docs/STATION_SETTLEMENT_EDITOR_PLAN.md).**
-  Like the ship editor: a **space-station editor** + a **town/village editor** (free-fly build room,
-  block palette + interaction markers, metadata, export bundle + merge), and **world-gen picks from pools
-  of hand-designed station/village/town types** in addition to procedural (a seed roll at the two placer
-  call sites; empty pools → today's behaviour). **Includes an assessment of the current procedural output:**
+- **Station + town/village editors — DONE (editor + export); world-gen pool integration pending.**
+  A shared `StructureEditor` (sibling of the ship editor) opens from the main menu in two modes —
+  **Station Editor** and **Town Editor** — a free-fly build room (RMB look, WASD/QE fly, click place /
+  middle-click remove) with a mode-specific palette of **blocks + interaction markers** (station:
+  hull/glass/light + hangar/vendor/mission_board/heal_tank/quarters/console; settlement: stone/metal/
+  glass/ladder/stairs/lamp + vendor/mission_board/npc), a name + **size tier** stepper, and **Save** →
+  a template bundle (`structure.json` + `layout.json`) under `<kind>_exports/<key>`. `tools/merge_structure.py`
+  folds a bundle into `data/{station,settlement}_templates.json`. Bilingual. **Still pending (the
+  template-pool world-gen hook):** make `StampStation`/`StampSettlement` roll a hand-made template from
+  the pool when non-empty (else procedural). See [docs/STATION_SETTLEMENT_EDITOR_PLAN.md](docs/STATION_SETTLEMENT_EDITOR_PLAN.md).
+- **Menu backdrop polish — DONE.** The start-screen ship now has **navigation lights** (red port /
+  green starboard), **front headlights**, a **blinking beacon** and a **pulsing engine glow + point
+  light**; the background planet got a **drifting cloud shell** (`Spacecraft/Cloud`). The ship editor
+  already includes the light parts (light / headlight / port + starboard / engine) in its palette.
+- **Procedural-enrichment history + the deferred world-gen template pool (background for the editors
+  above) — see [docs/STATION_SETTLEMENT_EDITOR_PLAN.md](docs/STATION_SETTLEMENT_EDITOR_PLAN.md).**
+  The remaining piece is **world-gen picking from pools of hand-designed station/village/town types**
+  in addition to procedural (a seed roll at the two placer call sites; empty pools → today's behaviour).
+  **Assessment of the current procedural output:**
   villages are a fixed 17×17 of 3–4 *identical* huts, towns 25×25 of identical 2-storey boxes (variety LOW,
   only 2 sizes); stations vary in silhouette (random walk) but every module is the same empty 7×6×7 shell
   (variety MEDIUM). Improvable via (1) the templates here and (2) a **procedural-enrichment** pass (P5).

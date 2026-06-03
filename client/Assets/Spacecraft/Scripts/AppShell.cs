@@ -6,7 +6,7 @@ using UnityEngine;
 namespace Spacecraft.Client
 {
     /// <summary>The shell phases: splash, main menu, settings, credits, loading, in-game.</summary>
-    public enum ShellPhase { Splash, MainMenu, Settings, Credits, Loading, InGame, ShipEditor, AvatarEditor }
+    public enum ShellPhase { Splash, MainMenu, Settings, Credits, Loading, InGame, ShipEditor, AvatarEditor, StructureEditor }
 
     /// <summary>
     /// Client front-end state machine (M20 / `anf_textures.md`): drives splash → main menu →
@@ -246,6 +246,35 @@ namespace Spacecraft.Client
             Phase = ShellPhase.MainMenu;
         }
 
+        /// <summary>Opens the station / settlement structure editor (build a template + save it).</summary>
+        public void OpenStructureEditor(StructureEditor.Mode mode)
+        {
+            DestroyMenuBackground();
+            _editorRoot = new GameObject("StructureEditor");
+            var ed = _editorRoot.AddComponent<StructureEditor>();
+            ed.Shell = this;
+            ed.EditorMode = mode;
+            Phase = ShellPhase.StructureEditor;
+        }
+
+        public void OpenStationEditor() => OpenStructureEditor(StructureEditor.Mode.Station);
+        public void OpenSettlementEditor() => OpenStructureEditor(StructureEditor.Mode.Settlement);
+
+        /// <summary>Closes the structure editor and returns to the main menu.</summary>
+        public void CloseStructureEditor()
+        {
+            if (_editorRoot != null)
+            {
+                Destroy(_editorRoot);
+                _editorRoot = null;
+            }
+
+            EnsureMenuBackground();
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+            Phase = ShellPhase.MainMenu;
+        }
+
         /// <summary>Time-based loading progress (0..1) for the uGUI loading bar.</summary>
         public float LoadingProgress => _loading.Progress;
 
@@ -330,6 +359,10 @@ namespace Spacecraft.Client
                 else if (Phase == ShellPhase.AvatarEditor)
                 {
                     CloseAvatarEditor();
+                }
+                else if (Phase == ShellPhase.StructureEditor)
+                {
+                    CloseStructureEditor();
                 }
             }
         }
