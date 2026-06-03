@@ -178,14 +178,16 @@ consumes protocol messages that already exist.
 - **Space asteroid mining — breakable asteroids DONE.** Space asteroids have a size tier
   (`AsteroidTier` 2/1/0) and **split on destruction**: large → smaller chunks (no loot) → smallest
   → mineral drops, via the existing `FireWeapon`/`AsteroidDestruction` path. 2 tests.
-- **Space collision — server foundation DONE.** The ship has an authoritative `ShipPosition` in
-  the instance (`ShipMoveIntent`/`ShipMove`); `TickSpace` damages hull/shield by impact speed when
-  it overlaps an asteroid and bounces it. 2 tests. Remaining: wire SpaceView to fly in server
-  coords + report position (`SendShipMove`) + hit effect.
-- **Tractor beam — DONE (server).** A buildable `tractor_beam` module: with it fitted, destroyed
-  targets' loot floats as a `ResourceDrop` (incl. NPC-ship salvage) instead of instant loot, and
-  `CollectSalvage` pulls drops within range into the cargo hold until full. 1 test. Remaining:
-  client beam VFX + cargo-fill HUD.
+- **Space collision — DONE.** The ship has an authoritative `ShipPosition` in the instance
+  (`ShipMoveIntent`/`ShipMove`); `TickSpace` damages hull/shield by impact speed when it overlaps an
+  asteroid and bounces it. 2 tests. **Client now wired:** SpaceView reports its position ~12 Hz
+  (`SendShipMove`) so collisions are authoritative, and a server-reported hull/shield drop triggers a
+  **red damage flash + camera shake** (hit audio was already wired).
+- **Tractor beam — DONE (server + client VFX).** A buildable `tractor_beam` module: with it fitted,
+  destroyed targets' loot floats as a `ResourceDrop` (incl. NPC-ship salvage) instead of instant loot,
+  and `CollectSalvage` pulls drops within range into the cargo hold until full. 1 test. **Client now
+  shows a cyan tractor beam** from the ship when a drop is pulled in + a **space cargo readout**
+  (top-left) that pulses on collect; resource drops render as distinct cyan cubes.
 - **Combat loot — lootable containers DONE.** The death-drop salvage capsule is now a **lootable
   container** (`GameServerContainers`): tracked + persisted, `LootContainer` transfers contents to a
   nearby player (proximity-checked, partial if full, despawns when emptied); `ContainerList`/
@@ -209,8 +211,11 @@ consumes protocol messages that already exist.
   DONE:** station contacts appear in `SpaceState`, `BoardStation` validates range from the ship,
   stamps the voxel interior into a reserved station instance area, moves the player inside, protects
   station blocks, and enables vendor market barter + station-board missions. 10 station tests across
-  generator + boarding. Still planned: client docking/boarding UI + station rendering polish, station
-  NPC population, and the **named station on the ship radar + the player's location readout**.
+  generator + boarding. **Client boarding DONE:** flying near a station shows a "Press E to board
+  <name>" prompt that sends `BoardStationIntent` (server validates the 70-unit range and moves the
+  player inside); stations render as a large grey hull in space. Still planned: station **interior
+  rendering polish**, station NPC population, **named station on the ship radar + location readout**,
+  and **radar scanner tiers** (gate/extend the radar by a scanner module).
 - **World variety — slice DONE.** Biome-aware `WorldGenerator`: single-biome planets + multi-biome
   worlds (surface per column from noise; **biome count randomised per world from the seed**); new
   blocks sand/mud/grass/crystal + new planet types (desert/jungle/crystal/swamp/varied);
