@@ -24,7 +24,7 @@ public sealed class TravelTests : IDisposable
         _content = ContentLoader.LoadFromDirectory(TestPaths.DataDir());
     }
 
-    private SvGameServer Started(out SqliteWorldRepository repo)
+    private SvGameServer Started(out SqliteWorldRepository repo, bool jumpDrive = true)
     {
         repo = new SqliteWorldRepository(new SaveGamePaths(_root, "travel"));
         var st = new LoopbackServerTransport(new LoopbackLink());
@@ -32,6 +32,12 @@ public sealed class TravelTests : IDisposable
         config.Rules.FreeSpaceFlight = true;
         var server = new SvGameServer(config, _content, st, repo);
         server.Start();
+        // Most travel tests jump between systems; fit a jump generator so that is allowed.
+        if (jumpDrive && !server.Ship.HasModule("jump_generator"))
+        {
+            server.Ship.Modules.Add("jump_generator");
+        }
+
         return server;
     }
 
@@ -135,6 +141,61 @@ public sealed class TravelTests : IDisposable
             // Destination again: its own edit persisted.
             server.Travel("Pilot", dest.Id);
             Assert.Equal(iron.Value, server.World.GetBlock(pos).Value);
+        }
+    }
+
+    [Fact]
+    public void Hyperjump_ToAnotherSystem_RequiresJumpGenerator()
+    {
+        var server = Started(out var repo, jumpDrive: false);
+        using (repo)
+        {
+            server.AddLocalPlayer("Pilot");
+            string origin = server.ActiveLocationId;
+            string originSystem = server.Galaxy.FindBody(origin)!.SystemId;
+
+            var crossSystem = server.Galaxy.AllBodies().First(b =>
+                b.Kind == CelestialKind.Planet
+                && !string.IsNullOrEmpty(b.PlanetType)
+                && _content.GetPlanet(b.PlanetType!) is not null
+                && b.SystemId != originSystem);
+
+            // Without a jump generator a cross-system jump is rejected.
+            server.Travel("Pilot", crossSystem.Id);
+            Assert.Equal(origin, server.ActiveLocationId);
+
+            // Fit one and the same jump now succeeds.
+            server.Ship.Modules.Add("jump_generator");
+            server.Travel("Pilot", crossSystem.Id);
+            Assert.Equal(crossSystem.Id, server.ActiveLocationId);
+        }
+    }
+
+    [Fact]
+    public void InSystemTravel_NeedsNoJumpGenerator()
+    {
+        var server = Started(out var repo, jumpDrive: false);
+        using (repo)
+        {
+            server.AddLocalPlayer("Pilot");
+            string origin = server.ActiveLocationId;
+            string originSystem = server.Galaxy.FindBody(origin)!.SystemId;
+
+            var sameSystem = server.Galaxy.AllBodies().FirstOrDefault(b =>
+                b.Kind == CelestialKind.Planet
+                && !string.IsNullOrEmpty(b.PlanetType)
+                && _content.GetPlanet(b.PlanetType!) is not null
+                && b.SystemId == originSystem
+                && b.Id != origin);
+
+            if (sameSystem is null)
+            {
+                return; // this seed's origin system has a single planet — nothing to assert
+            }
+
+            // An in-system hop is normal flight: allowed without a jump generator.
+            server.Travel("Pilot", sameSystem.Id);
+            Assert.Equal(sameSystem.Id, server.ActiveLocationId);
         }
     }
 

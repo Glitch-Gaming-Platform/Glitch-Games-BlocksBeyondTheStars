@@ -40,6 +40,11 @@
     "unlockCost": [ { "item": "data_fragment", "count": 2 }, { "item": "iron_plate", "count": 10 } ]
   },
   {
+    "key": "jump_generator", "nameKey": "blueprint.jump_generator.name", "descriptionKey": "blueprint.jump_generator.desc",
+    "category": "ShipExpansion", "prerequisites": [], "knowledgeCost": 12,
+    "unlockCost": [ { "item": "data_fragment", "count": 4 }, { "item": "titanium_plate", "count": 12 }, { "item": "energy_cell_1", "count": 6 } ]
+  },
+  {
     "key": "hull_plating", "nameKey": "blueprint.hull_plating.name", "descriptionKey": "blueprint.hull_plating.desc",
     "category": "ShipDefense", "prerequisites": [],
     "unlockCost": [ { "item": "data_fragment", "count": 2 }, { "item": "titanium_plate", "count": 10 } ]

@@ -842,8 +842,19 @@ namespace Spacecraft.Client
 
             if (!here && !string.IsNullOrEmpty(body.PlanetType))
             {
-                UiKit.AddButton(_detail, 8, y, 280, 56, L("ui.map.travel"), () => Game.Network?.SendTravel(body.Id));
-                y += 70f;
+                // A destination in another star system is a hyperspace jump (needs a jump generator).
+                var destSystem = map.Systems.FirstOrDefault(s => s.Bodies.Any(b => b.Id == body.Id));
+                var activeSystem = map.Systems.FirstOrDefault(s => s.Bodies.Any(b => b.Id == map.ActiveLocationId));
+                bool crossSystem = destSystem != null && activeSystem != null && destSystem.Id != activeSystem.Id;
+
+                UiKit.AddButton(_detail, 8, y, 280, 56, crossSystem ? L("ui.map.hyperjump") : L("ui.map.travel"), () => Game.Network?.SendTravel(body.Id));
+                y += 64f;
+
+                if (crossSystem)
+                {
+                    UiKit.AddText(_detail, 8, y, 620, 24, L("ui.map.hyperjump_hint"), 16, UiKit.CyanDim, TextAnchor.UpperLeft);
+                    y += 30f;
+                }
             }
 
             return y;

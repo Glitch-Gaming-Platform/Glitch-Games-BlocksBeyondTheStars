@@ -332,8 +332,16 @@ namespace Spacecraft.Client
 
             ServerSpawn = null; // re-snap at the new spawn once the next PlayerState arrives
             WorldEpoch++;
-            LastMessage = $"Arriving at {m.PlanetName}…";
+            LastMessage = m.Hyperjump ? $"Hyperjump → {m.PlanetName}…" : $"Arriving at {m.PlanetName}…";
+
+            if (m.Hyperjump)
+            {
+                HyperjumpStarted?.Invoke();
+            }
         }
+
+        /// <summary>Raised when a hyperspace jump to another star system begins (drives the warp VFX).</summary>
+        public event System.Action HyperjumpStarted;
 
         private void OnBlockChanged(Spacecraft.Networking.Messages.BlockChanged m)
         {

@@ -504,6 +504,9 @@ public sealed class WorldReset
     public string PlanetType { get; set; } = string.Empty;
     public string PlanetName { get; set; } = string.Empty;
     public string SystemName { get; set; } = string.Empty;
+
+    /// <summary>True when the arrival was a hyperspace jump to a different star system (drives the client warp animation).</summary>
+    public bool Hyperjump { get; set; }
 }
 
 /// <summary>The player's current vitals are respawning at the ship heal-tank (Medbay).</summary>

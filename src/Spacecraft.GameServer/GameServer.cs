@@ -279,6 +279,15 @@ public sealed partial class GameServer
             return;
         }
 
+        // A jump to a different star system is a hyperspace jump — it needs a jump generator fitted.
+        var origin = _galaxy?.FindBody(_meta.ActiveLocationId);
+        bool hyperjump = origin is null || origin.SystemId != body.SystemId;
+        if (hyperjump && (_ship is null || !_ship.HasModule("jump_generator")))
+        {
+            Reject(session, "travel", "Your ship has no jump generator — fit one to jump between star systems.");
+            return;
+        }
+
         // Take everyone out of the (old world's) space instance before switching worlds.
         foreach (var pid in _playerInstance.Keys.ToList())
         {
@@ -305,7 +314,7 @@ public sealed partial class GameServer
             s.State.AboardShip = true;
             s.SentChunks.Clear();
 
-            Send(s, new WorldReset { PlanetType = _meta.DefaultPlanetType, PlanetName = planetName, SystemName = systemName });
+            Send(s, new WorldReset { PlanetType = _meta.DefaultPlanetType, PlanetName = planetName, SystemName = systemName, Hyperjump = hyperjump });
             SendPlayerState(s);
             SendShipCombatStatus(s);
             SendShipPlacement(s);
@@ -316,7 +325,7 @@ public sealed partial class GameServer
             SendCreatures(s);
             SendContainers(s);
             SendStarMap(s);
-            Send(s, new ServerMessage { Text = $"Arrived at {planetName}." });
+            Send(s, new ServerMessage { Text = hyperjump ? $"Hyperjumped to {systemName} — {planetName}." : $"Arrived at {planetName}." });
         }
     }
 

@@ -165,12 +165,16 @@ consumes protocol messages that already exist.
   harder slanted rain in storms vs a light shower (`WeatherFx`) + lightning. Planned: **view-distance**
   scaling; 3D in-world rain/splashes + storm **sound**; AI cloud textures (procedural puffs for now);
   biome-flavoured weather.
-- **(NEW, planned) Hyperspace travel between systems:** travel to other star systems via a
-  **hyperspace jump** — every ship has a **jump-generator module** (required + later charge/cost/
-  range); pick a destination on the **star map**, server validates + switches the system; client
-  plays a **warp animation** (starfield stretches into streaks → drop out into the new system).
-  In-system hops keep launch/landing; hyperspace is system-to-system only. Reuses star map (M23)
-  + SpaceView + ship modules + universe data (M11). See CLIENT_COMPLETION_PLAN "Hyperspace travel".
+- **Hyperspace travel between systems — DONE.** Travelling to a planet in **another star system**
+  is now a hyperspace jump gated by a **`jump_generator` ship module** (blueprint + build cost +
+  bilingual locales); the server (`HandleTravel`) compares the origin vs destination `SystemId`,
+  rejects a cross-system jump without the module, flags `WorldReset.Hyperjump`, and reports
+  "Hyperjumped to …". In-system hops stay normal travel (no module needed). The client star map
+  labels cross-system destinations **"Hyperjump"** with a requirement hint, and `HyperspaceWarp`
+  plays a **uGUI warp animation** (star streaks rush outward over a dark wash → white flash → clear)
+  while the new world streams in. 2 new tests (254 total). Reuses star map (M23) + ship modules +
+  universe data (M11). Later: jump charge/cost/range from `jump_range`, fuel, in-space jump from the
+  cockpit instead of the menu.
 - **Space asteroid mining — breakable asteroids DONE.** Space asteroids have a size tier
   (`AsteroidTier` 2/1/0) and **split on destruction**: large → smaller chunks (no loot) → smallest
   → mineral drops, via the existing `FireWeapon`/`AsteroidDestruction` path. 2 tests.

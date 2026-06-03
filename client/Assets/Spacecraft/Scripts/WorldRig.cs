@@ -93,6 +93,10 @@ namespace Spacecraft.Client
             var chat = root.AddComponent<ChatUi>();
             chat.Game = boot;
 
+            // Hyperspace warp animation (plays on a system-to-system jump).
+            var warp = root.AddComponent<HyperspaceWarp>();
+            warp.Game = boot;
+
             // In-game gameplay menu (inventory / crafting / tech / ship / map / missions), Tab.
             var menu = root.AddComponent<GameMenu>();
             menu.Game = boot;
