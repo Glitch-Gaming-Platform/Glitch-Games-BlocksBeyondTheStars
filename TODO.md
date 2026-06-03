@@ -360,13 +360,11 @@ consumes protocol messages that already exist.
   this pass:** clouds + rain (weather), **post-FX** (bloom/tonemap/SSAO/vignette), and the **suit
   lamp + emissive glow + ship lights** (headlamp toggle L; emissive ores/crystals/lava/lights; ship nav
   position lights + front headlights; new emissive light blocks placeable in the ship editor).
-- **(NEW, planned) Toggleable world map / planet overview:** a full-screen **overlay map of the current
-  planet** (toggle key, e.g. **M**), distinct from the star map (Tab→Map = systems/travel). Shows a
-  top-down view of the **explored terrain** around the player (height/biome-shaded), the **player + ship**
-  positions + heading, and **points of interest** (landing zones, stations/settlements, known wrecks,
-  mission targets, scanned signals). Pan/zoom; click a POI for info; optional waypoint marker shown on the
-  HUD compass. Reveals as the player explores (fog-of-war), reads from streamed chunks + known markers.
-  Bilingual; uGUI (matches the new menu design). A mini version could later replace/augment the HUD compass.
+- **Toggleable world map / planet overview — DONE** (`b54a1f5`). Full-screen planet map (key **M**),
+  separate from the star map: player-centred **top-down render of the streamed terrain** (surface colour +
+  height shade; only loaded chunks → **fog-of-war**), **player (heading) + ship** markers, **click-to-set
+  waypoint** (the HUD compass now points to it), legend + coords + scale, zoom −/+. uGUI, bilingual.
+  *Later: POI markers (stations/settlements/wrecks/mission targets), pan, a mini embedded version.*
 - **Local time-of-day indicator — DONE** (`b7393bc`). HUD day/night widget (top-right under the compass):
   current phase + time until next dawn/dusk + a cycle bar with a marker (from `WorldEnvironment.TimeOfDay`
   + `DayLengthSeconds`). Bilingual. The visible sun already wanders across the sky by time of day.
