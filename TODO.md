@@ -3,6 +3,22 @@
 Resume point for development. Full milestone breakdown lives in `plans/IMPLEMENTATION_PLAN.md`
 (local, git-ignored). Tests: **240 passing**. Repo pushed to `origin/main` (private).
 
+## Planned (requested)
+
+- **Savegame selection / new game (singleplayer) — DONE.** The Singleplayer button now opens a world
+  picker (`UiSaveSelect`, `ShellPhase.SaveSelect`): it lists existing save worlds (subfolders with a
+  `world.db` under the profile's `singleplayer-saves`, newest first) to resume, and a "New world" name
+  field (+ Random) to start a fresh, differently-seeded world. `LocalServerLauncher.Start` takes the
+  world name + seed and passes `--world/--seed`; the server creates the save if missing (a new name =
+  a new world, an existing name resumes). The existing save shows up as "singleplayer". Bilingual.
+- **Material editor:** paint or load a texture for a new material, set how often it occurs and on what
+  kind of world (no atmosphere / with atmosphere / one biome / multiple biomes); adapt the game
+  mechanics + world-gen accordingly; + Python scripts to fold new materials into the data.
+- **Debug / admin commands + `/bump` snapshot:** an admin/debug command system; `/bump` captures and
+  **persists a precise diagnostic snapshot** of the player's situation (environment, the situation
+  before vs now, surroundings/nearby blocks + entities, recent events) plus a **player-written text
+  description** of the problem, written to a file the dev can read to reproduce + fix the bug.
+
 ## Known bugs
 
 - **Landed-ship interior glitches — FIXED.** `StampShipLayout` only stamped solid cells, so terrain/

@@ -26,7 +26,31 @@ namespace Spacecraft.Client
         public int Port { get; private set; } = DefaultPort;
         public bool IsRunning => _process != null && !_process.HasExited;
 
-        public bool Start(int port = DefaultPort, int viewDistanceChunks = 0)
+        /// <summary>Root folder holding the singleplayer save worlds (one subfolder per world).</summary>
+        public static string SavesRoot => Path.Combine(Application.persistentDataPath, "singleplayer-saves");
+
+        /// <summary>Existing singleplayer world names (subfolders that contain a world.db), newest first.</summary>
+        public static string[] ListWorlds()
+        {
+            if (!Directory.Exists(SavesRoot))
+            {
+                return Array.Empty<string>();
+            }
+
+            var dirs = new System.Collections.Generic.List<string>();
+            foreach (var dir in Directory.GetDirectories(SavesRoot))
+            {
+                if (File.Exists(Path.Combine(dir, "world.db")))
+                {
+                    dirs.Add(dir);
+                }
+            }
+
+            dirs.Sort((a, b) => File.GetLastWriteTimeUtc(Path.Combine(b, "world.db")).CompareTo(File.GetLastWriteTimeUtc(Path.Combine(a, "world.db"))));
+            return dirs.ConvertAll(Path.GetFileName).ToArray();
+        }
+
+        public bool Start(int port = DefaultPort, int viewDistanceChunks = 0, string worldName = "singleplayer", long seed = 0)
         {
             if (IsRunning)
             {
@@ -34,6 +58,10 @@ namespace Spacecraft.Client
             }
 
             Port = port;
+            if (string.IsNullOrWhiteSpace(worldName))
+            {
+                worldName = "singleplayer";
+            }
 
             bool windows = Application.platform == RuntimePlatform.WindowsPlayer
                            || Application.platform == RuntimePlatform.WindowsEditor;
@@ -52,13 +80,14 @@ namespace Spacecraft.Client
             Directory.CreateDirectory(saves);
 
             string viewArg = viewDistanceChunks > 0 ? $" --view-distance {viewDistanceChunks}" : string.Empty;
+            string seedArg = seed != 0 ? $" --seed {seed}" : string.Empty;
             // Singleplayer enables free space flight + PvE space combat so it's reachable solo.
             const string spaceArgs = " --free-flight true --space-combat PvE --space-npcs Normal";
             var psi = new ProcessStartInfo
             {
                 FileName = exe,
-                Arguments = $"--port {Port} --name Singleplayer --world singleplayer " +
-                            $"--max-players 1 --saves \"{saves}\" --data \"{data}\"" + viewArg + spaceArgs,
+                Arguments = $"--port {Port} --name Singleplayer --world \"{worldName}\" " +
+                            $"--max-players 1 --saves \"{saves}\" --data \"{data}\"" + viewArg + seedArg + spaceArgs,
                 WorkingDirectory = Path.GetDirectoryName(exe),
                 UseShellExecute = false,
                 CreateNoWindow = true,

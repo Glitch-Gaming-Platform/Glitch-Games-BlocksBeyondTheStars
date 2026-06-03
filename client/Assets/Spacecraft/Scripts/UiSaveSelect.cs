@@ -1,0 +1,58 @@
+using UnityEngine;
+using UnityEngine.UI;
+
+namespace Spacecraft.Client
+{
+    /// <summary>
+    /// The singleplayer world picker (uGUI): lists existing save worlds to resume and lets the player
+    /// start a brand-new world by name (a new name = a new, differently-seeded world), so different
+    /// worlds can be tested without overwriting. Shown on <see cref="ShellPhase.SaveSelect"/> over the
+    /// menu backdrop; AppShell spawns/destroys it per phase.
+    /// </summary>
+    public static class UiSaveSelect
+    {
+        public static GameObject Build(AppShell shell)
+        {
+            var canvas = UiKit.CreateCanvas("SaveSelectUI");
+            var root = canvas.transform;
+
+            UiKit.AddLogo(root, 360f, 70f, 900f, 96f, shell.L("ui.save.title"), 56);
+            UiKit.AddText(root, 364f, 180f, 1000f, 26f, shell.L("ui.save.subtitle"), 18, UiKit.CyanDim, TextAnchor.MiddleLeft);
+
+            // ── Existing worlds (left) ────────────────────────────────────────────────────────
+            var left = UiKit.AddPanel(root, 90f, 250f, 720f, 640f, UiKit.PanelFill).transform;
+            UiKit.AddText(left, 20f, 16f, 680f, 26f, shell.L("ui.save.existing"), 18, UiKit.Cyan, TextAnchor.MiddleLeft, FontStyle.Bold);
+
+            var worlds = LocalServerLauncher.ListWorlds();
+            if (worlds.Length == 0)
+            {
+                UiKit.AddText(left, 20f, 70f, 680f, 28f, shell.L("ui.save.none"), 17, UiKit.TextCol, TextAnchor.MiddleLeft);
+            }
+            else
+            {
+                int shown = Mathf.Min(worlds.Length, 9);
+                for (int i = 0; i < shown; i++)
+                {
+                    string w = worlds[i];
+                    UiKit.AddButton(left, 20f, 56f + i * 62f, 680f, 54f, $"▸  {w}", () => shell.StartSingleplayerWorld(w), "btn_singleplayer");
+                }
+            }
+
+            // ── New world (right) ─────────────────────────────────────────────────────────────
+            var right = UiKit.AddPanel(root, 850f, 250f, 700f, 360f, UiKit.PanelFill).transform;
+            UiKit.AddText(right, 20f, 16f, 660f, 26f, shell.L("ui.save.new"), 18, UiKit.Cyan, TextAnchor.MiddleLeft, FontStyle.Bold);
+            UiKit.AddText(right, 20f, 60f, 660f, 24f, shell.L("ui.save.name"), 15, UiKit.TextCol, TextAnchor.MiddleLeft);
+
+            string[] name = { "new_world" };
+            UiKit.AddInput(right, 20f, 88f, 660f, 34f, name[0], v => name[0] = v);
+
+            UiKit.AddButton(right, 20f, 140f, 320f, 50f, shell.L("ui.save.create"), () => shell.StartSingleplayerWorld(name[0]), "btn_singleplayer");
+            UiKit.AddButton(right, 360f, 140f, 320f, 50f, shell.L("ui.save.random"), () => shell.StartSingleplayerWorld("world_" + Random.Range(1000, 999999)), "btn_join");
+            UiKit.AddText(right, 20f, 210f, 660f, 120f, shell.L("ui.save.hint"), 15, UiKit.CyanDim, TextAnchor.UpperLeft).horizontalOverflow = HorizontalWrapMode.Wrap;
+
+            UiKit.AddButton(root, 90f, 920f, 240f, 50f, shell.L("ui.menu.back"), () => shell.GoTo(ShellPhase.MainMenu), "btn_exit");
+
+            return canvas.gameObject;
+        }
+    }
+}

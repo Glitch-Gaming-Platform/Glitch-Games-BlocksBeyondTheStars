@@ -35,6 +35,9 @@ namespace Spacecraft.Client
         /// <summary>Language code that drives the localizer: "en" or "de".</summary>
         public string Language = "en";
 
+        /// <summary>Last singleplayer world the player launched (pre-selected in the world picker).</summary>
+        public string LastWorld = "singleplayer";
+
         // Accessibility (flags wired now; visual effects applied when the render layer lands)
         public bool ReducedEffects = false;
         public bool LargeUi = false;

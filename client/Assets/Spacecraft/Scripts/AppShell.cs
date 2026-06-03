@@ -6,7 +6,7 @@ using UnityEngine;
 namespace Spacecraft.Client
 {
     /// <summary>The shell phases: splash, main menu, settings, credits, loading, in-game.</summary>
-    public enum ShellPhase { Splash, MainMenu, Settings, Credits, Loading, InGame, ShipEditor, AvatarEditor, StructureEditor, ContentEditor, Editors }
+    public enum ShellPhase { Splash, MainMenu, Settings, Credits, Loading, InGame, ShipEditor, AvatarEditor, StructureEditor, ContentEditor, Editors, SaveSelect }
 
     /// <summary>
     /// Client front-end state machine (M20 / `anf_textures.md`): drives splash → main menu →
@@ -119,13 +119,18 @@ namespace Spacecraft.Client
             Phase = ShellPhase.MainMenu;
         }
 
-        public void StartSingleplayer()
+        /// <summary>Opens the singleplayer world picker (choose an existing save or start a new one).</summary>
+        public void StartSingleplayer() => Phase = ShellPhase.SaveSelect;
+
+        /// <summary>Launches singleplayer on a specific world (creates it if new); seed 0 = derive from name.</summary>
+        public void StartSingleplayerWorld(string worldName, long seed = 0)
         {
             // Singleplayer hosts the bundled dedicated server as a child process bound to
-            // loopback (Option A), then connects to it like any other server. Start it now so
-            // it has the loading-screen window to come up before the client connects.
+            // loopback (Option A), then connects to it like any other server.
             _hostLocal = true;
-            if (_localServer.Start(LocalServerLauncher.DefaultPort, Settings.ViewDistanceChunks))
+            Settings.LastWorld = worldName;
+            Settings.Save();
+            if (_localServer.Start(LocalServerLauncher.DefaultPort, Settings.ViewDistanceChunks, worldName, seed))
             {
                 Host = _localServer.Host;
                 Port = _localServer.Port.ToString();
@@ -197,6 +202,7 @@ namespace Spacecraft.Client
         private GameObject _uiSettings;
         private GameObject _uiCredits;
         private GameObject _uiEditors;
+        private GameObject _uiSaveSelect;
         private GameObject _editorRoot;
 
         /// <summary>Opens the standalone ship-type editor (build a ship design + save it).</summary>
@@ -374,6 +380,16 @@ namespace Spacecraft.Client
                 _uiEditors = null;
             }
 
+            if (Phase == ShellPhase.SaveSelect && _uiSaveSelect == null)
+            {
+                _uiSaveSelect = UiSaveSelect.Build(this);
+            }
+            else if (Phase != ShellPhase.SaveSelect && _uiSaveSelect != null)
+            {
+                Destroy(_uiSaveSelect);
+                _uiSaveSelect = null;
+            }
+
             if (Input.GetKeyDown(KeyCode.Escape))
             {
                 if (Phase == ShellPhase.InGame)
@@ -394,6 +410,10 @@ namespace Spacecraft.Client
                     Phase = ShellPhase.MainMenu;
                 }
                 else if (Phase == ShellPhase.Editors)
+                {
+                    Phase = ShellPhase.MainMenu;
+                }
+                else if (Phase == ShellPhase.SaveSelect)
                 {
                     Phase = ShellPhase.MainMenu;
                 }
