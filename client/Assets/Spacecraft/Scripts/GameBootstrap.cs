@@ -61,6 +61,9 @@ namespace Spacecraft.Client
         public Vector3 PlayerPosition;
         public float PlayerYaw;
 
+        /// <summary>An optional world-map waypoint (XZ); the HUD compass points to it when set.</summary>
+        public Vector3? Waypoint;
+
         /// <summary>Interactive ship stations, and the one the player is currently next to (or empty).</summary>
         public NetShipStation[] Stations { get; private set; } = System.Array.Empty<NetShipStation>();
         public string NearbyStation;

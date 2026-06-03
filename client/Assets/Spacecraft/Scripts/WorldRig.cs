@@ -85,6 +85,10 @@ namespace Spacecraft.Client
             var hud = root.AddComponent<Hud>();
             hud.Game = boot;
 
+            // Toggleable full-screen planet map (key M), distinct from the star map.
+            var worldMap = root.AddComponent<WorldMap>();
+            worldMap.Game = boot;
+
             // In-game gameplay menu (inventory / crafting / tech / ship / map / missions), Tab.
             var menu = root.AddComponent<GameMenu>();
             menu.Game = boot;

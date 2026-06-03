@@ -326,6 +326,19 @@ namespace Spacecraft.Client
             GUI.DrawTexture(new Rect(center.x - 1, center.y - radius, 2, 8), Texture2D.whiteTexture);
             GUI.color = pc;
 
+            // Waypoint pointer (from the world map), if one is set.
+            if (Game.Waypoint.HasValue)
+            {
+                var wp = Game.Waypoint.Value;
+                float wdx = wp.x - Game.PlayerPosition.x, wdz = wp.z - Game.PlayerPosition.z;
+                float wAng = (Mathf.Atan2(wdx, wdz) * Mathf.Rad2Deg - Game.PlayerYaw) * Mathf.Deg2Rad;
+                float wr = Mathf.Clamp(Mathf.Sqrt(wdx * wdx + wdz * wdz) * 1.2f, 10f, radius);
+                var wb = new Vector2(center.x + Mathf.Sin(wAng) * wr, center.y - Mathf.Cos(wAng) * wr);
+                GUI.color = new Color(1f, 0.85f, 0.3f, 0.95f);
+                GUI.DrawTexture(new Rect(wb.x - 3, wb.y - 3, 6, 6), Texture2D.whiteTexture);
+                GUI.color = pc;
+            }
+
             if (!Game.ShipPosition.HasValue)
             {
                 return;
