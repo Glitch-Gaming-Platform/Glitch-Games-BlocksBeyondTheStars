@@ -121,6 +121,10 @@ public sealed class SpaceStationBoardingTests : IDisposable
             // The vendor crew stands at the station's vendor marker (its interior, not the surface).
             var vendorMarker = server.SpaceStationMarkers.First(m => m.Type == "vendor");
             Assert.Contains(server.NpcSnapshots, n => n.Role == "vendor" && n.Home.DistanceSquared(vendorMarker.Pos) < 1f);
+
+            // Beyond the marker crew, the station is populated with extra wandering civilians.
+            Assert.True(server.NpcCount >= 4, $"Expected extra civilians, got {server.NpcCount}.");
+            Assert.Contains(server.NpcSnapshots, n => n.Role == "settler");
         }
     }
 

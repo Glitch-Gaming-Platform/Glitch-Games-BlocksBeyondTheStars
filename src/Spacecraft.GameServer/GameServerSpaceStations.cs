@@ -296,6 +296,21 @@ public sealed partial class GameServer
             added++;
         }
 
+        // Extra wandering civilians/dockhands so the station feels populated — scaled by size, some are
+        // maintenance androids, with a little size variation. Placed near existing markers (valid rooms).
+        int extra = station.SizeTier switch { "small" => 2, "large" => 7, "huge" => 11, _ => 4 };
+        var spots = station.Markers.Select(m => m.Pos).ToList();
+        for (int i = 0; i < extra && spots.Count > 0; i++)
+        {
+            var b = spots[rng.Next(spots.Count)];
+            var home = new Vector3f(b.X + (float)(rng.NextDouble() * 4 - 2), b.Y, b.Z + (float)(rng.NextDouble() * 4 - 2));
+            bool robot = rng.NextDouble() < 0.3; // ~30% androids
+            var npc = MakeNpc("settler", "traders", robot, home, rng);
+            npc.Size = 0.9f + (float)rng.NextDouble() * 0.22f;
+            _npcs.Add(npc);
+            added++;
+        }
+
         if (added > 0)
         {
             _log.Info($"Spawned {added} crew NPCs at station '{station.Name}'.");

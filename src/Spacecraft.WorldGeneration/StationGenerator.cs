@@ -299,9 +299,10 @@ public static class StationGenerator
         ushort light = content.GetBlock("data_cache")?.NumericId.Value ?? glass;
         ushort tank = content.GetBlock("ice")?.NumericId.Value ?? glass;
         ushort dark = content.GetBlock("carbon")?.NumericId.Value ?? hull;
+        ushort plant = content.GetBlock("flora_plant")?.NumericId.Value ?? 0;
         foreach (var m in placed)
         {
-            FurnishModule(Set, m.Origin, m.Type, hull, light, tank, dark);
+            FurnishModule(Set, m.Origin, m.Type, hull, light, tank, dark, plant);
         }
 
         // 9) Exterior detail on exposed module faces — solar-panel wings, antennae, docking arms, and a
@@ -370,28 +371,32 @@ public static class StationGenerator
     /// a doorway, the vertical shaft, or the hollow-centre cell the room relies on.
     /// </summary>
     private static void FurnishModule(System.Action<int, int, int, ushort> set, Vector3i o, string type,
-        ushort hull, ushort light, ushort tank, ushort dark)
+        ushort hull, ushort light, ushort tank, ushort dark, ushort plant)
     {
-        // Corner ceiling lights in every room.
+        // Four corner ceiling lights in every room (brighter, livelier interiors).
         if (light != 0)
         {
             set(o.X + 1, o.Y + RoomH - 2, o.Z + 1, light);
             set(o.X + RoomW - 2, o.Y + RoomH - 2, o.Z + RoomL - 2, light);
+            set(o.X + 1, o.Y + RoomH - 2, o.Z + RoomL - 2, light);
+            set(o.X + RoomW - 2, o.Y + RoomH - 2, o.Z + 1, light);
         }
 
         switch (type)
         {
-            case "hub": // a control console bank along the -X wall + a status panel
+            case "hub": // a control console bank along the -X wall + a status panel + a planter
                 set(o.X + 1, o.Y + 1, o.Z + 2, dark);
                 set(o.X + 1, o.Y + 1, o.Z + 4, dark);
                 set(o.X + 1, o.Y + 2, o.Z + 2, light);
                 set(o.X + 1, o.Y + 2, o.Z + 4, light);
+                if (plant != 0) set(o.X + 5, o.Y + 1, o.Z + 5, plant);
                 break;
 
-            case "market": // a vendor counter along the +Z wall
+            case "market": // a vendor counter along the +Z wall + a planter
                 set(o.X + 2, o.Y + 1, o.Z + 5, dark);
                 set(o.X + 4, o.Y + 1, o.Z + 5, dark);
                 set(o.X + 2, o.Y + 2, o.Z + 5, light); // register / display
+                if (plant != 0) set(o.X + 5, o.Y + 1, o.Z + 1, plant);
                 break;
 
             case "medbay": // a glowing heal tank in a corner
@@ -400,11 +405,12 @@ public static class StationGenerator
                 set(o.X + 2, o.Y + 1, o.Z + 1, light);
                 break;
 
-            case "quarters": // two bunks against the +X wall
+            case "quarters": // two bunks against the +X wall + a planter
                 set(o.X + 5, o.Y + 1, o.Z + 1, dark);
                 set(o.X + 5, o.Y + 1, o.Z + 2, dark);
                 set(o.X + 5, o.Y + 1, o.Z + 4, dark);
                 set(o.X + 5, o.Y + 1, o.Z + 5, dark);
+                if (plant != 0) set(o.X + 1, o.Y + 1, o.Z + 5, plant);
                 break;
 
             case "hangar": // supply crates stacked in the corners by the mouth

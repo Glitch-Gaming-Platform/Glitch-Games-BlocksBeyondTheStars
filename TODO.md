@@ -3,6 +3,15 @@
 Resume point for development. Full milestone breakdown lives in `plans/IMPLEMENTATION_PLAN.md`
 (local, git-ignored). Tests: **240 passing**. Repo pushed to `origin/main` (private).
 
+## Known bugs (to fix)
+
+- **Landed-ship interior glitches:** on a ship landed on a planet, the interior often shows
+  glitches — it looks like the ship hull collides with **fauna/flora**, and something protrudes
+  **from outside into the ship**. Likely the surface ship stamp (`StampShip`) overlaps creatures/
+  flora or terrain isn't cleared around/under the hull, or flora regrows into the hull. Investigate
+  `GameServerShipStructure.StampShipLayout` + flora/creature placement vs the ship footprint
+  (clear a volume + suppress flora/creature spawn inside the hull).
+
 ## Done (committed & pushed)
 
 | Milestone | Summary |
@@ -218,8 +227,11 @@ consumes protocol messages that already exist.
   **Location readout DONE:** `PlayerStateUpdate.StationName` drives the HUD location panel to show the
   boarded station's name. **Radar scanner tiers DONE:** a buildable `radar_array` module adds a
   `radar_bonus` that widens `ShipCombatStatus.RadarRange`, which the HUD radar now uses (base 130 + 170
-  per array); 1 test (255 total). Still planned: station **interior rendering polish**, station NPC
-  population.
+  per array); 1 test (255 total). **Interior + population polish DONE:** every station room now has
+  **four** corner ceiling lights (brighter) + **planters** (flora) in hub/market/quarters; and
+  `SpawnStationNpcs` adds **extra wandering civilians** scaled by size tier (small 2 → huge 11) with
+  **~30% maintenance androids** + size variation, so stations feel populated (marker crew —
+  vendor/quartermaster/dockhands — unchanged). NPCs already wander + animate + carry nameplates.
 - **World variety — slice DONE.** Biome-aware `WorldGenerator`: single-biome planets + multi-biome
   worlds (surface per column from noise; **biome count randomised per world from the seed**); new
   blocks sand/mud/grass/crystal + new planet types (desert/jungle/crystal/swamp/varied);
