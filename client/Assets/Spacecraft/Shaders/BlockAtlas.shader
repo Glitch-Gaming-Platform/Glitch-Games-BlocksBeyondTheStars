@@ -11,6 +11,7 @@ Shader "Spacecraft/BlockAtlas"
     Properties
     {
         _MainTex ("Atlas", 2D) = "white" {}
+        _NormalTex ("Normal", 2D) = "bump" {}
     }
     SubShader
     {
@@ -27,6 +28,7 @@ Shader "Spacecraft/BlockAtlas"
             #include "UnityCG.cginc"
 
             sampler2D _MainTex;
+            sampler2D _NormalTex; // tangent-space normal map (Sobel-derived from the atlas)
             fixed4 _Sc_Light;   // system sun colour x day brightness x weather (a>0.5 = set)
             float4 _Sc_SunDir;  // world-space direction TO the sun
             fixed4 _Sc_Sky;     // sky colour for environment reflections
@@ -38,6 +40,7 @@ Shader "Spacecraft/BlockAtlas"
             {
                 float4 vertex : POSITION;
                 float3 normal : NORMAL;
+                float4 tangent : TANGENT;
                 float2 uv : TEXCOORD0;
                 fixed4 color : COLOR;   // r=gloss, g=metal, b=face AO
             };
@@ -48,6 +51,7 @@ Shader "Spacecraft/BlockAtlas"
                 float2 uv : TEXCOORD0;
                 float3 wn : TEXCOORD1;
                 float3 wp : TEXCOORD2;
+                float4 wt : TEXCOORD4; // world tangent xyz + bitangent handedness w
                 fixed4 mat : COLOR;
                 UNITY_FOG_COORDS(3)
             };
@@ -58,6 +62,7 @@ Shader "Spacecraft/BlockAtlas"
                 o.pos = UnityObjectToClipPos(v.vertex);
                 o.uv = v.uv;
                 o.wn = UnityObjectToWorldNormal(v.normal);
+                o.wt = float4(UnityObjectToWorldDir(v.tangent.xyz), v.tangent.w);
                 o.wp = mul(unity_ObjectToWorld, v.vertex).xyz;
                 o.mat = v.color;
                 UNITY_TRANSFER_FOG(o, o.pos);
@@ -69,7 +74,14 @@ Shader "Spacecraft/BlockAtlas"
                 fixed3 albedo = tex2D(_MainTex, i.uv).rgb;
                 fixed3 light = (_Sc_Light.a < 0.5) ? fixed3(1, 1, 1) : _Sc_Light.rgb;
 
-                float3 N = normalize(i.wn);
+                // Per-pixel normal from the Sobel-derived map, lifted into world space (tangent basis),
+                // so flat faces show micro-relief under the sun + lamp.
+                float3 gN = normalize(i.wn);
+                float3 T = normalize(i.wt.xyz);
+                float3 B = normalize(cross(gN, T) * i.wt.w);
+                float3 tn = tex2D(_NormalTex, i.uv).xyz * 2.0 - 1.0;
+                float3 N = normalize(tn.x * T + tn.y * B + tn.z * gN);
+
                 float3 L = normalize(_Sc_SunDir.xyz);
                 float3 V = normalize(_WorldSpaceCameraPos - i.wp);
                 float ndl = saturate(dot(N, L));

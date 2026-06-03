@@ -27,6 +27,7 @@ namespace Spacecraft.Client
             var tris = new List<int>();
             var colors = new List<Color>();
             var uvs = new List<Vector2>();
+            var tangents = new List<Vector4>(); // per-face tangents for normal mapping
 
             var origin = WorldConstants.ChunkOrigin(chunk.Coord);
             int n = WorldConstants.ChunkSize;
@@ -68,7 +69,7 @@ namespace Spacecraft.Client
                     var col = atlas != null
                         ? new Color(matR, matG, s, emission)
                         : new Color(baseColor.r * s, baseColor.g * s, baseColor.b * s, 1f);
-                    AddFace(verts, tris, colors, uvs, new Vector3(x, y, z), f, col, uv);
+                    AddFace(verts, tris, colors, uvs, tangents, new Vector3(x, y, z), f, col, uv);
                 }
             }
 
@@ -77,6 +78,7 @@ namespace Spacecraft.Client
             mesh.SetTriangles(tris, 0);
             mesh.SetColors(colors);
             mesh.SetUVs(0, uvs);
+            mesh.SetTangents(tangents);
             mesh.RecalculateNormals();
             mesh.RecalculateBounds();
             return mesh;
@@ -181,12 +183,21 @@ namespace Spacecraft.Client
                 0.35f + 0.5f * (float)rng.NextDouble());
         }
 
-        private static void AddFace(List<Vector3> verts, List<int> tris, List<Color> colors, List<Vector2> uvs, Vector3 p, int face, Color color, Rect uv)
+        private static void AddFace(List<Vector3> verts, List<int> tris, List<Color> colors, List<Vector2> uvs, List<Vector4> tangents, Vector3 p, int face, Color color, Rect uv)
         {
             int baseIndex = verts.Count;
             Vector3[] q = FaceQuad(p, face);
             verts.Add(q[0]); verts.Add(q[1]); verts.Add(q[2]); verts.Add(q[3]);
             colors.Add(color); colors.Add(color); colors.Add(color); colors.Add(color);
+
+            // Tangent = world-space U direction (q0→q3, matching the UV mapping below); w = bitangent
+            // handedness. Lets the shader transform the tangent-space normal map into world space.
+            Vector3 e1 = q[1] - q[0], e3 = q[3] - q[0];
+            Vector3 nrm = Vector3.Cross(e1, e3).normalized;
+            Vector3 tan = e3.normalized;
+            float hand = Vector3.Dot(Vector3.Cross(nrm, tan), e1) < 0f ? -1f : 1f;
+            var tv = new Vector4(tan.x, tan.y, tan.z, hand);
+            tangents.Add(tv); tangents.Add(tv); tangents.Add(tv); tangents.Add(tv);
             uvs.Add(new Vector2(uv.xMin, uv.yMin));
             uvs.Add(new Vector2(uv.xMin, uv.yMax));
             uvs.Add(new Vector2(uv.xMax, uv.yMax));

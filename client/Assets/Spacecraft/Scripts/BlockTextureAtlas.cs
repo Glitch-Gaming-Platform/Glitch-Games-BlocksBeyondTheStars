@@ -18,6 +18,11 @@ namespace Spacecraft.Client
 
         public Texture2D Texture { get; }
 
+        /// <summary>A tangent-space normal map derived from the colour atlas (Sobel on luminance), so flat
+        /// block faces catch the light with micro-relief (cracks, rivets, grain). Same tile layout as
+        /// <see cref="Texture"/>; the block shader samples it for per-pixel lighting.</summary>
+        public Texture2D NormalTexture { get; private set; }
+
         public BlockTextureAtlas(GameContent content)
         {
             Texture = new Texture2D(Cols * Tile, Rows * Tile, TextureFormat.RGBA32, mipChain: true)
@@ -36,6 +41,45 @@ namespace Spacecraft.Client
             }
 
             Texture.Apply(updateMipmaps: true);
+            BuildNormalAtlas();
+        }
+
+        /// <summary>Derives the normal atlas from the finished colour atlas: per pixel, the luminance
+        /// gradient (Sobel) becomes a surface normal (treating brighter = higher), encoded in RGB.</summary>
+        private void BuildNormalAtlas()
+        {
+            int w = Cols * Tile, h = Rows * Tile;
+            NormalTexture = new Texture2D(w, h, TextureFormat.RGBA32, mipChain: true)
+            {
+                filterMode = FilterMode.Point,
+                wrapMode = TextureWrapMode.Clamp,
+            };
+
+            var src = Texture.GetPixels();
+            var dst = new Color[w * h];
+            const float strength = 1.6f;
+
+            float Lum(int x, int y)
+            {
+                x = x < 0 ? 0 : (x >= w ? w - 1 : x);
+                y = y < 0 ? 0 : (y >= h ? h - 1 : y);
+                var c = src[y * w + x];
+                return c.r * 0.299f + c.g * 0.587f + c.b * 0.114f;
+            }
+
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    float dx = Lum(x + 1, y) - Lum(x - 1, y);
+                    float dy = Lum(x, y + 1) - Lum(x, y - 1);
+                    var n = new Vector3(-dx * strength, -dy * strength, 1f).normalized;
+                    dst[y * w + x] = new Color(n.x * 0.5f + 0.5f, n.y * 0.5f + 0.5f, n.z * 0.5f + 0.5f, 1f);
+                }
+            }
+
+            NormalTexture.SetPixels(dst);
+            NormalTexture.Apply(updateMipmaps: true);
         }
 
         /// <summary>UV rect of a block's tile (with a tiny inset to avoid bleeding).</summary>

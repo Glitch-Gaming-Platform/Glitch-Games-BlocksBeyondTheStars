@@ -184,6 +184,7 @@ namespace Spacecraft.Client
             if (atlasShader != null)
             {
                 ChunkMaterial = new Material(atlasShader) { mainTexture = Atlas.Texture };
+                ChunkMaterial.SetTexture("_NormalTex", Atlas.NormalTexture); // per-pixel normal mapping
             }
             else
             {
