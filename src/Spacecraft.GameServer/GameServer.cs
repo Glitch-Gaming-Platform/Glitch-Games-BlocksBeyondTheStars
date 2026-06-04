@@ -1809,7 +1809,12 @@ public sealed partial class GameServer
             }).ToArray(),
         }).ToArray();
 
-        Send(session, new StarMapData { Systems = systems, ActiveLocationId = session.CurrentLocationId }); // the player's own location
+        var players = _sessions.Values
+            .Where(s => s.Joined)
+            .Select(s => new NetPlayerLocation { Name = s.State.Name, LocationId = s.CurrentLocationId })
+            .ToArray();
+
+        Send(session, new StarMapData { Systems = systems, ActiveLocationId = session.CurrentLocationId, Players = players }); // own + party
     }
 
     private void SendRules(PlayerSession session)

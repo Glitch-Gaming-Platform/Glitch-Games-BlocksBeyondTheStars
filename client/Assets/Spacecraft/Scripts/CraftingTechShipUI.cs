@@ -475,6 +475,17 @@ namespace Spacecraft.Client
             {
                 bool here = b.Id == map.ActiveLocationId;
                 string status = here ? L("ui.map.here") : $"{b.Kind}  {b.Status}";
+
+                // Show the party: which players are currently on this body.
+                if (map.Players != null)
+                {
+                    var names = map.Players.Where(p => p.LocationId == b.Id).Select(p => p.Name).ToList();
+                    if (names.Count > 0)
+                    {
+                        status += "   ◈ " + string.Join(", ", names);
+                    }
+                }
+
                 AddCard(y, b.Name, "cat_planet", status, here ? UiKit.Cyan : UiKit.CyanDim,
                     "body:" + b.Id, () => { _selected = "body:" + b.Id; RebuildDetail(); });
                 y += 88f;

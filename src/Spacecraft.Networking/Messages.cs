@@ -504,6 +504,16 @@ public sealed class StarMapData
 {
     public NetStarSystem[] Systems { get; set; } = System.Array.Empty<NetStarSystem>();
     public string ActiveLocationId { get; set; } = string.Empty;
+
+    /// <summary>Where every other online player currently is, so the star map shows the whole party.</summary>
+    public NetPlayerLocation[] Players { get; set; } = System.Array.Empty<NetPlayerLocation>();
+}
+
+/// <summary>A player's current body (for the shared star map).</summary>
+public sealed class NetPlayerLocation
+{
+    public string Name { get; set; } = string.Empty;
+    public string LocationId { get; set; } = string.Empty;
 }
 
 /// <summary>
