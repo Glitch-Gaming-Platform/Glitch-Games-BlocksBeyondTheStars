@@ -115,7 +115,19 @@ Full phased design (P1 body positions → **P2 WorldManager indirection, the key
 per-player location → P4 per-player ship → P5 system flight + land-anywhere → P6 inter-system → P7
 cross-world MP polish) in **[docs/MULTIWORLD_AND_SYSTEM_FLIGHT_PLAN.md](docs/MULTIWORLD_AND_SYSTEM_FLIGHT_PLAN.md)**.
 Key enabler found: persistence is already **location-scoped** (the save DB can hold many worlds; only the
-in-memory single `_world` blocks it). Largest piece is P2 (behaviour-preserving `_world` indirection).
+in-memory single `_world` blocks it). **Decision: one ship per player, no crew.**
+
+**Progress:**
+- ✅ **P1** — seeded system-space coordinates on every body (`CelestialBody`/`NetBody`/`UniverseGenerator`),
+  deterministic, existing universes unchanged (`0e4162c`).
+- ✅ **P2** — `WorldManager`/`LoadedWorld` seam; the active world is routed through it, behaviour-preserving
+  (`f45bd41`).
+- ⏭️ **P3 (next, the core change)** — make `WorldManager` cache multiple resident worlds (load on demand,
+  unload+save when empty); add per-session `CurrentLocationId`; relocate per-world runtime state
+  (fauna/enemies/npcs/flora/fluids/containers/structures) from `GameServer` into `LoadedWorld`; tick each
+  resident world; stream chunks + run mine/place from the player's world; scope presence/entities per
+  world; make `WorldReset` per-player. This is the large, multi-step refactor that actually enables
+  different planets at once.
 
 ### Not started / larger future work
 - **Advanced graphics roadmap** — Built-in RP vs URP decision, god rays, reflection probes, LUT grade.
