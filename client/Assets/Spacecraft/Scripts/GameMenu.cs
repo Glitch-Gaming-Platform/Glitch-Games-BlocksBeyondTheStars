@@ -19,12 +19,33 @@ namespace Spacecraft.Client
 
         private Tab _tab = Tab.Inventory;
         private bool _open;
+        private bool _wasInSpaceView;
+        private bool _hyperjumpHooked;
 
         private void Update()
         {
-            if (Game != null && Input.GetKeyDown(KeyCode.Tab))
+            if (Game != null)
             {
-                SetOpen(!_open);
+                // Close the menu when a transition animation begins so the player can see it:
+                // a hyperspace warp (subscribed once) and a launch/landing flight sequence (from a
+                // planet or a station, which flips SpaceViewActive on).
+                if (!_hyperjumpHooked)
+                {
+                    Game.HyperjumpStarted += CloseForTransition;
+                    _hyperjumpHooked = true;
+                }
+
+                if (Game.SpaceViewActive && !_wasInSpaceView)
+                {
+                    CloseForTransition();
+                }
+
+                _wasInSpaceView = Game.SpaceViewActive;
+
+                if (Input.GetKeyDown(KeyCode.Tab))
+                {
+                    SetOpen(!_open);
+                }
             }
 
             // Drive the uGUI screen (CraftingTechShipUI renders every tab).
@@ -101,6 +122,23 @@ namespace Spacecraft.Client
 
         /// <summary>Closes the whole menu from the uGUI screen's X button.</summary>
         public void CloseFromUi() => SetOpen(false);
+
+        /// <summary>Closes the menu (if open) when a launch/landing/hyperjump animation starts.</summary>
+        private void CloseForTransition()
+        {
+            if (_open)
+            {
+                SetOpen(false);
+            }
+        }
+
+        private void OnDestroy()
+        {
+            if (Game != null && _hyperjumpHooked)
+            {
+                Game.HyperjumpStarted -= CloseForTransition;
+            }
+        }
 
         // --- Character appearance (driven by the uGUI Character tab) ---
 

@@ -88,10 +88,6 @@ SQLite persistence.
    `godmode`, `instant_build`) exist server-side via `AdminCommandIntent` but have **no in-game UI** to
    enter them — only `/bump` is typed in chat. Needs an admin console (typed commands → `AdminCommandIntent`).
 
-### Known issues
-- **Ship launch leaves the menu open.** When launching with the ship, the gameplay menu currently stays
-  open, hiding the launch animation. The menu should close on launch so the animation is visible.
-
 ### Queued analysis
 - **Landing + docking flow review.** Analyze how landing on planets and docking at stations work
   end-to-end (client + server), to document/improve them.
@@ -101,6 +97,9 @@ SQLite persistence.
   gated on a workshop (`CraftingTechShipUI.DetailInventory`).
 - **Wreck repair hint** — the HUD wreck panel now tells the player to aim at a breach + press **R** and
   lists the blocks still needed (`WreckRepairStatus.Needs`).
+- **Menu closes on launch/jump** — the gameplay menu auto-closes when a launch/landing flight sequence
+  begins (planet or station → `SpaceViewActive`) or a hyperspace jump starts (`HyperjumpStarted`), so the
+  launch/warp animation is visible (`GameMenu`).
 
 ### Not started / larger future work
 - **Advanced graphics roadmap** — Built-in RP vs URP decision, god rays, reflection probes, LUT grade.
