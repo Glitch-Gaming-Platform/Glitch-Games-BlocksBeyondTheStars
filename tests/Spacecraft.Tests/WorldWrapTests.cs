@@ -1,0 +1,111 @@
+using Spacecraft.Shared.Content;
+using Spacecraft.Shared.Geometry;
+using Spacecraft.Shared.Primitives;
+using Spacecraft.Shared.World;
+using Spacecraft.WorldGeneration;
+using Xunit;
+
+namespace Spacecraft.Tests;
+
+/// <summary>
+/// World wrap (W1): world-X is a wrapping longitude (cylinder world). These assert the user's core
+/// requirement — the eastern edge of the map lines up <i>exactly</i> with the western edge, with no
+/// visible seam — by checking generation is periodic across X = 0 ≡ X = Circumference and continuous
+/// (no cliff) where the seam meets.
+/// </summary>
+public class WorldWrapTests
+{
+    private static GameContent Content() => ContentLoader.LoadFromDirectory(TestPaths.DataDir());
+
+    private const int C = WorldConstants.Circumference;
+
+    [Fact]
+    public void Circumference_IsAWholeNumberOfChunks()
+    {
+        Assert.Equal(0, C % WorldConstants.ChunkSize);
+        Assert.Equal(C / WorldConstants.ChunkSize, WorldConstants.ChunksAround);
+    }
+
+    [Theory]
+    [InlineData("rocky")]
+    [InlineData("desert")]
+    [InlineData("varied")]
+    public void SurfaceHeight_IsPeriodic_AcrossTheSeam(string planetKey)
+    {
+        var content = Content();
+        var planet = content.GetPlanet(planetKey)!;
+        var gen = new WorldGenerator(4242, content);
+
+        for (int z = -200; z <= 200; z += 23)
+        {
+            // The same longitude reached the long way round must be the identical column.
+            Assert.Equal(gen.SurfaceHeight(planet, 0, z), gen.SurfaceHeight(planet, C, z));
+            Assert.Equal(gen.SurfaceHeight(planet, 7, z), gen.SurfaceHeight(planet, C + 7, z));
+            Assert.Equal(gen.SurfaceHeight(planet, -3, z), gen.SurfaceHeight(planet, C - 3, z));
+        }
+    }
+
+    [Fact]
+    public void SurfaceHeight_HasNoCliff_AtTheSeam()
+    {
+        var content = Content();
+        var planet = content.GetPlanet("rocky")!;
+        var gen = new WorldGenerator(555, content);
+
+        // The step from the last column before the seam (C-1) to the first after (C ≡ 0) must be no
+        // larger than an ordinary neighbour step — i.e. the seam is invisible, not a wall.
+        for (int z = 0; z < 400; z += 17)
+        {
+            int across = System.Math.Abs(gen.SurfaceHeight(planet, C, z) - gen.SurfaceHeight(planet, C - 1, z));
+            Assert.True(across <= 4, $"Seam cliff at z={z}: step {across}.");
+        }
+    }
+
+    [Theory]
+    [InlineData("varied")]
+    [InlineData("rocky")]
+    public void BiomeIndex_IsPeriodic_AcrossTheSeam(string planetKey)
+    {
+        var content = Content();
+        var planet = content.GetPlanet(planetKey)!;
+        var gen = new WorldGenerator(2024, content);
+
+        for (int z = -300; z <= 300; z += 31)
+        {
+            Assert.Equal(gen.BiomeIndexAt(planet, 0, z), gen.BiomeIndexAt(planet, C, z));
+            Assert.Equal(gen.BiomeIndexAt(planet, 12, z), gen.BiomeIndexAt(planet, C + 12, z));
+        }
+    }
+
+    [Fact]
+    public void GeneratedColumn_IsIdentical_AcrossTheSeam()
+    {
+        // The strongest check: the full block column (caves, ore, surface, flora) at the chunk straddling
+        // the seam must match the chunk a whole lap away — blocks included.
+        var content = Content();
+        var planet = content.GetPlanet("rocky")!;
+        var gen = new WorldGenerator(31415, content);
+
+        int chunkY = 3;
+        var west = gen.Generate(planet, new ChunkCoord(0, chunkY, 1));               // columns x = 0..15
+        var east = gen.Generate(planet, new ChunkCoord(WorldConstants.ChunksAround, chunkY, 1)); // x = C..C+15
+
+        Assert.True(west.RawBlocks.SequenceEqual(east.RawBlocks),
+            "Chunk a full lap away must regenerate identically (seam-free wrap).");
+    }
+
+    [Fact]
+    public void WrapX_And_WrapDeltaX_BehaveAcrossTheSeam()
+    {
+        Assert.Equal(0, WorldConstants.WrapX(C));
+        Assert.Equal(1, WorldConstants.WrapX(C + 1));
+        Assert.Equal(C - 1, WorldConstants.WrapX(-1));
+
+        // Shortest way round: 2 east from C-1 to (C+1 ≡ 1) is +2, not -(C-2).
+        Assert.Equal(2, WorldConstants.WrapDeltaX(2));
+        Assert.Equal(-2, WorldConstants.WrapDeltaX(-2));
+        Assert.Equal(1, WorldConstants.WrapDeltaX(C + 1));
+        Assert.Equal(-1, WorldConstants.WrapDeltaX(C - 1)); // C-1 east == 1 west
+        Assert.True(System.Math.Abs(WorldConstants.WrapDeltaX(C / 2 + 5)) <= C / 2);
+    }
+}

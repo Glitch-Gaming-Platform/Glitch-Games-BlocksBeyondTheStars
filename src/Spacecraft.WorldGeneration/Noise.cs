@@ -91,4 +91,67 @@ public static class Noise
 
         return norm > 0 ? sum / norm : 0;
     }
+
+    private const double Tau = 2.0 * System.Math.PI;
+
+    /// <summary>
+    /// 4D value noise in [0,1]. Built from two <see cref="Value3D"/> layers (at integer w) smoothly
+    /// interpolated along w, so it stays dependency-free without needing a 4-argument hash.
+    /// </summary>
+    public static double Value4D(long seed, double x, double y, double z, double w)
+    {
+        long w0 = (long)System.Math.Floor(w);
+        double tw = Smooth(w - w0);
+        unchecked
+        {
+            long sa = seed + w0 * 0x100000001B3L;       // FNV prime, distinct layer per integer w
+            long sb = seed + (w0 + 1) * 0x100000001B3L;
+            return Lerp(Value3D(sa, x, y, z), Value3D(sb, x, y, z), tw);
+        }
+    }
+
+    /// <summary>
+    /// FBM that is <b>exactly periodic in world-X with period <paramref name="circumference"/></b> while Z
+    /// stays linear — the seam-free generator for a cylinder world. The X axis is mapped onto a circle of
+    /// matching arc-length frequency (so local detail is unchanged), guaranteeing that the value <i>and its
+    /// slope</i> are continuous across X = 0 ≡ X = circumference. <paramref name="scale"/> is the world-units
+    /// per noise unit (the old <c>worldX / scale</c> divisor); octaves/lacunarity/gain match <see cref="Fbm2D"/>.
+    /// </summary>
+    public static double FbmCylX(long seed, double worldX, double worldZ, double circumference, double scale,
+        int octaves, double lacunarity = 2.0, double gain = 0.5)
+    {
+        double theta = Tau * worldX / circumference;
+        double radius = circumference / (scale * Tau); // arc-length per `scale` world units == 1 noise unit
+        double cx = radius * System.Math.Cos(theta);
+        double cy = radius * System.Math.Sin(theta);
+        double z = worldZ / scale;
+
+        double sum = 0, amp = 1, freq = 1, norm = 0;
+        for (int i = 0; i < octaves; i++)
+        {
+            // Periodic for every freq because cos/sin repeat exactly each lap of worldX.
+            sum += amp * Value3D(seed + i * 1013, cx * freq, z * freq, cy * freq);
+            norm += amp;
+            amp *= gain;
+            freq *= lacunarity;
+        }
+
+        return norm > 0 ? sum / norm : 0;
+    }
+
+    /// <summary>
+    /// Single-octave value noise that is <b>exactly periodic in world-X</b> (period
+    /// <paramref name="circumference"/>) while Y and Z stay linear — the seam-free counterpart to a 3D
+    /// <see cref="Value3D"/> field (caves, ore veins). <paramref name="scaleX"/>/<paramref name="scaleY"/>/
+    /// <paramref name="scaleZ"/> are the original per-axis divisors.
+    /// </summary>
+    public static double ValueCylX(long seed, double worldX, double worldY, double worldZ, double circumference,
+        double scaleX, double scaleY, double scaleZ)
+    {
+        double theta = Tau * worldX / circumference;
+        double radius = circumference / (scaleX * Tau);
+        double cx = radius * System.Math.Cos(theta);
+        double cy = radius * System.Math.Sin(theta);
+        return Value4D(seed, cx, worldY / scaleY, worldZ / scaleZ, cy);
+    }
 }

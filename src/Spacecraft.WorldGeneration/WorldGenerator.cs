@@ -47,7 +47,7 @@ public sealed class WorldGenerator
     public int SurfaceHeight(PlanetType planet, int worldX, int worldZ)
     {
         long seed = PlanetSeed(planet);
-        double n = Noise.Fbm2D(seed, worldX / planet.TerrainScale, worldZ / planet.TerrainScale, octaves: 4);
+        double n = Noise.FbmCylX(seed, worldX, worldZ, WorldConstants.Circumference, planet.TerrainScale, octaves: 4);
         return planet.BaseHeight + (int)System.Math.Round((n - 0.5) * 2.0 * planet.Amplitude);
     }
 
@@ -88,7 +88,7 @@ public sealed class WorldGenerator
                 // Carve caves below the surface layer.
                 if (planet.CaveThreshold > 0 && depth > 1)
                 {
-                    double cave = Noise.Value3D(seed + 7777, worldX / 22.0, worldY / 16.0, worldZ / 22.0);
+                    double cave = Noise.ValueCylX(seed + 7777, worldX, worldY, worldZ, WorldConstants.Circumference, 22.0, 16.0, 22.0);
                     if (cave > planet.CaveThreshold)
                     {
                         continue; // cave => air
@@ -107,7 +107,7 @@ public sealed class WorldGenerator
 
                     if (block == deepId && planet.DataCacheRarity > 0 && !dataCacheId.IsAir)
                     {
-                        double r = Noise.Value01(seed + 4242, worldX, worldY, worldZ);
+                        double r = Noise.Value01(seed + 4242, WorldConstants.WrapX(worldX), worldY, worldZ);
                         if (r < planet.DataCacheRarity)
                         {
                             block = dataCacheId;
@@ -126,7 +126,7 @@ public sealed class WorldGenerator
                 int fy = surfaceY + 1;
                 int fly = fy - origin.Y;
                 if (!floraId.IsAir && fly >= 0 && fly < WorldConstants.ChunkSize
-                    && Noise.Value01(seed + 9001, worldX, 7, worldZ) < planet.FloraDensity)
+                    && Noise.Value01(seed + 9001, WorldConstants.WrapX(worldX), 7, worldZ) < planet.FloraDensity)
                 {
                     chunk.Set(lx, fly, lz, floraId);
                 }
@@ -147,7 +147,7 @@ public sealed class WorldGenerator
             }
 
             // Coarse 3D noise produces vein-like clusters; rarity is the fraction kept.
-            double n = Noise.Value3D(seed + 100 + i * 31, x / 9.0, y / 9.0, z / 9.0);
+            double n = Noise.ValueCylX(seed + 100 + i * 31, x, y, z, WorldConstants.Circumference, 9.0, 9.0, 9.0);
             if (n > 1.0 - ore.Rarity)
             {
                 var oreBlock = _content.GetBlock(ore.Block);
@@ -206,7 +206,7 @@ public sealed class WorldGenerator
     /// large so each biome is a big contiguous region (so per-biome weather covers a meaningful area).</summary>
     private static int BiomeIndex(long seed, int worldX, int worldZ, int count)
     {
-        double n = Noise.Fbm2D(seed ^ 0x0B10E, worldX / 360.0, worldZ / 360.0, octaves: 3);
+        double n = Noise.FbmCylX(seed ^ 0x0B10E, worldX, worldZ, WorldConstants.Circumference, 360.0, octaves: 3);
         int idx = (int)(n * count);
         return idx < 0 ? 0 : (idx >= count ? count - 1 : idx);
     }
@@ -255,7 +255,7 @@ public sealed class WorldGenerator
 
         if (_floraBySurface.TryGetValue(surface.Value, out var pool) && pool.Length > 0)
         {
-            int idx = (int)(Noise.Value01(seed + 9101, worldX, 3, worldZ) * pool.Length);
+            int idx = (int)(Noise.Value01(seed + 9101, WorldConstants.WrapX(worldX), 3, worldZ) * pool.Length);
             if (idx >= pool.Length)
             {
                 idx = pool.Length - 1;
