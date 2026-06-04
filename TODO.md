@@ -107,6 +107,35 @@ docking). Findings:
   /fly /god /instant /ai`, `/help` lists them). The client parses them → `AdminCommandIntent`; the server
   still gates on `IsAdmin` + `CheatsAllowed`. `/bump` stays a chat message.
 
+### Full-system flight — analyzed (planned, not started)
+Goal: replace the per-planet **arena** (±130 units, one planet) with a **system-scale** space you fly
+through, approaching/landing on any planet in the system manually. Analysis (2026-06-04):
+
+**What blocks it today**
+- **No body positions.** `CelestialBody` (`Galaxy.cs`) has no X/Y/Z within a system — only systems have
+  map coords (`MapX/MapY`). There is nowhere to "fly to". A neighbour planet in `SpaceView` is a pure
+  visual.
+- **Single active world.** The server holds one `_world` + one shared `_ship`; `SwitchActiveWorld` rebuilds
+  everything and **displaces all players** (one shared world → two players can't be on different planets).
+- **Arena bounds + destination-agnostic landing.** `LeaveSpaceIntent` has no destination; you always land
+  on the active world's landing zone. Space flight is decoupled from the voxel world (a combat layer).
+
+**Approaches**
+- **(A) Layered flight + hot world-switch (recommended, ~moderate):** add seeded per-body system
+  coordinates, enlarge the space volume, render all bodies, and when the ship reaches a body's approach
+  zone the land action targets THAT body → `SwitchActiveWorld`. Keeps the one-world invariant; multiplayer
+  still converges (all land together). Touch: `Galaxy.cs`/`UniverseGenerator` (body coords),
+  `GameServerSpaceCombat` (volume + approach detect + destination), `SpaceView` (multi-body render),
+  `LeaveSpaceIntent`/travel (carry a destination).
+- **(B) Persistent parallel worlds (high effort/risk):** `Dictionary<id, ServerWorld>` + per-player active
+  world + per-player chunk streaming; enables genuinely simultaneous different-planet play but is a partial
+  rewrite of the world lifecycle (`_world` referenced in ~100 places).
+- **(C) Server-side orbital physics (high/design risk):** server simulates ship trajectory in system space
+  with sphere-of-influence landing; changes the flight UX from arcade to macro.
+
+**Recommendation:** (A) for "fly between planets" without breaking the architecture; (B) only if truly
+simultaneous multi-location multiplayer is the goal.
+
 ### Not started / larger future work
 - **Advanced graphics roadmap** — Built-in RP vs URP decision, god rays, reflection probes, LUT grade.
   Full research in [docs/ADVANCED_GRAPHICS_PLAN.md](docs/ADVANCED_GRAPHICS_PLAN.md).
