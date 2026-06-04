@@ -195,16 +195,24 @@ namespace Spacecraft.Client
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
             _confirmQuit = false;
+            if (_quitDialog != null)
+            {
+                UnityEngine.Object.Destroy(_quitDialog);
+                _quitDialog = null;
+            }
+
             Phase = ShellPhase.MainMenu; // leaving the game returns to the main menu
         }
 
         private bool _confirmQuit; // showing the "quit to menu?" confirmation over the game
+        private GameObject _quitDialog;
 
         private GameBootstrap Boot() => _gameRoot != null ? _gameRoot.GetComponentInChildren<GameBootstrap>() : null;
 
         private void CancelQuit()
         {
             _confirmQuit = false;
+            ShowQuitDialog(false);
             var boot = Boot();
             if (boot != null)
             {
@@ -447,6 +455,7 @@ namespace Spacecraft.Client
                     {
                         // Ask before leaving the game (rather than quitting instantly).
                         _confirmQuit = true;
+                        ShowQuitDialog(true);
                         if (boot != null)
                         {
                             boot.MenuOpen = true; // freezes player control + frees the cursor for the buttons
@@ -508,41 +517,37 @@ namespace Spacecraft.Client
         /// <summary>Returns from the credits screen to the main menu.</summary>
         public void CloseCredits() => Phase = ShellPhase.MainMenu;
 
-        /// <summary>The "leave the game?" confirmation drawn over the running game (Esc in-game).</summary>
-        private void OnGUI()
+        /// <summary>Builds the "leave the game?" confirmation as a uGUI overlay (consistent with the rest
+        /// of the menus, instead of an IMGUI box) and shows/hides it with the confirmation state.</summary>
+        private void ShowQuitDialog(bool show)
         {
-            if (!_confirmQuit || Phase != ShellPhase.InGame)
+            if (show && _quitDialog == null)
             {
-                return;
+                BuildQuitDialog();
             }
 
+            if (_quitDialog != null)
+            {
+                _quitDialog.SetActive(show);
+            }
+        }
+
+        private void BuildQuitDialog()
+        {
             bool de = Settings != null && Settings.Language == "de";
-            string title = de ? "Spiel verlassen und zurück zum Hauptmenü?" : "Leave the game and return to the main menu?";
-            string yes = de ? "Ja, verlassen" : "Yes, leave";
-            string no = de ? "Nein, weiterspielen" : "No, keep playing";
+            var canvas = UiKit.CreateCanvas("Quit Confirm");
+            canvas.sortingOrder = 60; // above the in-game HUD/menu
+            _quitDialog = canvas.gameObject;
 
-            var prev = GUI.color;
-            GUI.color = new Color(0f, 0f, 0f, 0.65f);
-            GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
-            GUI.color = prev;
+            var bg = UiKit.AddImage(canvas.transform, 0, 0, 1920, 1080, UiKit.SolidSprite, new Color(0f, 0f, 0f, 0.6f));
+            bg.raycastTarget = true; // swallow clicks behind the dialog
 
-            float w = 480f, h = 170f;
-            var r = new Rect((Screen.width - w) * 0.5f, (Screen.height - h) * 0.5f, w, h);
-            GUI.Box(r, GUIContent.none);
-
-            var label = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontSize = 18, wordWrap = true };
-            GUI.Label(new Rect(r.x + 20, r.y + 18, w - 40, 56), title, label);
-
-            var btn = new GUIStyle(GUI.skin.button) { fontSize = 15 };
-            if (GUI.Button(new Rect(r.x + 30, r.y + 96, 200, 48), yes, btn))
-            {
-                ReturnToMenu();
-            }
-
-            if (GUI.Button(new Rect(r.x + w - 230, r.y + 96, 200, 48), no, btn))
-            {
-                CancelQuit();
-            }
+            var panel = UiKit.AddPanel(canvas.transform, 720f, 430f, 480f, 220f, UiKit.Panel);
+            UiKit.AddText(panel.transform, 24f, 26f, 432f, 72f,
+                de ? "Spiel verlassen und zurück zum Hauptmenü?" : "Leave the game and return to the main menu?",
+                22, UiKit.TextCol, TextAnchor.MiddleCenter);
+            UiKit.AddButton(panel.transform, 30f, 132f, 200f, 58f, de ? "Ja, verlassen" : "Yes, leave", ReturnToMenu);
+            UiKit.AddButton(panel.transform, 250f, 132f, 200f, 58f, de ? "Nein, weiter" : "No, keep playing", CancelQuit);
         }
     }
 }

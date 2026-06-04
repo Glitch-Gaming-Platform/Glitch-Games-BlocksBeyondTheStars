@@ -112,9 +112,9 @@ public sealed partial class GameServer
             Name = string.IsNullOrWhiteSpace(name) ? "Orbital Station" : name,
             SizeTier = tier,
             SpacePosition = new Vector3f(0f, 0f, 42f + index * 30f),
-            // High orbit: far above any terrain so the planet's surface is beyond view distance and never
-            // streams — the station reads as a free-floating unit in space (with the space sky below).
-            Origin = new Vector3i(900 + index * 120, 1200, 900),
+            // High orbit: well above any terrain so the planet surface is beyond view distance and never
+            // streams — the station reads as a free-floating unit in space (space sky all around).
+            Origin = new Vector3i(900 + index * 120, 400, 900),
         };
         _stationsById[id] = station;
         return station;
@@ -255,6 +255,22 @@ public sealed partial class GameServer
         if (station.Spawn.Equals(Vector3f.Zero))
         {
             station.Spawn = new Vector3f(station.Origin.X + 3.5f, station.Origin.Y + 2f, station.Origin.Z + 3.5f);
+        }
+
+        // Guarantee solid ground + headroom at the spawn so the player can never fall straight through the
+        // station into the void (some markers sit in an open bay). A small hull pad does the job.
+        var hull = _content.GetBlock("iron_wall")?.NumericId ?? BlockId.Air;
+        if (!hull.IsAir)
+        {
+            var sp = station.Spawn.ToBlock();
+            for (int dx = -1; dx <= 1; dx++)
+            for (int dz = -1; dz <= 1; dz++)
+            {
+                _world.SetBlock(new Vector3i(sp.X + dx, sp.Y - 1, sp.Z + dz), hull); // floor pad
+            }
+
+            _world.SetBlock(sp, BlockId.Air);                                   // stand-in space
+            _world.SetBlock(new Vector3i(sp.X, sp.Y + 1, sp.Z), BlockId.Air);   // headroom
         }
 
         if (hasBoard)
