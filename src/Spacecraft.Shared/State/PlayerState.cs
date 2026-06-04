@@ -65,6 +65,9 @@ public sealed class PlayerState
     /// <summary>Stealth field active (from a stealth suit) — creatures/enemies ignore the player. Not persisted.</summary>
     public bool Stealthed { get; set; }
 
+    /// <summary>Jetpack firing (client-driven) — the server drains suit energy while true. Not persisted.</summary>
+    public bool Jetpacking { get; set; }
+
     // Session cheat toggles (admin only, server-authoritative; not persisted).
     public bool GodMode { get; set; }
     public bool Fly { get; set; }

@@ -19,6 +19,8 @@ namespace Spacecraft.Client
         public float MoveSpeed = 6f;
         public float JumpSpeed = 7f;
         public float Gravity = 20f;
+        public float JetpackAccel = 26f;   // upward acceleration while the jetpack fires
+        public float JetpackMaxRise = 6.5f; // cap on jetpack-driven rise speed
         public float MouseSensitivity = 2f;
         public bool InvertY = false;
         public bool ThirdPerson = false;
@@ -37,6 +39,7 @@ namespace Spacecraft.Client
         private Vector3 _spawnPos;
         private bool _settling;
         private bool _wasGrounded = true;
+        private bool _jetpackActive; // last reported jetpack thrust state (server drains energy on this)
         private float _stepTimer;
         private int _lastWorldEpoch;
 
@@ -135,12 +138,14 @@ namespace Spacecraft.Client
             // The space view owns the camera and freezes on-foot control entirely.
             if (Game != null && Game.SpaceViewActive)
             {
+                UpdateJetpack(false);
                 return;
             }
 
             // A UI panel or the chat input is open: don't steer/interact, just settle by gravity.
             if (Game != null && (Game.MenuOpen || Game.ChatTyping))
             {
+                UpdateJetpack(false);
                 ApplyGravityOnly();
                 return;
             }
@@ -557,6 +562,32 @@ namespace Spacecraft.Client
             }
         }
 
+        /// <summary>True when the player can fire the jetpack: carries one and has suit energy left.</summary>
+        private bool CanJetpack() => Game != null && Game.SuitEnergy > 0f && HasItem("jetpack");
+
+        /// <summary>Drives the jetpack thrust VFX/audio while firing and reports state edges to the server
+        /// (which is authoritative for the suit-energy drain).</summary>
+        private void UpdateJetpack(bool active)
+        {
+            if (active)
+            {
+                ClientAudio.Instance?.JetTick();
+                if (Weapons != null)
+                {
+                    // Twin thrust flames at the player's feet (offset left/right of the pack).
+                    var feet = transform.position + Vector3.down * 0.1f;
+                    Weapons.Sparks(feet - transform.right * 0.2f, new Color(1f, 0.72f, 0.3f), 3);
+                    Weapons.Sparks(feet + transform.right * 0.2f, new Color(1f, 0.55f, 0.2f), 3);
+                }
+            }
+
+            if (active != _jetpackActive)
+            {
+                _jetpackActive = active;
+                Game?.Network?.SendSetJetpack(active);
+            }
+        }
+
         private void Move()
         {
             float h = Input.GetAxis("Horizontal");
@@ -566,6 +597,7 @@ namespace Spacecraft.Client
             float prevVy = _verticalVelocity; // captured before the grounded reset (for landing shake)
             bool grounded = _controller.isGrounded;
             _moving = grounded && (Mathf.Abs(h) + Mathf.Abs(v) > 0.1f);
+            bool jetpacking = false;
             if (grounded)
             {
                 if (Input.GetButtonDown("Jump"))
@@ -578,7 +610,21 @@ namespace Spacecraft.Client
             else
             {
                 _verticalVelocity -= Gravity * Time.deltaTime;
+
+                // Jetpack: hold Jump in the air to thrust upward (needs the item + suit energy). The server
+                // drains energy on the reported state and forces it off when empty (SuitEnergy then hits 0).
+                if (Input.GetButton("Jump") && CanJetpack())
+                {
+                    jetpacking = true;
+                    _verticalVelocity += JetpackAccel * Time.deltaTime;
+                    if (_verticalVelocity > JetpackMaxRise)
+                    {
+                        _verticalVelocity = JetpackMaxRise;
+                    }
+                }
             }
+
+            UpdateJetpack(jetpacking);
 
             move.y = _verticalVelocity;
             _controller.Move(move * Time.deltaTime);

@@ -26,7 +26,7 @@ Last updated: 2026-06-04.
 |---|---|
 | **W / A / S / D** | Move |
 | **Mouse** | Look |
-| **Space** | Jump |
+| **Space** | Jump — **hold in the air to fire the jetpack** (if equipped), thrusting upward until suit energy runs out |
 | **Left-click** | Mine the targeted block (or **scan** it when a scanner is selected) |
 | **Right-click** | Place the selected hotbar block |
 | **Mouse wheel** | Cycle hotbar slot |
@@ -88,7 +88,8 @@ the hauler slow and heavy. Hull + shield are shown on the HUD; shields recharge,
 - **Oxygen** (max 100 + tank bonuses): refills aboard ship / on breathable worlds; drains outside on
   toxic/airless worlds. An `oxygen_extractor` cuts the drain on extractable atmospheres.
 - **Hunger** (max 100): drains off-ship; below ~15 the suit auto-eats stored/loose rations.
-- **Suit energy** (max 100): drains while cloaked (stealth suit); cloak drops when it hits 0.
+- **Suit energy** (max 100): powers the stealth-suit cloak and the **jetpack** (hold Space in the air to
+  thrust up); both stop when it hits 0. Recharges aboard the ship and refills fully at a heal-tank.
 - **Armor**: each piece (chest/legs/helmet) adds resistance, summed and capped (~75%).
 
 ### Mining & tools

@@ -90,6 +90,11 @@
     "unlockCost": [ { "item": "data_fragment", "count": 4 }, { "item": "titanium_plate", "count": 8 }, { "item": "cable", "count": 8 } ]
   },
   {
+    "key": "jetpack", "nameKey": "blueprint.jetpack.name", "descriptionKey": "blueprint.jetpack.desc",
+    "category": "Suit", "prerequisites": [], "knowledgeCost": 16,
+    "unlockCost": [ { "item": "data_fragment", "count": 4 }, { "item": "titanium_plate", "count": 8 }, { "item": "energy_cell_1", "count": 2 } ]
+  },
+  {
     "key": "advanced_scanner", "nameKey": "blueprint.advanced_scanner.name", "descriptionKey": "blueprint.advanced_scanner.desc",
     "category": "Tools", "prerequisites": [], "knowledgeCost": 10,
     "unlockCost": [ { "item": "data_fragment", "count": 3 }, { "item": "titanium_plate", "count": 5 }, { "item": "cable", "count": 4 } ]

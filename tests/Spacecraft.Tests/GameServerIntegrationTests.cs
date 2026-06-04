@@ -209,6 +209,42 @@ public sealed class GameServerIntegrationTests : IDisposable
         Assert.True(server.World.GetBlock(new Vector3i(7, solidY, 0)).IsAir);
     }
 
+    [Fact]
+    public void Jetpack_DrainsSuitEnergy_WhileActive_AndRejectsWithoutOne()
+    {
+        using var repo = new SqliteWorldRepository(new SaveGamePaths(_root, "jet"));
+        using var serverTransport = new LoopbackServerTransport(NewLink(out var link));
+        using var client = new LoopbackClientTransport(link);
+
+        var config = Config();
+        config.WorldName = "jet";
+        var server = new SvGameServer(config, _content, serverTransport, repo);
+        server.Start();
+        JoinAndDrain(server, client, "Pilot");
+        var session = server.Sessions[1];
+
+        // No jetpack carried: the request is rejected and the player is not jetpacking.
+        session.State.SuitEnergy = 100f;
+        client.Send(NetCodec.Encode(new SetJetpackIntent { Active = true }), DeliveryMode.ReliableOrdered);
+        server.Tick(0.1);
+        Assert.False(session.State.Jetpacking);
+
+        // With a jetpack and energy: it activates and drains suit energy over ticks.
+        session.State.Inventory.Add("jetpack", 1, 1);
+        client.Send(NetCodec.Encode(new SetJetpackIntent { Active = true }), DeliveryMode.ReliableOrdered);
+        server.Tick(0.1);
+        Assert.True(session.State.Jetpacking);
+
+        float before = session.State.SuitEnergy;
+        server.Tick(0.5); // not aboard ship → no recharge, so it must fall
+        Assert.True(session.State.SuitEnergy < before, "Jetpack should drain suit energy while firing.");
+
+        // Releasing the thrust stops the drain.
+        client.Send(NetCodec.Encode(new SetJetpackIntent { Active = false }), DeliveryMode.ReliableOrdered);
+        server.Tick(0.1);
+        Assert.False(session.State.Jetpacking);
+    }
+
     private static LoopbackLink NewLink(out LoopbackLink link)
     {
         link = new LoopbackLink();

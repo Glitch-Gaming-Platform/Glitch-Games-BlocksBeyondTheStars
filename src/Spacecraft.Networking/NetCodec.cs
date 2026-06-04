@@ -65,6 +65,7 @@ public static class NetCodec
         Register(42, typeof(RepairWreckIntent));
         Register(43, typeof(ClaimWreckIntent));
         Register(44, typeof(TravelIntent));
+        Register(45, typeof(SetJetpackIntent));
 
         // Server -> Client
         Register(50, typeof(JoinAccepted));

@@ -26,6 +26,7 @@ namespace Spacecraft.Client
         private AudioSource _hum;       // looping ship interior hum (procedural)
         private AudioSource _fluid;     // looping lava/water bed when near a fluid
         private AudioSource _drill;     // looping drill while mining
+        private AudioSource _jet;       // looping jetpack thrust while firing
 
         private AudioClip _ok, _err, _blip; // procedural fallbacks (no recorded equivalent)
 
@@ -36,6 +37,7 @@ namespace Spacecraft.Client
         private string _fluidId = string.Empty;
         private float _fluidScanTimer;
         private float _drillRefresh = -10f;
+        private float _jetRefresh = -10f;
         private float _thunderTimer;
         private readonly System.Random _rng = new System.Random();
 
@@ -96,6 +98,14 @@ namespace Spacecraft.Client
                 _drill.clip = drillClip;
                 _drill.Play();
             }
+
+            _jet = gameObject.AddComponent<AudioSource>();
+            _jet.playOnAwake = false;
+            _jet.loop = true;
+            _jet.spatialBlend = 0f;
+            _jet.volume = 0f;
+            _jet.clip = _clips.TryGetValue("jetpack_loop", out var jetClip) ? jetClip : JetClip();
+            _jet.Play();
 
             _ok = Tone(660f, 0.12f, 0.4f);
             _err = Tone(110f, 0.20f, 0.5f);
@@ -163,6 +173,13 @@ namespace Spacecraft.Client
                 _drill.volume = Mathf.MoveTowards(_drill.volume, on ? sfx * 0.4f : 0f, Time.deltaTime * 4f);
             }
 
+            // Jetpack thrust loop while firing (PlayerController calls JetTick each frame it thrusts).
+            if (_jet != null && _jet.clip != null)
+            {
+                bool on = Time.time - _jetRefresh < 0.15f;
+                _jet.volume = Mathf.MoveTowards(_jet.volume, on ? sfx * 0.5f : 0f, Time.deltaTime * 5f);
+            }
+
             // Lava/water ambience when near a fluid (throttled block scan around the player).
             _fluidScanTimer -= Time.deltaTime;
             if (_fluidScanTimer <= 0f)
@@ -179,6 +196,32 @@ namespace Spacecraft.Client
 
         /// <summary>Called by the player controller each frame it is actively drilling; keeps the drill loop alive.</summary>
         public void DrillTick() => _drillRefresh = Time.time;
+
+        /// <summary>Called each frame the jetpack is firing; keeps the thrust loop alive (fades out otherwise).</summary>
+        public void JetTick() => _jetRefresh = Time.time;
+
+        /// <summary>Synthesized jetpack thrust: a low rumble under filtered hiss (used when no recording exists).</summary>
+        private static AudioClip JetClip()
+        {
+            const int rate = 44100;
+            const float duration = 1f; // loops seamlessly enough for a continuous hiss
+            int samples = Mathf.CeilToInt(rate * duration);
+            var clip = AudioClip.Create("jetpack_loop", samples, 1, rate, false);
+            var data = new float[samples];
+            var rng = new System.Random(91);
+            float lp = 0f;
+            for (int i = 0; i < samples; i++)
+            {
+                float t = i / (float)rate;
+                float white = (float)(rng.NextDouble() * 2 - 1);
+                lp += (white - lp) * 0.25f; // low-pass the noise into an airy hiss
+                float rumble = Mathf.Sin(2f * Mathf.PI * 55f * t) * 0.25f + Mathf.Sin(2f * Mathf.PI * 90f * t) * 0.12f;
+                data[i] = (lp * 0.6f + rumble) * 0.5f;
+            }
+
+            clip.SetData(data, 0);
+            return clip;
+        }
 
         private void UpdateFluidAmbience()
         {

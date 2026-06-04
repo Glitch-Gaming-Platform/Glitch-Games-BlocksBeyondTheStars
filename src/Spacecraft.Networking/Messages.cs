@@ -177,6 +177,13 @@ public sealed class TeleportToShipIntent { }
 /// <summary>Client toggles the stealth field (requires a stealth suit + energy).</summary>
 public sealed class ToggleStealthIntent { }
 
+/// <summary>Client → server: the player is (or is no longer) firing the jetpack. The server drains suit
+/// energy while active and forces it off when the energy runs out (the client applies the thrust locally).</summary>
+public sealed class SetJetpackIntent
+{
+    public bool Active { get; set; }
+}
+
 /// <summary>Client docks with and boards a nearby space station from the current space instance.</summary>
 public sealed class BoardStationIntent
 {
@@ -771,6 +778,9 @@ public sealed class PlayerPresence
 
     /// <summary>Stealth field active — other clients fade/hide the avatar + nameplate.</summary>
     public bool Stealthed { get; set; }
+
+    /// <summary>Jetpack firing — other clients show the thrust flame under the avatar.</summary>
+    public bool Jetpacking { get; set; }
 
     /// <summary>Equipped-gear bitmask shown on the avatar: 1=helmet, 2=chest, 4=legs, 8=pack, 16=lamp.</summary>
     public int Gear { get; set; }

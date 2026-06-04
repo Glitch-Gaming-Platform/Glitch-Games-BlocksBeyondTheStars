@@ -568,6 +568,7 @@ public sealed partial class GameServer
             var p = session.State;
             DecayTeleportCooldown(p.PlayerId, dt);
             TickStealth(session, dt);
+            TickJetpack(session, dt);
             float maxOxygen = MaxOxygen(p);
             if (p.GodMode)
             {
@@ -583,6 +584,13 @@ public sealed partial class GameServer
                 // atmosphere: regenerate, no drain (up to the equipped tank capacity).
                 p.Oxygen = System.Math.Min(maxOxygen, p.Oxygen + (float)(dt * 25));
                 p.Health = System.Math.Min(100f, p.Health + (float)(dt * 2));
+
+                // Aboard the ship the suit recharges (powers the jetpack / stealth / suit tools); outside it
+                // only refills at a heal-tank. Don't recharge while actively spending it.
+                if (p.AboardShip && !p.Stealthed && !p.Jetpacking)
+                {
+                    p.SuitEnergy = System.Math.Min(100f, p.SuitEnergy + (float)(dt * 20));
+                }
             }
             else
             {
@@ -920,6 +928,7 @@ public sealed partial class GameServer
             case LoadRationIntent loadRation: HandleLoadRation(session, loadRation); break;
             case TeleportToShipIntent: HandleTeleportToShip(session); break;
             case ToggleStealthIntent: HandleToggleStealth(session); break;
+            case SetJetpackIntent sj: HandleSetJetpack(session, sj); break;
             case BoardStationIntent boardStation: HandleBoardStation(session, boardStation); break;
             case LeaveStationIntent: HandleLeaveStation(session); break;
             case RepairWreckIntent repairWreck: HandleRepairWreck(session, repairWreck); break;

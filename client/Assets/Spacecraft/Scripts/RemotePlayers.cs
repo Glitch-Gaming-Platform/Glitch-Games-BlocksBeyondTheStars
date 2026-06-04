@@ -13,6 +13,7 @@ namespace Spacecraft.Client
     public sealed class RemotePlayers : MonoBehaviour
     {
         public GameBootstrap Game;
+        public WeaponFx Weapons; // shared VFX layer, for remote jetpack thrust flames
 
         private sealed class Remote
         {
@@ -22,6 +23,7 @@ namespace Spacecraft.Client
             public Vector3 Target;       // latest reported position in canonical world space
             public Vector3 SettledWorld;  // smoothed position in world space (converted to scene for display)
             public float Yaw;
+            public bool Jetpacking;        // show a thrust flame under the avatar while firing
             public int Gear = -1;          // cached so gear is only rebuilt on change
             public string Held = "\0";     // cached held item key
         }
@@ -61,6 +63,11 @@ namespace Spacecraft.Client
                 r.SettledWorld = Vector3.Lerp(r.SettledWorld, r.Target, Time.deltaTime * 10f);
                 r.Go.transform.position = Game != null ? Game.ScenePos(r.SettledWorld.x, r.SettledWorld.y, r.SettledWorld.z) : r.SettledWorld;
                 r.Go.transform.rotation = Quaternion.Euler(0f, r.Yaw, 0f);
+
+                if (r.Jetpacking && Weapons != null)
+                {
+                    Weapons.Sparks(r.Go.transform.position + Vector3.down * 0.1f, new Color(1f, 0.65f, 0.25f), 3);
+                }
             }
         }
 
@@ -86,6 +93,7 @@ namespace Spacecraft.Client
             r.Name = m.Name;
             r.Target = new Vector3(m.X, m.Y, m.Z);
             r.Yaw = m.Yaw;
+            r.Jetpacking = m.Jetpacking;
 
             // Equipped gear (helmet/chest/legs/pack/lamp) shown on the remote avatar.
             if (m.Gear != r.Gear)

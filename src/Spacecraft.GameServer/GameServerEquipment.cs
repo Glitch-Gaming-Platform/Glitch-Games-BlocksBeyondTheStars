@@ -107,4 +107,52 @@ public sealed partial class GameServer
     }
 
     private void HandleToggleStealth(PlayerSession session) => ToggleStealth(session.State.PlayerId);
+
+    private const string JetpackItem = "jetpack";
+    private const float JetpackDrainPerSecond = 9f; // suit energy spent while thrusting
+
+    /// <summary>Sets the player's jetpack thrust state (client-driven). Rejects if they carry no jetpack
+    /// or have no suit energy; the actual upward thrust is applied client-side.</summary>
+    private void HandleSetJetpack(PlayerSession session, SetJetpackIntent intent)
+    {
+        var p = session.State;
+        if (!intent.Active)
+        {
+            p.Jetpacking = false;
+            return;
+        }
+
+        if (!p.Inventory.Has(JetpackItem, 1))
+        {
+            p.Jetpacking = false;
+            Reject(session, "jetpack", "You have no jetpack.");
+            return;
+        }
+
+        if (p.SuitEnergy <= 0f)
+        {
+            p.Jetpacking = false;
+            Reject(session, "jetpack", "Not enough suit energy to fire the jetpack.");
+            return;
+        }
+
+        p.Jetpacking = true;
+    }
+
+    /// <summary>Drains suit energy while the jetpack fires; cuts thrust when the energy runs out.</summary>
+    private void TickJetpack(PlayerSession session, double dt)
+    {
+        var p = session.State;
+        if (!p.Jetpacking)
+        {
+            return;
+        }
+
+        p.SuitEnergy = System.Math.Max(0f, p.SuitEnergy - (float)(dt * JetpackDrainPerSecond));
+        if (p.SuitEnergy <= 0f)
+        {
+            p.Jetpacking = false;
+            SendPlayerState(session); // tell the client its tank is empty so it stops thrusting
+        }
+    }
 }

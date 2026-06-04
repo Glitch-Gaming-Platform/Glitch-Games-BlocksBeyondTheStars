@@ -50,6 +50,7 @@ public sealed partial class GameServer
             Arms = s.ArmColor,
             Legs = s.LegColor,
             Stealthed = p.Stealthed,
+            Jetpacking = p.Jetpacking,
             Gear = GearMask(p),
             Held = HeldItemKey(p),
         };

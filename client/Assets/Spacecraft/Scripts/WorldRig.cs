@@ -172,6 +172,9 @@ namespace Spacecraft.Client
             // Tool/weapon VFX (beam + muzzle flash + impact sparks, drill sparks).
             var weaponFx = root.AddComponent<WeaponFx>();
             pc.Weapons = weaponFx;
+            remotes.Weapons = weaponFx; // remote jetpack thrust flames
+
+            // Jetpack thrust flames for the local third-person avatar would render via the player's own VFX.
 
             return root;
         }

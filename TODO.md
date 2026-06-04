@@ -76,8 +76,11 @@ SQLite persistence.
 ## 🔧 Open / pending
 
 ### Partial — backend done, client polish/UI/VFX remaining
-1. **Jetpack.** Only a gear-flag stub (`GameServerPresence` checks for a `jetpack` item); no item/recipe,
-   no boosted-jump/short-flight mechanics, no client VFX.
+1. ✅ **Jetpack (done).** Craftable item + blueprint + recipe (`jetpack`, workshop, gated). Hold Space in
+   the air to thrust up (`PlayerController`); server-authoritative suit-energy drain + force-off when empty
+   (`SetJetpackIntent` → `HandleSetJetpack`/`TickJetpack`), suit energy recharges aboard ship. VFX: twin
+   thrust flames + a looping thrust hiss (`ClientAudio.JetClip`), shown on remote players too (presence
+   `Jetpacking`). Test `Jetpack_DrainsSuitEnergy_WhileActive_AndRejectsWithoutOne`.
 2. ✅ **Weather (done).** IMGUI rain wash + lightning (`WeatherFx`), storm/rain ambience bed + thunder
    (`ClientAudio`, cave-silenced), 3D in-world rain falling around the player + storm fog/view-distance
    scaling (`WeatherFx3D`). All gated on open sky + intensity-scaled.
