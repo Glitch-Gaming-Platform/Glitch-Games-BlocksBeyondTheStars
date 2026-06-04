@@ -112,7 +112,9 @@ public sealed partial class GameServer
             Name = string.IsNullOrWhiteSpace(name) ? "Orbital Station" : name,
             SizeTier = tier,
             SpacePosition = new Vector3f(0f, 0f, 42f + index * 30f),
-            Origin = new Vector3i(900 + index * 120, 96, 900),
+            // High orbit: far above any terrain so the planet's surface is beyond view distance and never
+            // streams — the station reads as a free-floating unit in space (with the space sky below).
+            Origin = new Vector3i(900 + index * 120, 1200, 900),
         };
         _stationsById[id] = station;
         return station;

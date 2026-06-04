@@ -142,7 +142,10 @@ namespace Spacecraft.Client
 
             float intensity = env?.Intensity ?? 0f;
             Color sun = env != null ? Rgb(env.SunColor) : new Color(1f, 0.96f, 0.9f);
-            bool spaceSky = env != null && env.SpaceSky;
+            // Boarded on an orbital station: it floats free in space, so show the space sky (black, no fog)
+            // and treat it like a lit, life-supported interior — independent of the planet far below.
+            bool boarded = !string.IsNullOrEmpty(Game.StationName);
+            bool spaceSky = (env != null && env.SpaceSky) || boarded;
             ApplyLighting(_time, intensity, sun, spaceSky);
         }
 
@@ -162,7 +165,9 @@ namespace Spacecraft.Client
             // (so caves need a lamp). The ship is your home, though, so feed an "indoor fill" the shader
             // adds to skylight-occluded faces only — lighting the cabin (day or night) without touching the
             // sunlit outdoors seen through the windows. Smoothed so boarding/leaving fades.
-            float indoorTarget = Game != null && Game.Aboard ? 1f : 0f;
+            // Interior fill light: aboard your ship, or boarded on a station (its life-support lighting).
+            bool litInterior = Game != null && (Game.Aboard || !string.IsNullOrEmpty(Game.StationName));
+            float indoorTarget = litInterior ? 1f : 0f;
             _indoor = Mathf.MoveTowards(_indoor, indoorTarget, Time.deltaTime * 3f);
             Shader.SetGlobalFloat(IndoorId, _indoor);
 
