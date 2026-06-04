@@ -137,6 +137,12 @@ namespace Spacecraft.Client
         private static Vector2 BlockMaterial(GameContent content, BlockId id)
         {
             var def = content.BlockById(id);
+            // Data-driven override (Material Editor materials carry their own gloss/metal).
+            if (def != null && (def.Gloss.HasValue || def.Metal.HasValue))
+            {
+                return new Vector2(def.Gloss ?? 0.05f, def.Metal ?? 0f);
+            }
+
             switch (def?.Key)
             {
                 case "glass": return new Vector2(0.90f, 0.0f);
@@ -159,7 +165,13 @@ namespace Spacecraft.Client
         /// light blocks + lava glow strongly, crystals + glowing flora medium, ores a faint sheen.</summary>
         private static float BlockEmission(GameContent content, BlockId id)
         {
-            switch (content.BlockById(id)?.Key)
+            var def = content.BlockById(id);
+            if (def?.Emission is float e)
+            {
+                return e; // data-driven (Material Editor)
+            }
+
+            switch (def?.Key)
             {
                 case "light_white": return 1.00f;
                 case "light_red": return 1.00f;
@@ -184,6 +196,12 @@ namespace Spacecraft.Client
             if (def == null)
             {
                 return Color.magenta;
+            }
+
+            // Data-driven base colour (Material Editor materials carry their own tint).
+            if (def.Color is int rgb)
+            {
+                return new Color(((rgb >> 16) & 0xFF) / 255f, ((rgb >> 8) & 0xFF) / 255f, (rgb & 0xFF) / 255f);
             }
 
             // A curated palette so the world reads intentionally until a real texture atlas

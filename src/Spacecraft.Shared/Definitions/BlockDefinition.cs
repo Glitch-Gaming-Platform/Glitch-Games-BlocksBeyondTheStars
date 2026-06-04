@@ -33,6 +33,22 @@ public sealed class BlockDefinition
     /// <summary>Items produced when this block is mined.</summary>
     public List<ItemAmount> Drops { get; set; } = new();
 
+    // --- Optional render hints (data-driven appearance for custom materials) ---
+    // When null the client falls back to its built-in per-key look; when set they let a
+    // material authored in the Material Editor render correctly without any code change.
+
+    /// <summary>Surface gloss 0 (matte) .. 1 (mirror-ish), or null to use the built-in look.</summary>
+    public float? Gloss { get; set; }
+
+    /// <summary>Metalness 0 (dielectric) .. 1 (metal tints its highlight by albedo), or null for the built-in look.</summary>
+    public float? Metal { get; set; }
+
+    /// <summary>Self-illumination 0 (none) .. 1 (full glow), or null for the built-in look.</summary>
+    public float? Emission { get; set; }
+
+    /// <summary>Base RGB tint (0xRRGGBB) used for the procedural texture + color fallback, or null for the built-in palette.</summary>
+    public int? Color { get; set; }
+
     // --- Assigned by the registry, not present in JSON ---
 
     /// <summary>Dense numeric id assigned at load time; what chunks actually store.</summary>

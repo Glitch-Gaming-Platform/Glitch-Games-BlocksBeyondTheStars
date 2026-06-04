@@ -11,9 +11,17 @@ Resume point for development. Full milestone breakdown lives in `plans/IMPLEMENT
   field (+ Random) to start a fresh, differently-seeded world. `LocalServerLauncher.Start` takes the
   world name + seed and passes `--world/--seed`; the server creates the save if missing (a new name =
   a new world, an existing name resumes). The existing save shows up as "singleplayer". Bilingual.
-- **Material editor:** paint or load a texture for a new material, set how often it occurs and on what
-  kind of world (no atmosphere / with atmosphere / one biome / multiple biomes); adapt the game
-  mechanics + world-gen accordingly; + Python scripts to fold new materials into the data.
+- **Material editor — DONE.** `MaterialEditor` (in the Editors submenu) is a paint tool + data form:
+  paint a 64×64 block tile on a live canvas (left-click paint, right-click erase, preset swatches +
+  RGB base colour + Fill/Flat/Clear), or name a source PNG the merge tool decodes. You set the mining
+  mechanics (hardness, required tool, min tier — drops itself), the look (gloss / metalness / glow /
+  base tint — now **data-driven** via new optional `BlockDefinition` fields the client reads, so a
+  custom material renders correctly with no code change) and the world spawn (frequency + depth band +
+  **world type**: any / airless / with-atmosphere / single-biome / multi-biome). **Save** writes a
+  bundle (`material.json` + `texture.bytes`) under `material_exports/<key>/`; `tools/merge_material.py`
+  folds it into `data/blocks.json` + `items.json` + an ore vein on every matching planet in
+  `planets.json`, copies the texture into `client/Assets/Resources/textures/`, and adds bilingual
+  locale placeholders (warns if the block count would exceed the 64-tile atlas). Bilingual.
 - **`/bump` debug snapshot — DONE.** A player types `/bump <description>` in chat (intercepted before
   the comm-radio gate, so it needs no radio); the server writes a detailed JSON snapshot to
   `<world>/bumps/bump_NNN_<utc>.json`: the player state, environment (planet/biome/weather/time/atmo),

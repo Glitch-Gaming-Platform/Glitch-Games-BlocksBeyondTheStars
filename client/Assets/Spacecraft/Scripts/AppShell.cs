@@ -6,7 +6,7 @@ using UnityEngine;
 namespace Spacecraft.Client
 {
     /// <summary>The shell phases: splash, main menu, settings, credits, loading, in-game.</summary>
-    public enum ShellPhase { Splash, MainMenu, Settings, Credits, Loading, InGame, ShipEditor, AvatarEditor, StructureEditor, ContentEditor, Editors, SaveSelect }
+    public enum ShellPhase { Splash, MainMenu, Settings, Credits, Loading, InGame, ShipEditor, AvatarEditor, StructureEditor, ContentEditor, MaterialEditor, Editors, SaveSelect }
 
     /// <summary>
     /// Client front-end state machine (M20 / `anf_textures.md`): drives splash → main menu →
@@ -291,6 +291,30 @@ namespace Spacecraft.Client
             Phase = ShellPhase.Editors;
         }
 
+        /// <summary>Opens the material designer (paint/load a texture, set frequency + world type, mechanics).</summary>
+        public void OpenMaterialEditor()
+        {
+            DestroyMenuBackground();
+            _editorRoot = new GameObject("MaterialEditor");
+            _editorRoot.AddComponent<MaterialEditor>().Shell = this;
+            Phase = ShellPhase.MaterialEditor;
+        }
+
+        /// <summary>Closes the material designer and returns to the editors submenu.</summary>
+        public void CloseMaterialEditor()
+        {
+            if (_editorRoot != null)
+            {
+                Destroy(_editorRoot);
+                _editorRoot = null;
+            }
+
+            EnsureMenuBackground();
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+            Phase = ShellPhase.Editors;
+        }
+
         /// <summary>Closes the structure editor and returns to the main menu.</summary>
         public void CloseStructureEditor()
         {
@@ -432,6 +456,10 @@ namespace Spacecraft.Client
                 else if (Phase == ShellPhase.ContentEditor)
                 {
                     CloseContentEditor();
+                }
+                else if (Phase == ShellPhase.MaterialEditor)
+                {
+                    CloseMaterialEditor();
                 }
             }
         }
