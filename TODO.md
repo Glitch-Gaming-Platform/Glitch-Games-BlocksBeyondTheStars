@@ -221,6 +221,11 @@ StampShip in join/travel + per-player in the space-combat tick; **P4d** untangle
 stays per-world (fine while each occupied world has one player; shared-world multi-ship is P7).
 
 ### Not started / larger future work
+- **Space stations as their own locations** ⭐ — boarding a station currently stamps it into the planet
+  world and teleports there without a `WorldReset`, so the player falls through to the planet (and weather/
+  clouds/day-night bleed in). Plan: make a station its own **void world** (space sky, no weather/clouds,
+  fixed interior lighting, life support, NPCs) and board it via the proven travel/`WorldReset` path. Full
+  analysis + phased plan (S1–S7) in [docs/STATION_AS_LOCATION_PLAN.md](docs/STATION_AS_LOCATION_PLAN.md).
 - **World wrap (walk around the planet)** — ✅ **W0–W4 shipped**: X is a wrapping longitude (cylinder
   world), so you can walk east and arrive back at the start with a **seam-free** edge (terrain/biomes/caves/
   ore/structures continuous across X = 0 ≡ X = 6000). Seam-free generation via circular-domain noise; server
@@ -237,7 +242,7 @@ stays per-world (fine while each occupied world has one player; shared-world mul
 ---
 
 ## Reference docs (committed, under docs/)
-Concept/design detail for the larger systems: `WORLD_WRAP_PLAN`, `MULTIWORLD_AND_SYSTEM_FLIGHT_PLAN`, `SPACE_COMBAT_CONCEPT`,
+Concept/design detail for the larger systems: `STATION_AS_LOCATION_PLAN`, `WORLD_WRAP_PLAN`, `MULTIWORLD_AND_SYSTEM_FLIGHT_PLAN`, `SPACE_COMBAT_CONCEPT`,
 `CLIENT_COMPLETION_PLAN`, `CRAFTING_TECH_SHIP_UI_PLAN`, `STATION_SETTLEMENT_EDITOR_PLAN`,
 `SHIP_TYPE_EDITOR_PLAN`, `ADVANCED_GRAPHICS_PLAN`, `SOUND_DESIGN`, `SELF_HOSTING`, `AI_MISSION_BACKEND`,
 `CLIENT_SHELL_AND_ASSETS`.
