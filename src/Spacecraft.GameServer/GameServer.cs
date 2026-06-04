@@ -1118,7 +1118,9 @@ public sealed partial class GameServer
 
     private void HandleMine(PlayerSession session, MineBlockIntent mine)
     {
-        var pos = new Vector3i(mine.X, mine.Y, mine.Z);
+        // Longitude wraps: canonicalize X up front so reach, protection, mining progress and the broadcast
+        // all agree, whatever lap the client's unbounded transform reported the block from.
+        var pos = WorldConstants.CanonicalBlock(new Vector3i(mine.X, mine.Y, mine.Z));
         var current = _world.GetBlock(pos);
         if (current.IsAir)
         {
@@ -1267,7 +1269,7 @@ public sealed partial class GameServer
             return;
         }
 
-        var pos = new Vector3i(place.X, place.Y, place.Z);
+        var pos = WorldConstants.CanonicalBlock(new Vector3i(place.X, place.Y, place.Z)); // longitude wraps
         if (!_world.GetBlock(pos).IsAir)
         {
             Reject(session, "place", "Target is not empty.");
@@ -1624,8 +1626,12 @@ public sealed partial class GameServer
 
     private static bool WithinReach(PlayerState player, Vector3i block)
     {
-        var center = new Vector3f(block.X + 0.5f, block.Y + 0.5f, block.Z + 0.5f);
-        return player.Position.DistanceSquared(center) <= MaxReach * MaxReach;
+        // Longitude wraps: measure the X distance the short way round so a block just across the seam
+        // (canonical X numerically far, physically adjacent) is still reachable.
+        double dx = WorldConstants.WrapDeltaX((block.X + 0.5) - player.Position.X);
+        double dy = (block.Y + 0.5) - player.Position.Y;
+        double dz = (block.Z + 0.5) - player.Position.Z;
+        return dx * dx + dy * dy + dz * dz <= MaxReach * MaxReach;
     }
 
     private ToolProperties ActiveTool(PlayerState player)

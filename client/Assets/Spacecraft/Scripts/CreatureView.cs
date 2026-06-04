@@ -41,12 +41,12 @@ namespace Spacecraft.Client
             foreach (var c in Game.Creatures)
             {
                 seen.Add(c.Id);
-                var pos = new Vector3(c.X, c.Y, c.Z);
+                var pos = new Vector3(c.X, c.Y, c.Z); // canonical world space; smoothing stays in world space
                 if (!_creatures.TryGetValue(c.Id, out var entry))
                 {
                     var root = new GameObject("Creature_" + c.SpeciesId);
                     root.transform.SetParent(transform, true); // under the game root → destroyed on teardown (not leaked into menus/editors)
-                    root.transform.position = pos;
+                    root.transform.position = Game.ScenePos(pos.x, pos.y, pos.z); // seam-aware (longitude wraps)
                     new CreatureBuilder().Build(root, c);
                     entry = new Entry
                     {
@@ -70,14 +70,15 @@ namespace Spacecraft.Client
                 if (Time.time < entry.AttackUntil)
                 {
                     float k = 1f - (entry.AttackUntil - Time.time) / 0.22f;
-                    var to = Game.PlayerPosition - entry.Settled; to.y = 0f;
+                    var to = Game.PlayerPosition - Game.ScenePos(entry.Settled.x, entry.Settled.y, entry.Settled.z); to.y = 0f;
                     if (to.sqrMagnitude > 0.04f)
                     {
                         lunge = to.normalized * (Mathf.Sin(Mathf.Clamp01(k) * Mathf.PI) * 0.6f);
                     }
                 }
 
-                entry.Root.transform.position = entry.Settled + lunge;
+                // Smoothing is in world space; map to the scene at the copy nearest the player (longitude wraps).
+                entry.Root.transform.position = Game.ScenePos(entry.Settled.x, entry.Settled.y, entry.Settled.z) + lunge;
 
                 // Periodic idle vocalisation, spatialised at the creature, pitched by its size.
                 if (Time.time >= entry.NextCall)

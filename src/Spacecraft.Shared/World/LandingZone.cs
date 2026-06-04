@@ -20,5 +20,5 @@ public sealed class LandingZone
     public bool Protected { get; set; }
 
     public bool Contains(int x, int z)
-        => System.Math.Abs(x - CenterX) <= Radius && System.Math.Abs(z - CenterZ) <= Radius;
+        => System.Math.Abs(WorldConstants.WrapDeltaX(x - CenterX)) <= Radius && System.Math.Abs(z - CenterZ) <= Radius;
 }

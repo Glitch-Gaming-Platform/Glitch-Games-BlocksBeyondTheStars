@@ -15,16 +15,23 @@ namespace Spacecraft.Client
 
         public IReadOnlyDictionary<ChunkCoord, ChunkData> Chunks => _chunks;
 
+        // Longitude wraps: chunks are cached by canonical chunk-X (a chunk a lap away is the same chunk),
+        // and block lookups canonicalize X so an unbounded player coordinate still resolves after laps.
         public void StoreChunk(ChunkCoord coord, ushort[] blocks)
-            => _chunks[coord] = ChunkData.FromRaw(coord, blocks);
+        {
+            coord = WorldConstants.CanonicalChunk(coord);
+            _chunks[coord] = ChunkData.FromRaw(coord, blocks);
+        }
 
         /// <summary>Drops all cached chunks (used when travelling to another world).</summary>
         public void Clear() => _chunks.Clear();
 
-        public bool TryGetChunk(ChunkCoord coord, out ChunkData chunk) => _chunks.TryGetValue(coord, out chunk);
+        public bool TryGetChunk(ChunkCoord coord, out ChunkData chunk)
+            => _chunks.TryGetValue(WorldConstants.CanonicalChunk(coord), out chunk);
 
         public BlockId GetBlock(int wx, int wy, int wz)
         {
+            wx = WorldConstants.WrapX(wx);
             var coord = WorldConstants.WorldToChunk(new Vector3i(wx, wy, wz));
             if (!_chunks.TryGetValue(coord, out var chunk))
             {
@@ -38,6 +45,7 @@ namespace Spacecraft.Client
         /// <summary>Applies a single authoritative block change from the server.</summary>
         public bool ApplyBlockChange(int wx, int wy, int wz, ushort block, out ChunkCoord affected)
         {
+            wx = WorldConstants.WrapX(wx);
             affected = WorldConstants.WorldToChunk(new Vector3i(wx, wy, wz));
             if (!_chunks.TryGetValue(affected, out var chunk))
             {

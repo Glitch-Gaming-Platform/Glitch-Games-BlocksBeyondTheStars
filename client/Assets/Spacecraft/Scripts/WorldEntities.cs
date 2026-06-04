@@ -47,7 +47,7 @@ namespace Spacecraft.Client
                     _cubes[e.Id] = go;
                 }
 
-                go.transform.position = new Vector3(e.X, e.Y + 0.8f, e.Z);
+                go.transform.position = Game.ScenePos(e.X, e.Y + 0.8f, e.Z); // seam-aware (longitude wraps)
             }
 
             // Remove cubes whose entity is gone (killed / out of range).

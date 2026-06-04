@@ -17,7 +17,8 @@ namespace Spacecraft.Client
         private sealed class Npc
         {
             public GameObject Go;
-            public Vector3 Target;
+            public Vector3 Target;        // canonical world space
+            public Vector3 SettledWorld;   // smoothed world position (mapped to scene for display)
             public float Yaw;
             public string Label;
         }
@@ -35,7 +36,8 @@ namespace Spacecraft.Client
 
             foreach (var n in _npcs.Values)
             {
-                n.Go.transform.position = Vector3.Lerp(n.Go.transform.position, n.Target, Time.deltaTime * 8f);
+                n.SettledWorld = Vector3.Lerp(n.SettledWorld, n.Target, Time.deltaTime * 8f);
+                n.Go.transform.position = Game != null ? Game.ScenePos(n.SettledWorld.x, n.SettledWorld.y, n.SettledWorld.z) : n.SettledWorld;
                 n.Go.transform.rotation = Quaternion.Euler(0f, n.Yaw, 0f);
             }
         }
@@ -50,7 +52,7 @@ namespace Spacecraft.Client
                 {
                     var go = new GameObject($"NPC {nd.Role}");
                     go.transform.SetParent(transform, true); // under the game root → not leaked into menus/editors
-                    go.transform.position = new Vector3(nd.X, nd.Y, nd.Z);
+                    go.transform.position = Game != null ? Game.ScenePos(nd.X, nd.Y, nd.Z) : new Vector3(nd.X, nd.Y, nd.Z);
 
                     var avatar = go.AddComponent<PlayerAvatar>();
                     Color skin = nd.IsRobot ? new Color(0.75f, 0.78f, 0.82f) : Rgb(nd.SkinRgb);
@@ -63,7 +65,7 @@ namespace Spacecraft.Client
                         go.transform.localScale = Vector3.one * nd.Size;
                     }
 
-                    n = new Npc { Go = go };
+                    n = new Npc { Go = go, SettledWorld = new Vector3(nd.X, nd.Y, nd.Z) };
                     _npcs[nd.Id] = n;
                 }
 

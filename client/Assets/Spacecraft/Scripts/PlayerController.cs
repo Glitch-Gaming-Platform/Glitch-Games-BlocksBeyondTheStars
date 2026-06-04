@@ -207,7 +207,7 @@ namespace Spacecraft.Client
             float bestSq = 6f * 6f; // attack reach
             foreach (var e in Game.PlanetEnemies)
             {
-                var ep = new Vector3(e.X, e.Y, e.Z);
+                var ep = Game.ScenePos(e.X, e.Y, e.Z); // seam-aware (longitude wraps)
                 float d = (ep - transform.position).sqrMagnitude;
                 if (d < bestSq)
                 {
@@ -220,7 +220,7 @@ namespace Spacecraft.Client
             // Creatures (fauna) are attackable too — the server shares the hit path.
             foreach (var c in Game.Creatures)
             {
-                var cp = new Vector3(c.X, c.Y, c.Z);
+                var cp = Game.ScenePos(c.X, c.Y, c.Z); // seam-aware (longitude wraps)
                 float d = (cp - transform.position).sqrMagnitude;
                 if (d < bestSq)
                 {
@@ -262,7 +262,7 @@ namespace Spacecraft.Client
             float bestSq = 6f * 6f; // loot reach
             foreach (var c in Game.Containers)
             {
-                float d = (new Vector3(c.X + 0.5f, c.Y + 0.5f, c.Z + 0.5f) - transform.position).sqrMagnitude;
+                float d = (Game.ScenePos(c.X + 0.5f, c.Y + 0.5f, c.Z + 0.5f) - transform.position).sqrMagnitude; // seam-aware
                 if (d < bestSq)
                 {
                     bestSq = d;
@@ -407,7 +407,7 @@ namespace Spacecraft.Client
             float bestSq = Reach * Reach;
             foreach (var c in Game.Creatures)
             {
-                var cp = new Vector3(c.X, c.Y, c.Z);
+                var cp = Game.ScenePos(c.X, c.Y, c.Z); // seam-aware (longitude wraps)
                 float d = (cp - transform.position).sqrMagnitude;
                 if (d < bestSq)
                 {

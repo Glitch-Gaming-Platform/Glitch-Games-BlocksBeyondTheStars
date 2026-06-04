@@ -19,7 +19,8 @@ namespace Spacecraft.Client
             public GameObject Go;
             public PlayerAvatar Avatar;
             public string Name;
-            public Vector3 Target;
+            public Vector3 Target;       // latest reported position in canonical world space
+            public Vector3 SettledWorld;  // smoothed position in world space (converted to scene for display)
             public float Yaw;
             public int Gear = -1;          // cached so gear is only rebuilt on change
             public string Held = "\0";     // cached held item key
@@ -53,10 +54,12 @@ namespace Spacecraft.Client
                 _subscribed = true;
             }
 
-            // Smoothly move avatars toward their latest reported position/heading.
+            // Smoothly move avatars toward their latest reported position/heading. Smoothing is done in
+            // world space, then mapped to the scene at the copy nearest the player (longitude wraps).
             foreach (var r in _remotes.Values)
             {
-                r.Go.transform.position = Vector3.Lerp(r.Go.transform.position, r.Target, Time.deltaTime * 10f);
+                r.SettledWorld = Vector3.Lerp(r.SettledWorld, r.Target, Time.deltaTime * 10f);
+                r.Go.transform.position = Game != null ? Game.ScenePos(r.SettledWorld.x, r.SettledWorld.y, r.SettledWorld.z) : r.SettledWorld;
                 r.Go.transform.rotation = Quaternion.Euler(0f, r.Yaw, 0f);
             }
         }
@@ -72,11 +75,11 @@ namespace Spacecraft.Client
             {
                 var go = new GameObject($"Player {m.Name}");
                 go.transform.SetParent(transform, true); // under the game root → not leaked into menus/editors
-                go.transform.position = new Vector3(m.X, m.Y, m.Z);
+                go.transform.position = Game != null ? Game.ScenePos(m.X, m.Y, m.Z) : new Vector3(m.X, m.Y, m.Z);
                 var avatar = go.AddComponent<PlayerAvatar>();
                 avatar.Build(Rgb(m.Skin), Rgb(m.Torso), Rgb(m.Arms), Rgb(m.Legs));
                 avatar.SetVisible(true);
-                r = new Remote { Go = go, Avatar = avatar, Name = m.Name };
+                r = new Remote { Go = go, Avatar = avatar, Name = m.Name, SettledWorld = new Vector3(m.X, m.Y, m.Z) };
                 _remotes[m.PlayerId] = r;
             }
 

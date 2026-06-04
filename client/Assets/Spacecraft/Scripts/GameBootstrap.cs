@@ -95,16 +95,31 @@ namespace Spacecraft.Client
         /// <summary>Latest day/night + weather + sun colour (World systems).</summary>
         public WorldEnvironment Environment { get; private set; }
 
-        /// <summary>World-X span over which the local time-of-day shifts a full cycle. Treating X as a
-        /// longitude gives the planet a real day/night terminator: a player far east can be in daylight
-        /// while one far west is in night, on the same world.</summary>
-        public const float DayCircumference = 6000f;
+        /// <summary>World-X span over which the local time-of-day shifts a full cycle. This is the world
+        /// circumference (X is a wrapping longitude), so one walk around the world is exactly one day and
+        /// the planet has a real day/night terminator: a player far east can be in daylight while one far
+        /// west is in night, on the same world.</summary>
+        public const float DayCircumference = WorldConstants.Circumference;
 
         /// <summary>Time-of-day at the player's position — the server's global day fraction shifted by the
         /// player's longitude (world X), wrapped to 0..1. Drives the sky + HUD clock, so two players at
         /// different X see different times (one's day side, the other's night side).</summary>
         public float LocalTimeOfDay
             => Mathf.Repeat((Environment != null ? Environment.TimeOfDay : 0.5f) + PlayerPosition.x / DayCircumference, 1f);
+
+        /// <summary>
+        /// Maps an authoritative (canonical) world X to the Unity scene X nearest the player. World-X is a
+        /// wrapping longitude; the player's transform runs unbounded as it laps the world, so every object
+        /// (chunks, remote players, creatures, NPCs) is drawn at the copy closest to the player. In the near
+        /// field this just returns the canonical X; only objects across the seam are shifted by ±Circumference
+        /// (and those that would flip are beyond view distance anyway, so the flip is never seen).
+        /// </summary>
+        public float SceneX(double worldX)
+            => (float)(PlayerPosition.x + WorldConstants.WrapDeltaX(worldX - PlayerPosition.x));
+
+        /// <summary>Convenience: a full world position mapped to the nearest scene position (only X wraps).</summary>
+        public Vector3 ScenePos(float worldX, float worldY, float worldZ)
+            => new Vector3(SceneX(worldX), worldY, worldZ);
 
         /// <summary>Most recent handheld/ship scan readout for the HUD, and when it arrived (for auto-hide).</summary>
         public ScanResult LastScan { get; private set; }
@@ -130,7 +145,7 @@ namespace Spacecraft.Client
             float bestSq = range * range;
             foreach (var s in Stations)
             {
-                float dx = s.X - pos.x, dy = s.Y - pos.y, dz = s.Z - pos.z;
+                float dx = (float)WorldConstants.WrapDeltaX(s.X - pos.x), dy = s.Y - pos.y, dz = s.Z - pos.z; // longitude wraps
                 float d = dx * dx + dy * dy + dz * dz;
                 if (d < bestSq)
                 {
@@ -329,6 +344,34 @@ namespace Spacecraft.Client
 
                 _dirty.Clear();
             }
+
+            // Longitude wraps: keep every loaded chunk drawn at the copy nearest the player as it laps the
+            // world. Near chunks resolve to their canonical X (a no-op write); only chunks across the seam
+            // shift by ±Circumference. Throttled to once per block of X movement.
+            int chunkAnchor = Mathf.FloorToInt(PlayerPosition.x);
+            if (chunkAnchor != _lastReposX)
+            {
+                _lastReposX = chunkAnchor;
+                RepositionChunks();
+            }
+        }
+
+        private int _lastReposX = int.MinValue;
+
+        /// <summary>Re-places every loaded chunk GameObject at the seam-aware scene position for the player's
+        /// current longitude (see <see cref="SceneX"/>).</summary>
+        private void RepositionChunks()
+        {
+            foreach (var kv in _chunkObjects)
+            {
+                if (kv.Value == null)
+                {
+                    continue;
+                }
+
+                var origin = WorldConstants.ChunkOrigin(kv.Key);
+                kv.Value.transform.position = new Vector3(SceneX(origin.X), origin.Y, origin.Z);
+            }
         }
 
         private void OnChunk(Spacecraft.Networking.Messages.ChunkDataMessage m)
@@ -429,7 +472,7 @@ namespace Spacecraft.Client
                 go = new GameObject($"Chunk {coord.X},{coord.Y},{coord.Z}");
                 go.transform.SetParent(transform);
                 var origin = WorldConstants.ChunkOrigin(coord);
-                go.transform.position = new Vector3(origin.X, origin.Y, origin.Z);
+                go.transform.position = new Vector3(SceneX(origin.X), origin.Y, origin.Z); // seam-aware (longitude wraps)
                 go.AddComponent<MeshFilter>();
                 var mr = go.AddComponent<MeshRenderer>();
                 mr.sharedMaterial = ChunkMaterial;
