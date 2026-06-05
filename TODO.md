@@ -16,6 +16,15 @@ SQLite persistence.
 
 ---
 
+## ✅ Done (2026-06-06): Land on a planet with E (like docking a station)
+Flying near a planet/moon now shows **"Press E to land on \<name\>"** and **E lands** there — the same
+proximity → E flow as station docking (was "Press L" + an Enter/Esc confirm). In `SpaceView.UpdateCruise`,
+E is the context action: dock a station you're next to, else land on the body you've flown up to
+(`SendLeaveSpace(_landTargetId)`, server flies the descent). **L** stays as the "return to the body you
+launched from" shortcut. Reworded `ui.space.land_prompt` + `ui.space.controls` (en/de).
+
+---
+
 ## ✅ Done (2026-06-06): Space follow-ups — no relentless shake, a real sun disc
 - **The "ship being shaken" + red screen was continuous damage feedback.** `incoming` ship damage summed
   **all** hostiles in the instance with **no range check**, so a distant/off-screen drone plinked the ship

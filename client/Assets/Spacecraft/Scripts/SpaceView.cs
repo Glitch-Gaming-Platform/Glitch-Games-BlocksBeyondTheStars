@@ -290,15 +290,24 @@ namespace Spacecraft.Client
                 }
             }
 
-            // E begins a short dock-approach animation; the board intent is sent once it completes.
-            if (_nearStationId != null && Input.GetKeyDown(KeyCode.E))
+            // E is the context action while flying: dock with a station you're next to, or — like docking —
+            // land on a planet/moon you've flown up close to (the server flies the descent). L stays as the
+            // "return to the body you launched from" shortcut.
+            if (Input.GetKeyDown(KeyCode.E))
             {
-                _phase = Phase.Boarding;
-                _seq = 0f;
-                _boardSent = false;
-                _boardWait = 0f;
-                _boardTargetId = _nearStationId;
-                _boardStartPos = _ship.transform.localPosition;
+                if (_nearStationId != null)
+                {
+                    _phase = Phase.Boarding; // short dock-approach animation; board intent sent on completion
+                    _seq = 0f;
+                    _boardSent = false;
+                    _boardWait = 0f;
+                    _boardTargetId = _nearStationId;
+                    _boardStartPos = _ship.transform.localPosition;
+                }
+                else if (_landTargetId != null)
+                {
+                    Game.Network?.SendLeaveSpace(_landTargetId); // land on the nearby body
+                }
             }
         }
 
