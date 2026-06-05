@@ -473,11 +473,33 @@ namespace Spacecraft.Client
         /// <summary>Raised when a hyperspace jump to another star system begins (drives the warp VFX).</summary>
         public event System.Action HyperjumpStarted;
 
+        private static readonly (int X, int Y, int Z)[] _faceDirs =
+        {
+            (1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1),
+        };
+
         private void OnBlockChanged(Spacecraft.Networking.Messages.BlockChanged m)
         {
-            if (World.ApplyBlockChange(m.X, m.Y, m.Z, m.Block, out var coord))
+            if (!World.ApplyBlockChange(m.X, m.Y, m.Z, m.Block, out var coord))
             {
-                _dirty.Add(coord);
+                return;
+            }
+
+            _dirty.Add(coord);
+
+            // A block on a chunk edge also changes the NEIGHBOUR chunk's face toward it. Re-mesh that
+            // neighbour too — otherwise mining a boundary block leaves the adjacent chunk's now-exposed
+            // face missing (a hole you can see through), and placing leaves a stale hidden face.
+            foreach (var d in _faceDirs)
+            {
+                var nc = new ChunkCoord(
+                    WorldConstants.CanonicalChunkX(WorldConstants.WorldToChunk(m.X + d.X)),
+                    WorldConstants.WorldToChunk(m.Y + d.Y),
+                    WorldConstants.WorldToChunk(m.Z + d.Z));
+                if (!nc.Equals(coord))
+                {
+                    _dirty.Add(nc);
+                }
             }
         }
 
