@@ -12,7 +12,7 @@ namespace Spacecraft.Client
             var root = canvas.transform;
 
             UiKit.AddImage(root, 0, 0, 1920, 1080, UiKit.SolidSprite, new Color(0.02f, 0.04f, 0.08f, 0.55f));
-            float px = 610f, pw = 700f, py = 280f, ph = 520f;
+            float px = 560f, pw = 800f, py = 230f, ph = 620f;
             UiKit.AddPanel(root, px, py, pw, ph, UiKit.Panel);
 
             UiKit.AddLogo(root, px + 40, py + 36, pw - 80, 44, shell.L("ui.credits.title"), 30);

@@ -33,11 +33,14 @@ namespace Spacecraft.Client
             UiKit.AddLogo(root, 360f, 70f, 800f, 96f, "SPACECRAFT", 72);
             UiKit.AddText(root, 1700f, 44f, 180f, 24f, "VER. " + AppShell.Version, 16, UiKit.CyanDim, TextAnchor.MiddleRight);
 
+            // Connect-to-server dialog (built below; the JOIN button reveals it). Captured by the button.
+            GameObject connect = null;
+
             // --- Menu buttons ---
             const float bx = 90f, bw = 440f, bh = 54f, gap = 62f;
             float by = 322f;
             UiKit.AddButton(root, bx, by, bw, bh, shell.L("ui.menu.singleplayer"), shell.StartSingleplayer, "btn_singleplayer");
-            UiKit.AddButton(root, bx, by + gap, bw, bh, shell.L("ui.menu.join"), shell.StartJoin, "btn_join");
+            UiKit.AddButton(root, bx, by + gap, bw, bh, shell.L("ui.menu.join"), () => { if (connect != null) connect.SetActive(true); }, "btn_join");
             UiKit.AddButton(root, bx, by + gap * 2f, bw, bh, shell.L("ui.menu.editors"), () => shell.GoTo(ShellPhase.Editors), "btn_singleplayer");
             UiKit.AddButton(root, bx, by + gap * 3f, bw, bh, shell.L("ui.menu.settings"), shell.OpenSettings, "btn_settings");
             UiKit.AddButton(root, bx, by + gap * 4f, bw, bh, shell.L("ui.menu.credits"), () => shell.GoTo(ShellPhase.Credits), "btn_credits");
@@ -54,6 +57,27 @@ namespace Spacecraft.Client
             UiKit.AddText(root, 90f, 1030f, 500f, 26f, shell.L("ui.menu.community"), 16, UiKit.CyanDim, TextAnchor.MiddleLeft, FontStyle.Bold);
             UiKit.AddText(root, 660f, 1030f, 600f, 26f, shell.L("ui.splash.tagline"), 18, UiKit.Cyan, TextAnchor.MiddleCenter, FontStyle.Bold);
             UiKit.AddText(root, 1420f, 1030f, 460f, 26f, shell.L("ui.menu.wishlist"), 16, UiKit.Cyan, TextAnchor.MiddleRight, FontStyle.Bold);
+
+            // --- Connect-to-server dialog (added last so it draws on top; hidden until JOIN is pressed) ---
+            string[] host = { shell.Host };
+            string[] port = { shell.Port };
+            var dim = UiKit.AddImage(root, 0f, 0f, 1920f, 1080f, UiKit.SolidSprite, new Color(0f, 0f, 0f, 0.6f));
+            connect = dim.gameObject;
+            dim.raycastTarget = true; // swallow clicks behind the dialog
+            var dlg = UiKit.AddPanel(connect.transform, 660f, 360f, 600f, 360f, UiKit.Panel).transform;
+            UiKit.AddText(dlg, 30f, 24f, 540f, 30f, shell.L("ui.menu.connect_title"), 22, UiKit.Cyan, TextAnchor.MiddleCenter, FontStyle.Bold);
+            UiKit.AddText(dlg, 30f, 80f, 540f, 22f, shell.L("ui.menu.connect_host"), 15, UiKit.TextCol, TextAnchor.MiddleLeft);
+            UiKit.AddInput(dlg, 30f, 106f, 540f, 38f, host[0], v => host[0] = v);
+            UiKit.AddText(dlg, 30f, 160f, 540f, 22f, shell.L("ui.menu.connect_port"), 15, UiKit.TextCol, TextAnchor.MiddleLeft);
+            UiKit.AddInput(dlg, 30f, 186f, 260f, 38f, port[0], v => port[0] = v);
+            UiKit.AddButton(dlg, 30f, 272f, 270f, 54f, shell.L("ui.menu.connect"), () =>
+            {
+                shell.Host = string.IsNullOrWhiteSpace(host[0]) ? "127.0.0.1" : host[0].Trim();
+                shell.Port = string.IsNullOrWhiteSpace(port[0]) ? shell.Port : port[0].Trim();
+                shell.StartJoin();
+            }, "btn_join");
+            UiKit.AddButton(dlg, 310f, 272f, 260f, 54f, shell.L("ui.menu.back"), () => connect.SetActive(false), "btn_exit");
+            connect.SetActive(false);
 
             return canvas.gameObject;
         }
