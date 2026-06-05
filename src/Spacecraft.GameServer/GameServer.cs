@@ -1407,7 +1407,7 @@ public sealed partial class GameServer
             return;
         }
 
-        int count = System.Math.Max(1, craft.Count);
+        int count = System.Math.Clamp(craft.Count, 1, 999); // bound the batch size (avoid input*count overflow)
 
         // Creative mode: no material/blueprint/station cost — just produce the output.
         if (!Rules.CraftingCostsMaterials)

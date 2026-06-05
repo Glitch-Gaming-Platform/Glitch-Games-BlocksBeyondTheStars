@@ -62,6 +62,8 @@ namespace Spacecraft.Client
         }
 
         private string _pendingCategory; // a category to select when the mode next opens (e.g. "market")
+        private int _craftCount = 1;          // how many of the selected recipe to craft at once
+        private string _craftCountKey = string.Empty; // recipe the count belongs to (reset on a new selection)
 
         /// <summary>Requests a category be selected when this panel opens (used to jump straight to the
         /// market when the player talks to a vendor).</summary>
@@ -729,10 +731,44 @@ namespace Spacecraft.Client
                 y += 30f;
             }
 
-            var btn = UiKit.AddButton(_detail, 8, y, 280, 56, L("ui.action.craft"), () => { Game.Network.SendCraft(r.Key, 1); });
+            // Quantity stepper — craft more than one at a time (the server crafts N in a single action).
+            if (_craftCountKey != r.Key)
+            {
+                _craftCount = 1;
+                _craftCountKey = r.Key;
+            }
+
+            int maxCraft = Mathf.Max(1, MaxCraftable(r));
+            _craftCount = Mathf.Clamp(_craftCount, 1, maxCraft);
+
+            UiKit.AddButton(_detail, 8, y, 50, 56, "-", () => { _craftCount = Mathf.Max(1, _craftCount - 1); RebuildDetail(); });
+            UiKit.AddText(_detail, 62, y, 92, 56, _craftCount.ToString(), 24, UiKit.TextCol, TextAnchor.MiddleCenter, FontStyle.Bold);
+            UiKit.AddButton(_detail, 158, y, 50, 56, "+", () => { _craftCount = Mathf.Min(maxCraft, _craftCount + 1); RebuildDetail(); });
+            UiKit.AddButton(_detail, 214, y, 74, 56, "Max", () => { _craftCount = maxCraft; RebuildDetail(); });
+            y += 66f;
+
+            int n = _craftCount;
+            var btn = UiKit.AddButton(_detail, 8, y, 280, 56, L("ui.action.craft") + (maxCraft > 1 ? " ×" + n : string.Empty), () => { Game.Network.SendCraft(r.Key, n); });
             SetInteractable(btn, can);
             y += 70f;
             return y;
+        }
+
+        /// <summary>How many of a recipe the player can currently afford (0..99), from their owned inputs.</summary>
+        private int MaxCraftable(RecipeDefinition r)
+        {
+            int m = 99;
+            foreach (var inp in r.Inputs)
+            {
+                if (inp.Count <= 0)
+                {
+                    continue;
+                }
+
+                m = Mathf.Min(m, Owned(inp.Item) / inp.Count);
+            }
+
+            return Mathf.Clamp(m, 0, 99);
         }
 
         private float DetailTech()
