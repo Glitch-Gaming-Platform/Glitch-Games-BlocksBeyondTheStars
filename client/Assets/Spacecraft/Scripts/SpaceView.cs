@@ -265,6 +265,28 @@ namespace Spacecraft.Client
                 }
             }
 
+            // Stations are solid too — slide around them instead of flying through (the board range is far
+            // larger than this shell, so you can still fly up and dock with E).
+            var keepSpace = Game.Space;
+            if (keepSpace != null)
+            {
+                foreach (var e in keepSpace.Entities)
+                {
+                    if (e.Kind != "SpaceStation")
+                    {
+                        continue;
+                    }
+
+                    Vector3 sp = new Vector3(e.X, e.Y, e.Z);
+                    Vector3 d = pos - sp;
+                    float dist = d.magnitude;
+                    if (dist < StationKeepOut && dist > 0.0001f)
+                    {
+                        pos = sp + d / dist * StationKeepOut;
+                    }
+                }
+            }
+
             _ship.transform.localPosition = pos;
 
             // System-scale flight: the nearest other body within approach range is the land target; press E
@@ -1171,6 +1193,7 @@ namespace Spacecraft.Client
         private string _nearStationId;
         private string _nearStationName;
         private const float BoardRange = 66f; // just inside the server's 70-unit board range
+        private const float StationKeepOut = 6f; // ship-collision shell around a station hub (far inside BoardRange)
 
         // System-scale flight: the other bodies of the current system, placed at their (scaled) system
         // coordinates so you can fly between them and land on any one. The body nearest within

@@ -543,6 +543,13 @@ collider closes the gap when shut). Phased plan:
   and route through the existing fluid system (`FluidLevel`/`ActiveFluid` + the client fluid render). **When
   picking this up, analyse the terrain pass + fluid sim precisely first**, then implement.
 
+- **Varied terrain types per world/biome** — today terrain height is one global noise profile. Plan:
+  per-world **terrain archetypes** (flat, rolling hills, mountainous, canyons) blended across the surface;
+  each **biome** rolls a random *number* of terrain types it can contain, so worlds differ in ruggedness.
+  Water bodies get matching variety: shallow, deep, shallow-with-islands, etc. (ties into the water/lava
+  abundance plan above). Needs: terrain-archetype noise/region selection in `WorldGenerator`, per-biome
+  archetype sets, deterministic from seed, seam-safe across chunk/longitude wrap. Requested 2026-06-06.
+
 ### Not started / larger future work
 - **World wrap (walk around the planet)** — ✅ **W0–W4 shipped**: X is a wrapping longitude (cylinder
   world), so you can walk east and arrive back at the start with a **seam-free** edge (terrain/biomes/caves/

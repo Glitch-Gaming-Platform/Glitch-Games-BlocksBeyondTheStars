@@ -119,15 +119,22 @@ namespace Spacecraft.Client
             int i = 0;
             foreach (var e in Game.Space.Entities)
             {
+                bool station = e.Kind == "SpaceStation";
                 var world = new Vector3(e.X, e.Y, e.Z);
                 var dir = world - camPos;
                 var v = new Vector2(Vector3.Dot(dir, camR), Vector3.Dot(dir, camF)) * scale;
                 if (v.magnitude > Radius)
                 {
+                    // A station stays as a rim direction-marker (it's a fixed navigation point); an asteroid
+                    // or enemy beyond radar range is simply not detected yet — don't paint a phantom blip at
+                    // the rim where nothing actually is.
+                    if (!station)
+                    {
+                        continue;
+                    }
+
                     v = v.normalized * Radius;
                 }
-
-                bool station = e.Kind == "SpaceStation";
                 if (station && dir.magnitude < nearestDist)
                 {
                     nearestDist = dir.magnitude;

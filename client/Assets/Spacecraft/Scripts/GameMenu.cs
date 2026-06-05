@@ -69,8 +69,11 @@ namespace Spacecraft.Client
         public void OpenMarket()
         {
             EnsureUi();
-            _ui.RequestCategory("market");
+            // Open/switch to the crafting tab FIRST, then jump to the market category — otherwise ShowMode
+            // resets the category to "all" right after RequestCategory set it, and you land on the generic
+            // crafting list instead of the vendor's trade view.
             OpenAt(Tab.Crafting);
+            _ui.RequestCategory("market");
         }
 
         private void OpenAt(Tab tab)
