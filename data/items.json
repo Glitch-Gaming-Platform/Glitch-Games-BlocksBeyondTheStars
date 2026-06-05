@@ -1,6 +1,7 @@
 [
   { "key": "stone",           "nameKey": "item.stone.name",           "category": "block",      "maxStack": 99, "placesBlock": "stone" },
   { "key": "dirt",            "nameKey": "item.dirt.name",            "category": "block",      "maxStack": 99, "placesBlock": "dirt" },
+  { "key": "wood_log",        "nameKey": "item.wood_log.name",        "category": "block",      "maxStack": 99, "placesBlock": "wood_log" },
   { "key": "basalt",          "nameKey": "item.basalt.name",          "category": "block",      "maxStack": 99, "placesBlock": "basalt" },
   { "key": "ice",             "nameKey": "item.ice.name",             "category": "block",      "maxStack": 99, "placesBlock": "ice" },
   { "key": "iron_ore",        "nameKey": "item.iron_ore.name",        "category": "material",   "maxStack": 99 },

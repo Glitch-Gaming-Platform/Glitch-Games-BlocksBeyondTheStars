@@ -193,6 +193,19 @@ public class WorldGenerationTests
     }
 
     [Fact]
+    public void FloraWorld_GrowsTrees()
+    {
+        var content = Content();
+        var planet = content.GetPlanet("jungle")!; // grass surface + flora → multi-block trees
+        var gen = new WorldGenerator(777, content);
+        ushort log = content.GetBlock("wood_log")!.NumericId.Value;
+        ushort leaves = content.GetBlock("tree_leaves")!.NumericId.Value;
+
+        Assert.True(CountBlock(gen, planet, log) > 0, "A flora world should grow tree trunks.");
+        Assert.True(CountBlock(gen, planet, leaves) > 0, "…topped with leaf crowns.");
+    }
+
+    [Fact]
     public void AirlessWorld_HasNoWater()
     {
         var content = Content();

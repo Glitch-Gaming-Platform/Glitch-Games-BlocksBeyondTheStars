@@ -146,6 +146,12 @@ public sealed class WorldGenerator
         // ground floods — the basin's depth + any rises become shallow water / deep water / islands.
         var (fluidLevel, fluidId) = ResolveSeaFluid(planet);
 
+        // Trees: multi-block trunk + leaf crown on grass/earth ground (a small auto density on flora worlds).
+        double treeDensity = planet.TreeDensity ?? (flora ? 0.012 : 0.0);
+        var logId = _content.GetBlock("wood_log")?.NumericId ?? BlockId.Air;
+        var leafId = _content.GetBlock("tree_leaves")?.NumericId ?? BlockId.Air;
+        bool trees = treeDensity > 0.0 && !logId.IsAir && !leafId.IsAir;
+
         var origin = WorldConstants.ChunkOrigin(coord);
 
         for (int lx = 0; lx < WorldConstants.ChunkSize; lx++)
@@ -224,7 +230,83 @@ public sealed class WorldGenerator
             }
         }
 
+        if (trees)
+        {
+            StampTrees(planet, seed, chunk, coord, biomes, logId, leafId, treeDensity, fluidLevel);
+        }
+
         return chunk;
+    }
+
+    /// <summary>Stamps multi-block trees (a wood trunk + a rounded leaf crown) on grass/earth columns. Scans a
+    /// margin around the chunk so a tree straddling a chunk edge generates the same from either chunk; the
+    /// per-column roll wraps in X so the longitude seam matches too. Deterministic from the seed.</summary>
+    private void StampTrees(PlanetType planet, long seed, ChunkData chunk, ChunkCoord coord,
+        List<(BlockId Surface, BlockId Sub)> biomes, BlockId logId, BlockId leafId, double density, int fluidLevel)
+    {
+        var origin = WorldConstants.ChunkOrigin(coord);
+        int cs = WorldConstants.ChunkSize;
+        const int crown = 2;
+        var grassId = _content.GetBlock("grass")?.NumericId ?? BlockId.Air;
+        var dirtId = _content.GetBlock("dirt")?.NumericId ?? BlockId.Air;
+        var mudId = _content.GetBlock("mud")?.NumericId ?? BlockId.Air;
+
+        void SetCell(int wx, int wy, int wz, BlockId block, bool overwrite)
+        {
+            int lx = wx - origin.X, ly = wy - origin.Y, lz = wz - origin.Z;
+            if (lx < 0 || lx >= cs || ly < 0 || ly >= cs || lz < 0 || lz >= cs)
+            {
+                return; // outside this chunk (a neighbour chunk stamps that part of the tree)
+            }
+
+            if (!overwrite && !chunk.Get(lx, ly, lz).IsAir)
+            {
+                return; // leaves only fill air, never carve the trunk or terrain
+            }
+
+            chunk.Set(lx, ly, lz, block);
+        }
+
+        for (int wx = origin.X - crown; wx < origin.X + cs + crown; wx++)
+        for (int wz = origin.Z - crown; wz < origin.Z + cs + crown; wz++)
+        {
+            if (Noise.Value01(seed + 5150, WorldConstants.WrapX(wx), 11, wz) >= density)
+            {
+                continue;
+            }
+
+            var surf = biomes[biomes.Count <= 1 ? 0 : BiomeIndex(seed, wx, wz, biomes.Count)].Surface;
+            if (surf != grassId && surf != dirtId && surf != mudId)
+            {
+                continue; // trees only on grassy / earthy ground
+            }
+
+            int sy = SurfaceHeight(planet, wx, wz);
+            if (sy + 1 <= fluidLevel)
+            {
+                continue; // not in the sea
+            }
+
+            int height = 4 + (int)(Noise.Value01(seed + 5151, WorldConstants.WrapX(wx), 13, wz) * 3.99); // 4..7
+            int topY = sy + height;
+
+            for (int ty = sy + 1; ty <= topY; ty++)
+            {
+                SetCell(wx, ty, wz, logId, overwrite: true);
+            }
+
+            for (int dy = -1; dy <= 2; dy++)
+            for (int dx = -crown; dx <= crown; dx++)
+            for (int dz = -crown; dz <= crown; dz++)
+            {
+                if (dx * dx + dz * dz + dy * dy > crown * crown + 1)
+                {
+                    continue; // a roughly spherical canopy
+                }
+
+                SetCell(wx + dx, topY + dy, wz + dz, leafId, overwrite: false);
+            }
+        }
     }
 
     private BlockId SelectOre(PlanetType planet, long seed, int x, int y, int z, int depth, BlockId fallback)

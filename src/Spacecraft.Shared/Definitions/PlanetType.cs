@@ -91,6 +91,10 @@ public sealed class PlanetType
     /// <c>null</c> = auto (volcanic worlds get a moderate amount). Watery worlds get no surface lava.</summary>
     public double? LavaAbundance { get; set; }
 
+    /// <summary>Per-column chance of a multi-block tree (trunk + leaf crown) on grass/dirt ground. <c>null</c>
+    /// = auto (a small density on worlds that have flora). 0 = no trees.</summary>
+    public double? TreeDensity { get; set; }
+
     /// <summary>Base cloud tint, packed 0xRRGGBB (storms darken it client-side). Ash worlds are grey-brown,
     /// deserts sandy, ice pale blue. Used for both the surface cloud layer and the view from space.</summary>
     public int CloudColor { get; set; } = 0xEDEFF2;
