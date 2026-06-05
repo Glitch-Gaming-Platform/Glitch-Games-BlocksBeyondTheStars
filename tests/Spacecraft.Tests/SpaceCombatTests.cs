@@ -99,6 +99,7 @@ public sealed class SpaceCombatTests : IDisposable
         {
             var pilot = server.AddLocalPlayer("Pilot");
             server.Ship.Modules.Add("asteroid_breaker");
+            server.Ship.Modules.Remove("tractor_beam"); // test the direct-to-inventory loot path (no tractor float)
             server.EnterSpace("Pilot");
 
             // Keep breaking the nearest asteroid: large -> medium -> small -> mineral drops.
@@ -180,6 +181,7 @@ public sealed class SpaceCombatTests : IDisposable
         {
             var pilot = server.AddLocalPlayer("Pilot");
             server.Ship.Modules.Add("ship_cannon_1"); // 20 dmg
+            server.Ship.Modules.Remove("tractor_beam"); // loot drops straight to inventory (no tractor float)
             server.EnterSpace("Pilot");
 
             var drone = server.SpaceEntitiesFor("Pilot").First(e => e.Kind == CombatEntityKind.Drone);

@@ -143,6 +143,7 @@ public sealed partial class GameServer
             Shield = _ship.Shield,
             ShieldMax = _shipShieldMax,
             RadarRange = _shipRadarRange,
+            Modules = _ship.Modules.ToArray(),
         });
 
     // ---------------- Build ship modules ----------------
@@ -540,8 +541,9 @@ public sealed partial class GameServer
     private const string TractorModule = "tractor_beam";
     private const float TractorRange = 8f;
 
-    /// <summary>Tractor beam: pulls salvage drops within range into the ship's cargo hold (until full).</summary>
-    private void CollectSalvage(SpaceInstance instance)
+    /// <summary>Tractor beam: pulls salvage drops within <paramref name="range"/> into the ship's cargo hold
+    /// (until full). The passive tick uses a short range; a manual pull (quick-bar) sweeps a wider one.</summary>
+    private void CollectSalvage(SpaceInstance instance, float range)
     {
         if (!_ship.HasModule(TractorModule))
         {
@@ -551,7 +553,7 @@ public sealed partial class GameServer
         bool changed = false;
         foreach (var drop in instance.Entities.Where(e => e.Kind == CombatEntityKind.ResourceDrop).ToList())
         {
-            if (drop.Position.DistanceSquared(instance.ShipPosition) > TractorRange * TractorRange)
+            if (drop.Position.DistanceSquared(instance.ShipPosition) > range * range)
             {
                 continue;
             }
@@ -592,6 +594,29 @@ public sealed partial class GameServer
         }
     }
 
+    private const float TractorPullRange = 30f; // a manual quick-bar tractor sweep reaches further than the passive pull
+
+    /// <summary>Manual tractor pull (quick-bar): sweeps salvage within a wider range into the cargo hold.</summary>
+    public void TractorPull(string playerId)
+    {
+        var session = FindSessionByPlayerId(playerId);
+        if (!_playerInstance.TryGetValue(playerId, out var instanceId) ||
+            !_spaceInstances.TryGetValue(instanceId, out var instance))
+        {
+            return;
+        }
+
+        if (!_ship.HasModule(TractorModule))
+        {
+            RejectSpace(session, "No tractor beam fitted on this ship.");
+            return;
+        }
+
+        CollectSalvage(instance, TractorPullRange);
+    }
+
+    private void HandleTractorPull(PlayerSession session) => TractorPull(session.State.PlayerId);
+
     /// <summary>Sets the player's ship position in its space instance (trusted + finite-clamped, like on-foot move).</summary>
     public void ShipMove(string playerId, float x, float y, float z)
     {
@@ -630,7 +655,7 @@ public sealed partial class GameServer
 
             // Tractor beam: pull nearby salvage drops into the cargo hold (before collision, so the
             // collision bounce doesn't move the ship away from the drop first).
-            CollectSalvage(instance);
+            CollectSalvage(instance, TractorRange);
 
             // Collision: flying into an asteroid damages the ship (scaled by impact speed) and
             // stops it. Physical — independent of the combat rules.

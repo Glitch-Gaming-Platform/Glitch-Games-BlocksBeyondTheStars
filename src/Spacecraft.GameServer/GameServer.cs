@@ -444,7 +444,7 @@ public sealed partial class GameServer
         }
 
         var ship = new ShipState { CurrentLocationId = _meta.DefaultPlanetType };
-        foreach (var key in new[] { "cockpit", "reactor", "life_support", "workshop", "medbay", "quarters", "cargo_hold_basic", "ship_laser_basic" })
+        foreach (var key in new[] { "cockpit", "reactor", "life_support", "workshop", "medbay", "quarters", "cargo_hold_basic", "ship_laser_basic", "tractor_beam" })
         {
             if (_content.GetShipModule(key) is not null)
             {
@@ -931,6 +931,7 @@ public sealed partial class GameServer
             case ChatIntent chat: HandleChat(session, chat); break;
             case RequestStarMap: SendStarMap(session); break;
             case SaveGameIntent: SaveAll(); _log.Info($"Explicit save requested by '{session.State.Name}'."); break;
+            case TractorPullIntent: HandleTractorPull(session); break;
             case AdminCommandIntent admin: HandleAdminCommand(session, admin); break;
             case RequestMissions: SendMissionList(session); break;
             case AcceptMissionIntent accept: HandleAcceptMission(session, accept.MissionId); break;

@@ -6,13 +6,29 @@ plans live under [docs/](docs/) (committed); this file is the high-level status.
 keep it current when controls/features change. Last consolidated 2026-06-04.
 
 **Build:** `scripts/build-client.ps1` (publishes shared libs + bundled server + Unity Windows player).
-**Test:** `dotnet test` — currently **287 passing**. Locale parity (en/de) is enforced by a test.
+**Test:** `dotnet test` — currently **288 passing**. Locale parity (en/de) is enforced by a test.
 **Conventions:** English docs/comments; in-game text bilingual DE+EN; commit to `main` with the
 `Co-Authored-By: Claude Opus 4.8` trailer; paid/AI asset generation is gated (propose + approve first).
 
 Architecture: Unity 6 (Built-in RP) client + authoritative .NET 8 server, everything built in code (no
 scene authoring). One shared world; contractless MessagePack networking; deterministic seed world-gen;
 SQLite persistence.
+
+---
+
+## ✅ Done (2026-06-06): Closer planets, radar bearings, ship-systems quick-bar
+- **Planets closer together:** flight distance = orbit spacing (~520 system units between adjacent orbits)
+  × `SystemViewScale`. That was 0.30 → ~156 flight units (~11 s cruise) between neighbours; lowered to **0.16
+  → ~83 units (~6 s)** so the system is a short hop, not a slog. Client-only (no universe regen).
+- **Radar bearings to planets:** the cockpit radar (`SpaceRadar`) now reads `SpaceView.Landables` and draws a
+  **green marker per planet/moon**, pinned to the rim when far so it reads as a **direction arrow** ("head
+  that way"); the readout under the radar shows the nearest dockable station or, failing that, **➜ nearest
+  planet · distance**.
+- **Ship-systems quick-bar:** a HUD bar in flight built from the active ship's fitted modules
+  (`ShipCombatStatus.Modules`, new) — **Laser** (any weapon module) + **Tractor** (tractor beam). Pick with
+  **1–9**, **use with LMB**: the laser auto-locks the best target ahead (mines + fights), the tractor does a
+  **manual wide sweep** to pull in salvage (new `TractorPullIntent` → wider-range `CollectSalvage`). The
+  starter ship now carries a tractor beam too. Bottom controls hint reworded (en/de).
 
 ---
 

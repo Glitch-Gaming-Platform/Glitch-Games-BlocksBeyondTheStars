@@ -139,6 +139,7 @@ namespace Spacecraft.Client
             var radar = root.AddComponent<SpaceRadar>();
             radar.Game = boot;
             radar.Camera = cam;
+            radar.SpaceView = space; // so the radar can show bearings to the system's planets/moons
 
             // Day/night + weather + sun colour (World systems).
             var sky = root.AddComponent<Sky>();

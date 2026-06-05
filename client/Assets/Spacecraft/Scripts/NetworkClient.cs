@@ -134,6 +134,9 @@ namespace Spacecraft.Client
         /// <summary>Asks the server to save the world + players to disk now (explicit save).</summary>
         public void SendSaveGame() => Send(new SaveGameIntent());
 
+        /// <summary>Fires the ship's tractor beam as a manual sweep to pull in nearby salvage.</summary>
+        public void SendTractorPull() => Send(new TractorPullIntent());
+
         public void SendConsume(string itemKey) => Send(new ConsumeItemIntent { ItemKey = itemKey });
 
         public void SendLoadRation(string itemKey, int count) => Send(new LoadRationIntent { ItemKey = itemKey, Count = count });

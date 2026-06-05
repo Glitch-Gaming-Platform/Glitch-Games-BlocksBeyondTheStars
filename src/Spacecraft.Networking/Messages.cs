@@ -116,6 +116,11 @@ public sealed class SaveGameIntent
 {
 }
 
+/// <summary>Client fires the ship's tractor beam as a manual sweep (quick-bar): pull nearby salvage in.</summary>
+public sealed class TractorPullIntent
+{
+}
+
 /// <summary>Client asks to leave the space instance and return to the surface/base.</summary>
 public sealed class LeaveSpaceIntent
 {
@@ -600,6 +605,10 @@ public sealed class ShipCombatStatus
 
     /// <summary>Space-radar range in world units (base + radar-module bonus); drives the HUD radar scale.</summary>
     public float RadarRange { get; set; } = 130f;
+
+    /// <summary>The active ship's fitted module keys — lets the flight HUD build its ship-systems quick-bar
+    /// (weapon, tractor beam, …) from what the ship actually carries.</summary>
+    public string[] Modules { get; set; } = System.Array.Empty<string>();
 }
 
 /// <summary>Snapshot of the space instance a player is in (sent on entry and on change).</summary>

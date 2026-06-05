@@ -110,6 +110,7 @@ public static class NetCodec
         Register(89, typeof(ChatIntent));
         Register(90, typeof(ChatMessage));
         Register(91, typeof(SaveGameIntent));
+        Register(92, typeof(TractorPullIntent));
     }
 
     private static void Register(byte tag, Type type)

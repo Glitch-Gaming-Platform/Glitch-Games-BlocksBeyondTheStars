@@ -14,6 +14,7 @@ namespace Spacecraft.Client
     {
         public GameBootstrap Game;
         public Camera Camera;
+        public SpaceView SpaceView; // source of the landable-body bearings (planets/moons to fly to)
 
         private const float Radius = 72f;
         private const float DefaultRange = 130f; // world units mapped to the radar edge (no radar module)
@@ -143,6 +144,36 @@ namespace Spacecraft.Client
                 blip.gameObject.SetActive(true);
             }
 
+            // Landable planets/moons: a green bearing marker each, clamped to the rim so a far body reads as
+            // a direction arrow ("that way"). Helps you navigate the system from the cockpit.
+            string nearestBody = null;
+            float nearestBodyDist = float.MaxValue;
+            if (SpaceView != null)
+            {
+                foreach (var body in SpaceView.Landables)
+                {
+                    var dir = body.Pos - camPos;
+                    var v = new Vector2(Vector3.Dot(dir, camR), Vector3.Dot(dir, camF)) * scale;
+                    bool offEdge = v.magnitude > Radius;
+                    if (offEdge)
+                    {
+                        v = v.normalized * Radius; // pin to the rim → a direction arrow toward the planet
+                    }
+
+                    if (dir.magnitude < nearestBodyDist)
+                    {
+                        nearestBodyDist = dir.magnitude;
+                        nearestBody = body.Name;
+                    }
+
+                    var blip = Blip(i++);
+                    blip.rectTransform.anchoredPosition = v;
+                    blip.rectTransform.sizeDelta = new Vector2(10f, 10f);
+                    blip.color = new Color(0.45f, 1f, 0.55f); // green = a planet/moon you can land on
+                    blip.gameObject.SetActive(true);
+                }
+            }
+
             for (; i < _blips.Count; i++)
             {
                 if (_blips[i].gameObject.activeSelf)
@@ -151,12 +182,17 @@ namespace Spacecraft.Client
                 }
             }
 
+            // Readout under the radar: prefer a station name (dockable), else the nearest planet to head for.
             if (nearestStation != null)
             {
                 _stationLabel.text = $"{nearestStation} · {Mathf.RoundToInt(nearestDist)}m";
             }
+            else if (nearestBody != null)
+            {
+                _stationLabel.text = $"➜ {nearestBody} · {Mathf.RoundToInt(nearestBodyDist)}m";
+            }
 
-            _stationLabel.gameObject.SetActive(nearestStation != null);
+            _stationLabel.gameObject.SetActive(nearestStation != null || nearestBody != null);
         }
 
         private void OnDestroy()

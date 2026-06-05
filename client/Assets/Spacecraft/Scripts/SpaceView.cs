@@ -66,12 +66,17 @@ namespace Spacecraft.Client
         private readonly List<TractorBeam> _beams = new List<TractorBeam>();
         private float _cargoFlash;        // pulses the cargo readout when salvage is tractored in
 
-        // Fire the ship laser in flight (LMB / Space): the starter dual laser mines asteroids + fights.
-        private float _fireCd;            // shot cooldown
+        // Ship-systems quick-bar (1–9 select, LMB use): fire the laser, sweep the tractor beam, …
+        private float _fireCd;            // shot/use cooldown
         private string _fireTargetId;     // the entity currently in the firing solution (for the reticle)
+        private int _selectedSystem;      // index into _systems
+        private readonly List<ShipSystem> _systems = new List<ShipSystem>();
+        private Text _systemsBar;
         private const string FlightWeapon = "ship_laser_basic";
         private const float WeaponRange = 45f;  // matches ship_laser_basic weapon_range
         private const float FireRate = 0.45f;   // seconds between shots
+
+        private struct ShipSystem { public string Label; public string Kind; public string WeaponKey; }
 
         // System sun: a bright billboard far off in a fixed direction, tinted by the star's colour, plus a
         // screen-space lens flare that blooms when you look toward it.
@@ -335,16 +340,78 @@ namespace Spacecraft.Client
                 }
             }
 
-            // Fire the ship laser (hold LMB or Space): auto-locks the best target in range ahead — mines
-            // asteroids and fights hostiles with the same dual laser. Rate-limited so it can't be spammed.
-            _fireCd -= Time.deltaTime;
-            var fireTarget = BestFireTarget();
-            _fireTargetId = fireTarget?.Id;
-            if (fireTarget != null && _fireCd <= 0f && (Input.GetMouseButton(0) || Input.GetKey(KeyCode.Space)))
+            // Ship-systems quick-bar: 1–9 pick the active system, LMB uses it. The laser auto-locks the best
+            // target ahead (mines asteroids + fights hostiles); the tractor beam sweeps in nearby salvage.
+            RebuildSystems();
+            for (int n = 0; n < _systems.Count && n < 9; n++)
             {
-                _fireCd = FireRate;
-                FireAt(fireTarget);
+                if (Input.GetKeyDown(KeyCode.Alpha1 + n))
+                {
+                    _selectedSystem = n;
+                }
             }
+
+            _fireCd -= Time.deltaTime;
+            var sys = _systems[_selectedSystem];
+            if (sys.Kind == "laser")
+            {
+                var target = BestFireTarget();
+                _fireTargetId = target?.Id;
+                if (target != null && _fireCd <= 0f && Input.GetMouseButton(0))
+                {
+                    _fireCd = FireRate;
+                    FireAt(target, sys.WeaponKey);
+                }
+            }
+            else // tractor
+            {
+                _fireTargetId = null;
+                if (_fireCd <= 0f && Input.GetMouseButtonDown(0))
+                {
+                    _fireCd = 0.6f;
+                    ActivateTractor();
+                }
+            }
+        }
+
+        /// <summary>Rebuilds the quick-bar of ship systems from the active ship's fitted modules (a weapon
+        /// laser, a tractor beam, …). Always offers at least the laser so a fresh ship can fight.</summary>
+        private void RebuildSystems()
+        {
+            _systems.Clear();
+            var mods = Game.ShipCombat?.Modules;
+            string weapon = null;
+            if (mods != null)
+            {
+                foreach (var m in mods)
+                {
+                    if (m == "ship_laser_basic" || m == "ship_cannon_1" || m == "laser_cannon_2" || m == "asteroid_breaker")
+                    {
+                        weapon = m;
+                        break;
+                    }
+                }
+            }
+
+            _systems.Add(new ShipSystem { Label = Loc("ui.space.sys_laser", "Laser"), Kind = "laser", WeaponKey = weapon ?? FlightWeapon });
+            if (mods != null && System.Array.IndexOf(mods, "tractor_beam") >= 0)
+            {
+                _systems.Add(new ShipSystem { Label = Loc("ui.space.sys_tractor", "Tractor"), Kind = "tractor" });
+            }
+
+            _selectedSystem = Mathf.Clamp(_selectedSystem, 0, _systems.Count - 1);
+        }
+
+        private string Loc(string key, string fallback) => Game.Localizer != null ? Game.Localizer.Get(key) : fallback;
+
+        /// <summary>Manual tractor sweep: pulls nearby salvage in (server-authoritative) with a cyan beam + ping.</summary>
+        private void ActivateTractor()
+        {
+            Game.Network?.SendTractorPull();
+            Vector3 from = _ship.transform.localPosition;
+            Vector3 to = from + _ship.transform.localRotation * Vector3.forward * 12f;
+            SpawnLaserBeam(from, to, new Color(0.4f, 0.85f, 1f));
+            ClientAudio.Instance?.Cue("scan_ping");
         }
 
         /// <summary>The best entity to fire on: the nearest asteroid/hostile within weapon range that's
@@ -389,9 +456,9 @@ namespace Spacecraft.Client
 
         /// <summary>Sends the fire intent + plays the laser beam, impact flash and sound. Mining (asteroid)
         /// reads amber; combat reads cyan.</summary>
-        private void FireAt(Spacecraft.Networking.Messages.NetCombatEntity target)
+        private void FireAt(Spacecraft.Networking.Messages.NetCombatEntity target, string weaponKey)
         {
-            Game.Network?.SendFireWeapon(FlightWeapon, target.Id);
+            Game.Network?.SendFireWeapon(weaponKey, target.Id);
             bool mining = target.Kind == "Asteroid";
             Color col = mining ? new Color(1f, 0.7f, 0.25f) : new Color(0.45f, 1f, 1f);
 
@@ -1069,6 +1136,10 @@ namespace Spacecraft.Client
         // coordinates so you can fly between them and land on any one. The body nearest within
         // LandApproachRange is the land target; if none, landing returns you to the current body.
         private readonly List<(string Id, string Name, Vector3 Pos, float Radius)> _landables = new();
+
+        /// <summary>The system's landable bodies (scene-local positions + names) — the radar reads these to
+        /// draw a bearing marker toward each planet/moon you can fly to.</summary>
+        public IReadOnlyList<(string Id, string Name, Vector3 Pos, float Radius)> Landables => _landables;
         // Every body (landable + decorative) as a keep-out sphere: the ship slides along it instead of
         // flying into the planet, so there is no "fell into the planet / auto-landed" — you stop at the
         // approach distance and press E to land. (Pos, keep-out radius.)
@@ -1078,7 +1149,8 @@ namespace Spacecraft.Client
         private float _landTargetSq;    // squared distance to the land target (for station-vs-body priority)
         private float _nearStationSq;   // squared distance to the near station
         private float _bounds = Bounds; // flight clamp, enlarged to span the resident system
-        private const float SystemViewScale = 0.30f; // system units → flight-view units
+        private const float SystemViewScale = 0.16f; // system units → flight-view units (kept compact so
+                                                     // neighbouring planets are a short cruise apart, not minutes)
         private const float KeepOutMargin = 10f;     // how far outside a body's surface the ship is held
         private const float LandBand = 40f;          // land prompt shows within (body radius + margin + band)
 
@@ -1176,6 +1248,22 @@ namespace Spacecraft.Client
             _crosshair.sprite = UiKit.SolidSprite;
             _crosshair.color = new Color(0.6f, 0.7f, 0.8f, 0.35f);
             _crosshair.raycastTarget = false;
+
+            // Ship-systems quick-bar, just above the controls hint (1–9 select, LMB use).
+            var barGo = new GameObject("SystemsBar", typeof(RectTransform));
+            barGo.transform.SetParent(_ui.transform, false);
+            var brt2 = barGo.GetComponent<RectTransform>();
+            brt2.anchorMin = brt2.anchorMax = new Vector2(0.5f, 0f);
+            brt2.pivot = new Vector2(0.5f, 0f);
+            brt2.sizeDelta = new Vector2(760f, 30f);
+            brt2.anchoredPosition = new Vector2(0f, 52f);
+            _systemsBar = barGo.AddComponent<Text>();
+            _systemsBar.font = UiKit.Font;
+            _systemsBar.fontSize = 19;
+            _systemsBar.alignment = TextAnchor.MiddleCenter;
+            _systemsBar.horizontalOverflow = HorizontalWrapMode.Overflow;
+            _systemsBar.supportRichText = true;
+            _systemsBar.raycastTarget = false;
         }
 
         /// <summary>Creates the chain of lens-flare sprites once (a big bloom at the sun + ghosts that march
@@ -1344,6 +1432,35 @@ namespace Spacecraft.Client
                     _crosshair.color = _fireTargetId != null
                         ? new Color(0.5f, 1f, 1f, 0.9f)
                         : new Color(0.6f, 0.7f, 0.8f, 0.35f);
+                }
+            }
+
+            // Ship-systems quick-bar text: the selected system is highlighted; numbers are the hotkeys.
+            if (_systemsBar != null)
+            {
+                bool show = _phase == Phase.Cruise && !_confirmLand && _systems.Count > 0;
+                _systemsBar.enabled = show;
+                if (show)
+                {
+                    var sb = new System.Text.StringBuilder();
+                    for (int n = 0; n < _systems.Count; n++)
+                    {
+                        if (n > 0)
+                        {
+                            sb.Append("    ");
+                        }
+
+                        if (n == _selectedSystem)
+                        {
+                            sb.Append($"<color=#66ffff><b>[{n + 1} {_systems[n].Label}]</b></color>");
+                        }
+                        else
+                        {
+                            sb.Append($"<color=#8fa3b8>{n + 1} {_systems[n].Label}</color>");
+                        }
+                    }
+
+                    _systemsBar.text = sb.ToString();
                 }
             }
         }
