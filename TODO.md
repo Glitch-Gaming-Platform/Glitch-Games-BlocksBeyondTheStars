@@ -32,6 +32,32 @@ is **pre-approved** (keys in `tools/ai-assets/.env`, run via `uv`).
   submerged (`WeatherFx.EyeUnderwater` + an IMGUI wash, smoothed, hidden in space/menu).
 - **Task 2 — Walk all the way around a planet.** Analyse: can the player really circumnavigate a planet, and
   **how is it implemented**? It should be possible. (World-wrap is partly built — verify it end-to-end.)
+
+  ### Task 2 — Analysis + Plan (2026-06-07)
+  **Verdict: circumnavigation already works (W0–W4).** The world is a **cylinder**: X is a wrapping longitude,
+  **Circumference = 6000 blocks** (`WorldConstants.cs:22`). Terrain/biomes/caves/ore are seam-free via
+  circular-domain noise (`Noise.FbmCylX`/`ValueCylX`), **proven by 10 `WorldWrapTests`** (height/biome/caves/
+  ore identical at X=0 ≡ 6000). The server wraps the player's X (`GameServer.cs:1184`); the client renders the
+  nearest wrapped copy via `SceneX`, so crossing X=0 has **no visible jump/seam**. Mining/placing wrap
+  (`WithinReach` uses `WrapDeltaX`). A full lap ≈ **6000 ÷ 6 m/s ≈ 16–17 min** of straight walking. Latitude
+  (Z) is **not** wrapped (you circle the equator, not over the poles).
+
+  **Two gaps:**
+  1. **~21 unwrapped `DistanceSquared` proximity checks** break interactions across the seam: `GameServer-
+     Creatures.cs` (171/375/391/402), `GameServerDoors.cs:184`, `GameServerSettlements.cs:233`,
+     `GameServerTrade.cs:49`, `GameServerEnemies.cs` (71/146), `GameServerContainers.cs:56`,
+     `GameServerShipStructure.cs:410`, `GameServerSpaceCombat.cs` (365/562/671/694). An object just across X=0
+     reads as ~6000 blocks away. Mining/placing are fine (already wrapped); these AI/interaction checks aren't.
+  2. **Poles (W5) not done** — Z is unbounded: you can walk north/south forever into generated terrain with no
+     barrier, so the planet doesn't feel bounded N/S.
+
+  **Plan:**
+  - **Fix 1 (seam interactions):** add a wrap-aware `WrapDistanceSquared(a, b)` helper (X the short way round,
+    plain Y/Z) and replace the unwrapped proximity `DistanceSquared` calls in the listed server systems. Add a
+    test that a creature/door/vendor just across the seam is reachable.
+  - **Fix 2 (poles, optional):** bound latitude with a **pole barrier** — past a latitude limit the surface
+    rises into an impassable ice wall (frozen biome), so walking N/S ends at a wall instead of infinite void.
+  - **Planet size:** 6000 blocks ≈ 16 min/lap; can shrink for a faster "around the world" feel if desired.
 - **Task 3 — Shadows & darkness on planets.** Analyse how shadow-casting + darkness work. A **cave entrance
   currently looks like a black wall** — change it so the entrance reads as **softly lit**. Shadows should be
   **softer**, not so **hard-edged**.
