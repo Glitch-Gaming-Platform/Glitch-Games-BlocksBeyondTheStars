@@ -90,11 +90,11 @@ public sealed partial class GameServer
             blocks.Add(new { x = px + dx, y = py + dy, z = pz + dz, block = _content.BlockById(id)?.Key ?? id.Value.ToString() });
         }
 
-        var creatures = _creatures.Where(c => p.Position.DistanceSquared(c.Position) < r2)
+        var creatures = _creatures.Where(c => WrapDistSq(p.Position, c.Position) < r2)
             .Select(c => new { c.Id, kind = c.Kind.ToString(), species = c.SpeciesId, c.Hostile, x = c.Position.X, y = c.Position.Y, z = c.Position.Z }).ToList();
-        var npcs = _npcs.Where(npc => p.Position.DistanceSquared(npc.Pos) < r2)
+        var npcs = _npcs.Where(npc => WrapDistSq(p.Position, npc.Pos) < r2)
             .Select(npc => new { npc.Id, npc.Role, npc.Theme, x = npc.Pos.X, y = npc.Pos.Y, z = npc.Pos.Z }).ToList();
-        var others = _sessions.Values.Where(o => o.Joined && o.ConnectionId != session.ConnectionId && p.Position.DistanceSquared(o.State.Position) < r2)
+        var others = _sessions.Values.Where(o => o.Joined && o.ConnectionId != session.ConnectionId && WrapDistSq(p.Position, o.State.Position) < r2)
             .Select(o => new { o.State.Name, x = o.State.Position.X, y = o.State.Position.Y, z = o.State.Position.Z }).ToList();
         var containers = _containers.Where(c => Dist2(p.Position, c.Position) < r2)
             .Select(c => new { c.Id, c.Kind, items = c.Items.Count, c.Position.X, c.Position.Y, c.Position.Z }).ToList();
@@ -138,9 +138,5 @@ public sealed partial class GameServer
         }
     }
 
-    private static float Dist2(Vector3f a, Vector3i b)
-    {
-        float dx = a.X - b.X, dy = a.Y - b.Y, dz = a.Z - b.Z;
-        return dx * dx + dy * dy + dz * dz;
-    }
+    private static float Dist2(Vector3f a, Vector3i b) => (float)WrapDistSq(a, b); // longitude-wrap aware
 }

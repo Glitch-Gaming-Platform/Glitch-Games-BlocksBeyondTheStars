@@ -53,7 +53,7 @@ public sealed partial class GameServer
         }
 
         var center = new Vector3f(container.Position.X + 0.5f, container.Position.Y + 0.5f, container.Position.Z + 0.5f);
-        if (session.State.Position.DistanceSquared(center) > LootReach * LootReach)
+        if (WrapDistSq(session.State.Position, center) > LootReach * LootReach)
         {
             Reject(session, "loot", "Container is out of reach.");
             return;

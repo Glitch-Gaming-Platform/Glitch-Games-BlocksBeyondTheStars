@@ -168,7 +168,7 @@ public sealed partial class GameServer
                     continue;
                 }
 
-                if (p.Position.DistanceSquared(creature.Position) <= CreatureProximityRange * CreatureProximityRange)
+                if (WrapDistSq(p.Position, creature.Position) <= CreatureProximityRange * CreatureProximityRange)
                 {
                     p.Health = System.Math.Max(0f, p.Health - Mitigate(p, (float)(creature.DamagePerSecond * dt)));
                     SendPlayerState(session);
@@ -372,7 +372,7 @@ public sealed partial class GameServer
             foreach (var other in _creatures)
             {
                 if (!ReferenceEquals(other, target) && other.SpeciesId == target.SpeciesId
-                    && other.Position.DistanceSquared(target.Position) <= CreaturePackRallyRange * CreaturePackRallyRange)
+                    && WrapDistSq(other.Position, target.Position) <= CreaturePackRallyRange * CreaturePackRallyRange)
                 {
                     other.ProvokeTimer = CreatureProvokeSeconds;
                 }
@@ -388,7 +388,7 @@ public sealed partial class GameServer
         int removed = _creatures.RemoveAll(c =>
         {
             var nearest = NearestPlayerPosition(targets, c.Position);
-            return nearest is not { } np || np.DistanceSquared(c.Position) > maxSq;
+            return nearest is not { } np || WrapDistSq(np, c.Position) > maxSq;
         });
         return removed > 0;
     }
@@ -399,7 +399,7 @@ public sealed partial class GameServer
         float bestSq = float.MaxValue;
         foreach (var s in targets)
         {
-            float d = s.State.Position.DistanceSquared(from);
+            float d = (float)WrapDistSq(s.State.Position, from);
             if (d < bestSq)
             {
                 bestSq = d;

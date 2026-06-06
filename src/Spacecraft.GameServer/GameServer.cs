@@ -1765,6 +1765,14 @@ public sealed partial class GameServer
         return dx * dx + dy * dy + dz * dz <= MaxReach * MaxReach;
     }
 
+    /// <summary>Squared distance between two on-planet positions measured the short way round the longitude
+    /// seam — every surface proximity check uses this so a creature/door/vendor/container just across X = 0 is
+    /// adjacent, not a world away. (Space combat keeps plain distances — space isn't a cylinder.)</summary>
+    private static double WrapDistSq(Vector3f a, Vector3f b) => WorldConstants.WrapDistanceSquared(a, b);
+
+    /// <summary>Wrap-aware squared distance from a position to a block cell (the cell's min corner).</summary>
+    private static double WrapDistSq(Vector3f a, Vector3i b) => WorldConstants.WrapDistanceSquared(a, new Vector3f(b.X, b.Y, b.Z));
+
     private ToolProperties ActiveTool(PlayerState player)
     {
         int slot = player.SelectedHotbarSlot;

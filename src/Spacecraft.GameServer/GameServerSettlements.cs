@@ -230,7 +230,7 @@ public sealed partial class GameServer
     {
         foreach (var (markerType, pos) in _settlementMarkers)
         {
-            if (markerType == type && player.Position.DistanceSquared(pos) <= reach * reach)
+            if (markerType == type && WrapDistSq(player.Position, pos) <= reach * reach)
             {
                 return true;
             }

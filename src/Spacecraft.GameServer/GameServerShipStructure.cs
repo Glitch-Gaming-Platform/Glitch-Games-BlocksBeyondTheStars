@@ -407,7 +407,7 @@ public sealed partial class GameServer
             return;
         }
 
-        if (!p.AboardShip || p.Position.DistanceSquared(pos.Value) > ShipStationReach * ShipStationReach)
+        if (!p.AboardShip || WrapDistSq(p.Position, pos.Value) > ShipStationReach * ShipStationReach)
         {
             Reject(session, "station", "Too far from the station.");
             return;

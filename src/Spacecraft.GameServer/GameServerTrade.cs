@@ -46,7 +46,7 @@ public sealed partial class GameServer
             return false;
         }
 
-        return sa.State.Position.DistanceSquared(sb.State.Position) <= TradeRange * TradeRange;
+        return WrapDistSq(sa.State.Position, sb.State.Position) <= TradeRange * TradeRange;
     }
 
     public void RequestTrade(string fromPlayer, string toPlayer)

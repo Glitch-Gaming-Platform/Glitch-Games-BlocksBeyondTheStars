@@ -68,7 +68,7 @@ public sealed partial class GameServer
                     continue;
                 }
 
-                if (p.Position.DistanceSquared(enemy.Position) <= EnemyProximityRange * EnemyProximityRange)
+                if (WrapDistSq(p.Position, enemy.Position) <= EnemyProximityRange * EnemyProximityRange)
                 {
                     p.Health = System.Math.Max(0f, p.Health - Mitigate(p, (float)(enemy.DamagePerSecond * dt)));
                     SendPlayerState(session);
@@ -143,7 +143,7 @@ public sealed partial class GameServer
         // range like the machete's must not silently reject those hits — equipping a weapon must never make
         // you worse than bare fists).
         float reach = isWeapon ? System.Math.Max(tool.Range, EnemyAttackReach) : EnemyAttackReach;
-        if (p.Position.DistanceSquared(target.Position) > reach * reach)
+        if (WrapDistSq(p.Position, target.Position) > reach * reach)
         {
             Reject(session, "attack", "Target is out of reach.");
             return;

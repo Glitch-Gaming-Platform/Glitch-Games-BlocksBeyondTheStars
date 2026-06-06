@@ -169,7 +169,7 @@ public sealed partial class GameServer
 
             // Face the nearest player if one is close, else look along the stroll heading.
             var nearest = NearestPlayerPosition(targets, npc.Pos);
-            if (nearest is { } np && np.DistanceSquared(npc.Pos) <= NpcFaceRange * NpcFaceRange)
+            if (nearest is { } np && WrapDistSq(np, npc.Pos) <= NpcFaceRange * NpcFaceRange)
             {
                 npc.Facing = (float)System.Math.Atan2(np.X - npc.Pos.X, np.Z - npc.Pos.Z);
             }

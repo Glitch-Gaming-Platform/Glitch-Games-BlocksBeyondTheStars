@@ -54,6 +54,18 @@ public static class WorldConstants
         return m > c / 2 ? m - c : m;
     }
 
+    /// <summary>Squared distance between two surface-world positions measured the short way round the
+    /// longitude seam (X wraps; Y/Z are linear). Use for every on-planet proximity check so a creature, door,
+    /// vendor or container just across X = 0 ≡ Circumference reads as adjacent, not a world away. (Don't use
+    /// in space, which isn't a cylinder.)</summary>
+    public static double WrapDistanceSquared(Vector3f a, Vector3f b)
+    {
+        double dx = WrapDeltaX((double)a.X - b.X);
+        double dy = (double)a.Y - b.Y;
+        double dz = (double)a.Z - b.Z;
+        return dx * dx + dy * dy + dz * dz;
+    }
+
     /// <summary>Wraps a chunk-X index into the canonical [0, ChunksAround) range (longitude wrap).</summary>
     public static int CanonicalChunkX(int chunkX)
     {

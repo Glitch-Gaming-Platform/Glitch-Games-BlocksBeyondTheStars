@@ -154,7 +154,7 @@ public sealed partial class GameServer
                 continue; // hinge doors are manual (HandleDoorInteract)
             }
 
-            bool near = targets.Any(p => p.DistanceSquared(door.Pos) <= SlideDoorOpenRange * SlideDoorOpenRange);
+            bool near = targets.Any(p => WrapDistSq(p, door.Pos) <= SlideDoorOpenRange * SlideDoorOpenRange);
             if (near)
             {
                 door.AutoCloseTimer = SlideDoorAutoClose;
@@ -181,7 +181,7 @@ public sealed partial class GameServer
             return; // unknown door, or a slide door (those are server-automatic)
         }
 
-        if (session.State.Position.DistanceSquared(door.Pos) > HingeDoorReach * HingeDoorReach)
+        if (WrapDistSq(session.State.Position, door.Pos) > HingeDoorReach * HingeDoorReach)
         {
             return; // too far to reach the latch
         }

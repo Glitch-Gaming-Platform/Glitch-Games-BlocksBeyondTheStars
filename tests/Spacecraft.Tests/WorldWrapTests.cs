@@ -123,4 +123,19 @@ public class WorldWrapTests
         Assert.Equal(-1, WorldConstants.WrapDeltaX(C - 1)); // C-1 east == 1 west
         Assert.True(System.Math.Abs(WorldConstants.WrapDeltaX(C / 2 + 5)) <= C / 2);
     }
+
+    [Fact]
+    public void WrapDistanceSquared_MeasuresProximityAcrossTheSeam()
+    {
+        // Two points 4 blocks apart across X = 0 ≡ C read as 4², not (C-4)² — so a creature/door/vendor just
+        // across the seam counts as adjacent. (This is what the surface proximity checks now use.)
+        var west = new Vector3f(C - 2, 64, 10);
+        var east = new Vector3f(2, 64, 10);
+        Assert.Equal(16.0, WorldConstants.WrapDistanceSquared(west, east), 3);
+
+        // Y and Z stay linear (not wrapped).
+        var a = new Vector3f(2, 64, 10);
+        var b = new Vector3f(2, 70, 18);
+        Assert.Equal(36.0 + 64.0, WorldConstants.WrapDistanceSquared(a, b), 3);
+    }
 }
