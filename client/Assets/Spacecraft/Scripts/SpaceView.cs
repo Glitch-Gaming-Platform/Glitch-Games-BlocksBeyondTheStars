@@ -26,6 +26,7 @@ namespace Spacecraft.Client
         private const float Bounds = 130f;
         private const float EvaSpeed = 6.5f;       // suit thrust speed on a spacewalk (slower than the ship)
         private const float EvaBoardRange = 11f;   // how close the suit must get to the hull to board the ship
+        private const float ShipKeepOut = 3.5f;    // suit can't fly into its own ship — bounce off the hull shell
 
         private enum Phase { Launch, Cruise, Landing, Boarding }
 
@@ -598,6 +599,15 @@ namespace Spacecraft.Client
                 {
                     _evaPos = ob.Pos + d / dist * ob.Radius;
                 }
+            }
+
+            // Don't float through your own parked ship — bounce off / slide around the hull (like a station's
+            // keep-out). The board range is far larger, so you can still drift up to the hatch and press E.
+            Vector3 toShip = _evaPos - _ship.transform.localPosition;
+            float shipDist = toShip.magnitude;
+            if (shipDist < ShipKeepOut && shipDist > 0.0001f)
+            {
+                _evaPos = _ship.transform.localPosition + toShip / shipDist * ShipKeepOut;
             }
 
             // Report the suit's pose so the other players in this instance see us floating (the server tags it

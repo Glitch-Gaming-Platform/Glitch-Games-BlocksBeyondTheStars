@@ -609,7 +609,17 @@ namespace Spacecraft.Client
 
             if (!Game.InSpace)
             {
-                UiKit.AddButton(_listContent, 0, y, 280, 56, L("ui.space.enter"), () => Game.Network?.SendEnterSpace());
+                // Inside the ship while it floats in space: this is the helm — take it to fly again, with NO
+                // planet take-off animation (you never landed). On a real surface it's the launch-into-space.
+                if (Game.LoadingPlanetType == "ship_interior")
+                {
+                    UiKit.AddButton(_listContent, 0, y, 280, 56, L("ui.station.helm"), () => Game.Network?.SendExitShip());
+                }
+                else
+                {
+                    UiKit.AddButton(_listContent, 0, y, 280, 56, L("ui.space.enter"), () => Game.Network?.SendEnterSpace());
+                }
+
                 return y + 70f;
             }
 

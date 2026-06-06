@@ -293,15 +293,13 @@ only then implement. Items marked *(analysis only)* must NOT be implemented yet.
    - **5c — Show the ship's entry hatch while on an EVA.** On a spacewalk the ship's **entry hatch** isn't
      marked, so it's unclear where to board back in. Make the hatch visibly stand out (a marker / glow / label)
      when floating in EVA so the player can find the way back inside.
-   - **5d — EVA must not fly *into* the ship.** While in EVA the suit can pass straight through the hull. It
-     should **bounce off / be deflected** by a ship keep-out shell (like the station keep-out in
-     `SpaceView.UpdateCruise`/`UpdateEva`), so you slide around the hull and approach the hatch instead.
-   - **5e — Bug: "Launch into space" from inside the ship plays the take-off animation.** After stepping inside
-     the ship with **F** in space, the menu's **Launch into space** (`ui.space.enter`) replays the *planet*
-     take-off animation (because `Game.InSpace` is false in the on-foot ship-interior void world). From the ship
-     interior, returning to the flight view must use the **helm (cockpit, no animation)** — the menu launch
-     button should **not** offer the animated launch there (hide it, or route it through the skip-launch helm
-     path). Also clarify in-game that the cockpit/helm is the way back to piloting.
+   - ✅ **5d — EVA must not fly *into* the ship (done 2026-06-07).** `SpaceView.UpdateEva` now bounces the suit
+     off a `ShipKeepOut` (3.5) shell around the parked ship and slides it along the hull (like the station
+     keep-out); the board range (11) is larger so you still drift to the hatch and press E.
+   - ✅ **5e — "Launch into space" from inside the ship no longer plays the take-off animation (done
+     2026-06-07).** In the ship-interior void world (`Game.LoadingPlanetType == "ship_interior"`) the ship-tab
+     button now reads **"Take the helm (fly)"** and calls `SendExitShip` (the skip-launch helm path) instead of
+     `SendEnterSpace`; on a real surface it stays the normal "Launch into space".
 6. **Bug — save the player's position per planet.** When I land on another planet, my **position there** should
    be saved too, so on **loading the save I'm back there** (not just the last/home world).
 7. **Bug — creatures chase forever + spawn only at the ship.** Analyse: creatures seem to **follow the player
