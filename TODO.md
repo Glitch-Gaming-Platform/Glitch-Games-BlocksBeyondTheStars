@@ -22,10 +22,13 @@ an **Analysis + Plan** block here **before** any implementation, (3) ask clarify
 (4) only then implement + commit. One task at a time. Asset generation (OpenAI textures / ElevenLabs sounds)
 is **pre-approved** (keys in `tools/ai-assets/.env`, run via `uv`).
 
-- **Task 1 — Swimming / diving + ship landing underwater.** Analyse: can the player sink/dive in water today?
-  The player **should be able to swim and dive**. Water should therefore have **transparency** (slightly
-  see-through). **Jumping** should let the player **surface** again. The **ship must be able to land underwater
-  on water worlds**, and **no water may be inside the ship** (and none may flow in).
+- ✅ **Task 1 — Swimming / diving + ship landing underwater** (done 2026-06-07). Part 1: the chunk collider
+  now excludes fluids so the player swims/dives — buoyant sink, **Jump = rise/surface**, water breaks falls;
+  submerging spends the **suit oxygen** even on a breathable world. Part 2: water renders **transparent**
+  (alpha submesh, clear-blue tile alpha, no frost) so you see down into seas. Part 3: the fluid sim is
+  **ship-aware** (`FluidCanEnter`) — ships land at the seabed (so underwater on water worlds) with a **dry,
+  watertight cabin** that water can't flow into. Tests: `Submerged_DrainsSuitOxygen_…`,
+  `Fluid_DoesNotFlowIntoAShipInterior`. *(Possible polish: a subtle blue screen tint while submerged.)*
 - **Task 2 — Walk all the way around a planet.** Analyse: can the player really circumnavigate a planet, and
   **how is it implemented**? It should be possible. (World-wrap is partly built — verify it end-to-end.)
 - **Task 3 — Shadows & darkness on planets.** Analyse how shadow-casting + darkness work. A **cave entrance

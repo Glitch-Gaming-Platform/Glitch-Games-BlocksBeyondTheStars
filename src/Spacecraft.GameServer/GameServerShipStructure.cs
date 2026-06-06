@@ -502,6 +502,10 @@ public sealed partial class GameServer
     /// their own ship at their own landing zone.</summary>
     public Vector3i ShipAnchorOf(string playerId) => _worlds.Active.StampFor(playerId).Anchor;
 
+    /// <summary>Test/diagnostic: whether a block cell lies inside a ship interior (cell-centre probe).</summary>
+    public bool ShipInteriorContainsCellForTest(int x, int y, int z)
+        => ShipInteriorContains(new Vector3f(x + 0.5f, y + 0.5f, z + 0.5f));
+
     /// <summary>True if the position is within ANY player's ship hull box in this world (so no one builds
     /// inside a ship, no flora/creatures spawn there, and standing inside any ship counts as "aboard").</summary>
     private bool ShipInteriorContains(Vector3f p)

@@ -93,7 +93,7 @@ public sealed partial class GameServer
             bool changed = false;
 
             var below = new Vector3i(pos.X, pos.Y - 1, pos.Z);
-            if (_world.GetBlock(below).IsAir)
+            if (FluidCanEnter(below))
             {
                 FillFluid(below, kind, FluidFull); // fluid falls full
                 changed = true;
@@ -118,12 +118,22 @@ public sealed partial class GameServer
 
     private void Spread(Vector3i n, BlockId kind, byte level, ref bool changed)
     {
-        if (_world.GetBlock(n).IsAir)
+        if (FluidCanEnter(n))
         {
             FillFluid(n, kind, (byte)(level - 1));
             changed = true;
         }
     }
+
+    /// <summary>A fluid may enter a cell only if it's air AND not inside a ship interior — so a sea/lava body
+    /// can never flow into (or refill) a landed ship's cabin, keeping a submerged ship watertight and dry.</summary>
+    private bool FluidCanEnter(Vector3i p)
+        => _world.GetBlock(p).IsAir && !InShipInterior(p);
+
+    /// <summary>True if a cell lies inside any landed ship's interior (cheap no-op when no ship is stamped).</summary>
+    private bool InShipInterior(Vector3i p)
+        => _worlds.Active.ShipStamps.Count > 0
+        && ShipInteriorContains(new Vector3f(p.X + 0.5f, p.Y + 0.5f, p.Z + 0.5f));
 
     private void FillFluid(Vector3i pos, BlockId kind, byte level)
     {
@@ -133,7 +143,6 @@ public sealed partial class GameServer
         _activeFluid.Add(pos);
     }
 
-    private bool IsAirAt(int x, int y, int z) => _world.GetBlock(new Vector3i(x, y, z)).IsAir;
 
     /// <summary>True if any of the cell's 6 neighbours is a fluid — i.e. a hole opened here (e.g. by mining
     /// an underwater rock or kelp) would have a sea/lava body to refill it.</summary>
@@ -146,11 +155,12 @@ public sealed partial class GameServer
         || IsFluid(_world.GetBlock(new Vector3i(p.X, p.Y - 1, p.Z)).Value);
 
     /// <summary>True if a cell has any neighbour it could flow into (sideways or down) — used to let settled
-    /// full cells go dormant, so a big body of fluid doesn't keep every cell active forever.</summary>
+    /// full cells go dormant, so a big body of fluid doesn't keep every cell active forever. Ship-interior
+    /// cells don't count (the fluid can't enter them), so a source against a submerged hull also goes dormant.</summary>
     private bool HasAirNeighbor(Vector3i p)
-        => IsAirAt(p.X + 1, p.Y, p.Z) || IsAirAt(p.X - 1, p.Y, p.Z)
-        || IsAirAt(p.X, p.Y, p.Z + 1) || IsAirAt(p.X, p.Y, p.Z - 1)
-        || IsAirAt(p.X, p.Y - 1, p.Z);
+        => FluidCanEnter(new Vector3i(p.X + 1, p.Y, p.Z)) || FluidCanEnter(new Vector3i(p.X - 1, p.Y, p.Z))
+        || FluidCanEnter(new Vector3i(p.X, p.Y, p.Z + 1)) || FluidCanEnter(new Vector3i(p.X, p.Y, p.Z - 1))
+        || FluidCanEnter(new Vector3i(p.X, p.Y - 1, p.Z));
 
     /// <summary>When a fluid cell is removed (mined), wake the surrounding fluid so it flows back into the
     /// hole. Worldgen sea cells are untracked → treated as full sources, so digging into a body refills; a

@@ -113,6 +113,47 @@ public sealed class FluidTests : IDisposable
     }
 
     [Fact]
+    public void Fluid_DoesNotFlowIntoAShipInterior()
+    {
+        var repo = new SqliteWorldRepository(new SaveGamePaths(_root, "fluidship"));
+        using (repo)
+        {
+            var st = new LoopbackServerTransport(new LoopbackLink());
+            var config = new ServerConfig { WorldName = "fluidship", Seed = 1, AutoSaveIntervalMinutes = 9999, PlaceStarterShip = true };
+            var server = new SvGameServer(config, _content, st, repo);
+            server.Start();
+
+            var p = server.AddLocalPlayer("Pilot"); // spawns inside the ship
+            server.Tick(0.1);
+            Assert.True(p.State.AboardShip, "the player should spawn inside the ship");
+
+            // Find two stacked interior-air cells in the cabin (a source on top, the target just below it).
+            var floor = p.State.Position.ToBlock();
+            Vector3i? src = null, below = null;
+            for (int dy = 0; dy <= 8 && src == null; dy++)
+            {
+                var top = new Vector3i(floor.X, floor.Y + dy + 1, floor.Z);
+                var bot = new Vector3i(floor.X, floor.Y + dy, floor.Z);
+                if (server.ShipInteriorContainsCellForTest(top.X, top.Y, top.Z) && server.World.GetBlock(top).IsAir
+                    && server.ShipInteriorContainsCellForTest(bot.X, bot.Y, bot.Z) && server.World.GetBlock(bot).IsAir)
+                {
+                    src = top;
+                    below = bot;
+                }
+            }
+
+            Assert.NotNull(src);
+            Assert.NotNull(below);
+
+            server.PlaceFluidSource("water", src!.Value.X, src.Value.Y, src.Value.Z); // seed water in the cabin
+            for (int i = 0; i < 12; i++) server.Tick(0.3);
+
+            // The sim must refuse to flow the source down through the interior cell below it — the cabin stays dry.
+            Assert.True(server.World.GetBlock(below!.Value).IsAir, "fluid must not flow down into the ship interior");
+        }
+    }
+
+    [Fact]
     public void Water_FlowsDownIntoAir()
     {
         var server = Started(out var repo);
