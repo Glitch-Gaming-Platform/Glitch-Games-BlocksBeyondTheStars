@@ -48,19 +48,23 @@ only then implement. Items marked *(analysis only)* must NOT be implemented yet.
    creatures spawn?** Make sure they **don't only spawn at the ship** but are **distributed across their biomes**.
    Analyse precisely, then make a plan, ask questions, only then implement.
 8. **Task 4 — content-styled icons** for everything pickup-able / hand-held. (Detailed below.)
-9. **Feature — build high enough to leave the atmosphere into space.** Analyse + plan thoroughly: it should be
+9. **Feature — holographic visor HUD.** Analyse + plan: can the in-game UI be adapted so it looks like a
+   **holographic HUD projected onto the inside of an outward-curved glass** (the space-suit visor glass)? Look
+   at which **effects** can be used to achieve it (e.g. curvature/parallax, a fresnel/rim glow on the visor,
+   scanlines, chromatic-edge fringing, bloom/glow, subtle distortion + reflections). Analyse + plan only for now.
+10. **Feature — build high enough to leave the atmosphere into space.** Analyse + plan thoroughly: it should be
    theoretically possible, on a world / moon / asteroid, to **build a structure tall enough that it leaves the
    atmosphere** (if there is one) and you are **in space**. Analyse precisely, then plan, ask questions, only
-   then implement. (Ties into items 5 and the sphere analysis 13.)
-10. **Feature — trade knowledge points.** Players should be able to **trade knowledge points**. Key constraint:
+   then implement. (Ties into item 5 and the sphere analysis 14.)
+11. **Feature — trade knowledge points.** Players should be able to **trade knowledge points**. Key constraint:
    knowledge **never goes away** — unlocking blueprints only needs a knowledge **threshold**, no points are
    spent; so trading must **not deduct** knowledge points either. But it must be ensured that **each knowledge
    point can only be passed to another player once** — track how many points you've **already given to a given
    other player**, so no endless back-and-forth trade is possible. It should be possible to **offer knowledge
    for materials or for equipment** in a trade. Analyse precisely, then plan, ask questions, only then implement.
-11. **Task 5 — crafting / tech-tree / materials overhaul + more metals & rare earths.** (Detailed below; big.)
-12. **Task 6 — drastically more flora & fauna variety** (with generated textures + sounds). (Detailed below; big.)
-13. **Analysis only — make a world more spherical (vertical wrap too).** *(Analysis only — do NOT implement.)*
+12. **Task 5 — crafting / tech-tree / materials overhaul + more metals & rare earths.** (Detailed below; big.)
+13. **Task 6 — drastically more flora & fauna variety** (with generated textures + sounds). (Detailed below; big.)
+14. **Analysis only — make a world more spherical (vertical wrap too).** *(Analysis only — do NOT implement.)*
    Analyse and estimate: how could the game be changed so a world can be circumnavigated **not only horizontally
    but also vertically** — i.e. how to make a world behave **more like a sphere**. Assess what's **realistically
    possible**, weighing **complexity and performance cost**. For now, just **estimate and analyse**.
