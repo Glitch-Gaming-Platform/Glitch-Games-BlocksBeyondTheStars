@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Spacecraft.Shared.World;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -779,7 +780,7 @@ namespace Spacecraft.Client
             var homePos = new Vector3(0f, -150f, -20f);
             // Every body has its own size (deterministic from its id), so worlds + moons look big or small in
             // orbit instead of all identical — an approximate reflection of how varied the bodies are.
-            float homeDiameter = 150f * BodySizeScale(current?.Id ?? Game?.LocationName);
+            float homeDiameter = OrbitDiameterFor(current?.Id ?? Game?.LocationName ?? "home", current?.Kind, current?.PlanetType) * 3.2f;
             SpawnBody("HomePlanet", homePos, homeDiameter, homeType);
             _landables.Add((string.Empty, Game?.LocationName ?? "home", homePos, homeDiameter * 0.5f));
             _keepOut.Add((homePos, homeDiameter * 0.5f + KeepOutMargin));
@@ -788,7 +789,6 @@ namespace Spacecraft.Client
             // The system's other planets/moons at their (scaled) orbit coords — all real, all landable.
             if (current != null && system != null)
             {
-                const float PlanetDiameter = 46f, MoonDiameter = 28f;
                 const float BodyGap = 8f; // clear space kept between two bodies' surfaces
 
                 // Plan every body first (positions + radii), then nudge any overlaps apart, THEN spawn — so no
@@ -821,7 +821,7 @@ namespace Spacecraft.Client
 
                     string type = string.IsNullOrEmpty(b.PlanetType) ? homeType : b.PlanetType;
                     var pos = new Vector3((b.SystemX - current.SystemX) * SystemViewScale, 0f, (b.SystemZ - current.SystemZ) * SystemViewScale);
-                    float diameter = PlanetDiameter * BodySizeScale(b.Id);
+                    float diameter = OrbitDiameterFor(b.Id, b.Kind, b.PlanetType);
                     Plan(b.Id, b.Name, pos, diameter, type);
                     planets.Add((b.SystemX, b.SystemZ, pos, diameter * 0.5f));
                 }
@@ -845,7 +845,7 @@ namespace Spacecraft.Client
                     }
 
                     var rel = new Vector3((b.SystemX - parent.Sx) * SystemViewScale, 0f, (b.SystemZ - parent.Sz) * SystemViewScale);
-                    float moonDia = MoonDiameter * BodySizeScale(b.Id);
+                    float moonDia = OrbitDiameterFor(b.Id, b.Kind, b.PlanetType);
                     float minClear = parent.Radius + moonDia * 0.5f + BodyGap; // outside the planet's surface
                     if (rel.magnitude < minClear)
                     {
@@ -900,25 +900,21 @@ namespace Spacecraft.Client
             _bounds = Mathf.Max(Bounds, maxDist + 140f); // keep the whole system reachable
         }
 
-        /// <summary>A deterministic per-body size factor (0.70..1.35) from the body id, so each world/moon has
-        /// its own size in orbit (a small moon reads smaller than a big gas world). Same id → same size, and
-        /// a body looks the same size whether it's the one you launched from or a distant one in the system.</summary>
-        private static float BodySizeScale(string id)
+        /// <summary>The orbit-view diameter for a body, derived from its real walkable circumference — so a
+        /// tiny asteroid reads small, a moon medium and a big planet large, matching how long it'd take to walk
+        /// around. Same body → same size, on the surface (server) and in orbit (here).</summary>
+        private static float OrbitDiameterFor(string id, string kind, string planetType)
         {
-            int h = StableHash(id);
-            return 0.70f + (h % 1000) / 1000f * 0.65f; // 0.70 .. 1.35
+            int circ = WorldConstants.CircumferenceFor(id, ClassOf(kind, planetType));
+            return 8f + circ / 220f; // ~13 (asteroid) .. ~23 (moon) .. ~46-62 (planet)
         }
 
-        private static int StableHash(string s)
-        {
-            int h = 17;
-            foreach (char c in s ?? string.Empty)
-            {
-                h = h * 31 + c;
-            }
-
-            return h & 0x7fffffff;
-        }
+        /// <summary>Maps a NetBody's string kind + planet type to a size class (matches the server's
+        /// <see cref="WorldConstants.SizeClassFor"/>).</summary>
+        private static WorldConstants.WorldSizeClass ClassOf(string kind, string planetType)
+            => string.Equals(planetType, "asteroid", System.StringComparison.OrdinalIgnoreCase) ? WorldConstants.WorldSizeClass.Asteroid
+             : kind == "Moon" ? WorldConstants.WorldSizeClass.Moon
+             : WorldConstants.WorldSizeClass.Planet;
 
         /// <summary>Spawns one real celestial body: a lit, textured sphere with a per-type cloud shell.</summary>
         private void SpawnBody(string name, Vector3 pos, float diameter, string planetType)

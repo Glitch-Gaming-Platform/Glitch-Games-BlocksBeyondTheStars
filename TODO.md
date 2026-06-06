@@ -70,9 +70,15 @@ is **pre-approved** (keys in `tools/ai-assets/.env`, run via `uv`).
   round circumference to a multiple of ChunkSize (16). **Three size classes** by body: **asteroid**
   (landable, PlanetType `asteroid`) **800–1600**, **moon** (`CelestialKind.Moon`) **2500–4000**, **planet**
   **5000–12000** — `CircumferenceFor(bodyId, class)` deterministic; `SizeClassFor(kind, planetKey)` in shared
-  so server (active world from `_galaxy.FindBody`) + client (orbit from `NetBody`) agree. The static
-  `WorldConstants` helpers gain circumference overloads (old no-arg versions default to 6000), so the threading
-  is a per-world value passed at the ~23 sites — no global mutable state.
+  so server (active world from `_galaxy.FindBody`) + client (orbit from `NetBody`) agree.
+
+  ✅ **DONE 2026-06-07** (3 stages): **Stage 1** (`b21a299`) — `WorldConstants` circumference overloads +
+  `WorldSizeClass`/`SizeClassFor`/`CircumferenceFor`. **Stage 2** (`d35a587`) — server sizes each world from
+  its body (`LoadWorld` → `SetCircumference` on the generator + `ServerWorld.Circumference`); terrain/caves/
+  ore/biomes/flora wrap at it; move-wrap, pole clamp, reach + proximity read the active size; `WorldEnvironment`
+  carries Circumference + LatitudeLimit. **Stage 3** — client caches it (`GameBootstrap.Circumference` +
+  `ClientWorld._circumference`) for `SceneX`/day span/chunk wrap; the orbit view sizes each body by its real
+  circumference (`OrbitDiameterFor`). Tests read `server.World.Circumference`; 318 pass.
 
   ### Task 2 — Analysis + Plan (2026-06-07)
   **Verdict: circumnavigation already works (W0–W4).** The world is a **cylinder**: X is a wrapping longitude,

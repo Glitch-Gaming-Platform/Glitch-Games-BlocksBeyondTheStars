@@ -131,13 +131,15 @@ namespace Spacecraft.Client
         /// circumference (X is a wrapping longitude), so one walk around the world is exactly one day and
         /// the planet has a real day/night terminator: a player far east can be in daylight while one far
         /// west is in night, on the same world.</summary>
-        public const float DayCircumference = WorldConstants.Circumference;
+        /// <summary>This world's walkable circumference (longitude wrap + day span). Sized per body (asteroids
+        /// small, planets large) — sent by the server in <see cref="WorldEnvironment"/>; used for every X wrap.</summary>
+        public int Circumference { get; private set; } = WorldConstants.Circumference;
 
         /// <summary>Time-of-day at the player's position — the server's global day fraction shifted by the
         /// player's longitude (world X), wrapped to 0..1. Drives the sky + HUD clock, so two players at
         /// different X see different times (one's day side, the other's night side).</summary>
         public float LocalTimeOfDay
-            => Mathf.Repeat((Environment != null ? Environment.TimeOfDay : 0.5f) + PlayerPosition.x / DayCircumference, 1f);
+            => Mathf.Repeat((Environment != null ? Environment.TimeOfDay : 0.5f) + PlayerPosition.x / Circumference, 1f);
 
         /// <summary>
         /// Maps an authoritative (canonical) world X to the Unity scene X nearest the player. World-X is a
@@ -147,7 +149,7 @@ namespace Spacecraft.Client
         /// (and those that would flip are beyond view distance anyway, so the flip is never seen).
         /// </summary>
         public float SceneX(double worldX)
-            => (float)(PlayerPosition.x + WorldConstants.WrapDeltaX(worldX - PlayerPosition.x));
+            => (float)(PlayerPosition.x + WorldConstants.WrapDeltaX(worldX - PlayerPosition.x, Circumference));
 
         /// <summary>Convenience: a full world position mapped to the nearest scene position (only X wraps).</summary>
         public Vector3 ScenePos(float worldX, float worldY, float worldZ)
@@ -177,7 +179,7 @@ namespace Spacecraft.Client
             float bestSq = range * range;
             foreach (var s in Stations)
             {
-                float dx = (float)WorldConstants.WrapDeltaX(s.X - pos.x), dy = s.Y - pos.y, dz = s.Z - pos.z; // longitude wraps
+                float dx = (float)WorldConstants.WrapDeltaX(s.X - pos.x, Circumference), dy = s.Y - pos.y, dz = s.Z - pos.z; // longitude wraps
                 float d = dx * dx + dy * dy + dz * dz;
                 if (d < bestSq)
                 {
@@ -204,7 +206,7 @@ namespace Spacecraft.Client
             float bestSq = 1.6f * 1.6f; // the hit must land on (or right next to) a station tile
             foreach (var s in Stations)
             {
-                float dx = (float)WorldConstants.WrapDeltaX(s.X - hit.point.x), dy = s.Y - hit.point.y, dz = s.Z - hit.point.z;
+                float dx = (float)WorldConstants.WrapDeltaX(s.X - hit.point.x, Circumference), dy = s.Y - hit.point.y, dz = s.Z - hit.point.z;
                 float d = dx * dx + dy * dy + dz * dz;
                 if (d < bestSq)
                 {
@@ -330,7 +332,12 @@ namespace Spacecraft.Client
             Network.NpcsReceived += m => Npcs = m.Npcs;
             Network.ContainersReceived += m => Containers = m.Containers;
             Network.OwnedShipsReceived += m => OwnedShips = m.Ships;
-            Network.WorldEnvironmentReceived += m => Environment = m;
+            Network.WorldEnvironmentReceived += m =>
+            {
+                Environment = m;
+                Circumference = m.Circumference > 0 ? m.Circumference : WorldConstants.Circumference;
+                World?.SetCircumference(Circumference); // chunk/block wrap at this world's size
+            };
             Network.WorldResetReceived += OnWorldReset;
             Network.ScanResultReceived += m =>
             {
@@ -533,7 +540,7 @@ namespace Spacecraft.Client
             foreach (var d in _faceDirs)
             {
                 var nc = new ChunkCoord(
-                    WorldConstants.CanonicalChunkX(WorldConstants.WorldToChunk(m.X + d.X)),
+                    WorldConstants.CanonicalChunkX(WorldConstants.WorldToChunk(m.X + d.X), Circumference),
                     WorldConstants.WorldToChunk(m.Y + d.Y),
                     WorldConstants.WorldToChunk(m.Z + d.Z));
                 if (!nc.Equals(coord))
