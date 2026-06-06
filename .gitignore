@@ -5,6 +5,9 @@ obj/
 artifacts/
 publish/
 
+# Editor / agent settings (local only)
+.claude/
+
 # Rider / VS
 .idea/
 .vs/

@@ -7,15 +7,17 @@ self-hosting come naturally.
 
 ## About this project
 
-Spacecraft is a **family project**:
+**SpaceCraft — JuMaVe Games**
 
-- **Justus (age 10)** is the **Product Owner** — he comes up with the game and writes the
-  user requirements.
-- **Marcel (papa)** is the **technical translator** — he turns Justus's ideas into precise
-  technical requirements.
-- **Verena (mama)** is the **game tester** — she plays the game and gives feedback.
-- The **AI (Claude Code, Anthropic's Claude Opus)** produces the technical implementation
-  from those requirements.
+A family project:
+
+- **Justus Dütscher** (son) — ideas, game design, playtesting
+- **Marcel Dütscher** (father) — technical lead and AI prompting
+- **Verena Dütscher** (mother) — game balancing and playtesting
+
+We're hoping for community support! Get involved and join in — your name could soon be here too!
+
+*(This is the same credit shown in the game's Credits screen — `ui.credits.body`.)*
 
 > **Status & docs:** [TODO.md](TODO.md) is the single Done/Open status doc; player operation is in
 > [docs/USER_MANUAL.md](docs/USER_MANUAL.md); deeper design notes are under [docs/](docs/). (The
