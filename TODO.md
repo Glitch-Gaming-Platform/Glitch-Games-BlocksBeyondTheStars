@@ -341,6 +341,30 @@ only then implement. Items marked *(analysis only)* must NOT be implemented yet.
    constantly**. After a while, pursuing/attacking creatures should **leave the player alone**. Also: **where do
    creatures spawn?** Make sure they **don't only spawn at the ship** but are **distributed across their biomes**.
    Analyse precisely, then make a plan, ask questions, only then implement.
+
+   ### Analysis (2026-06-07)
+   - **(a) Chase never ends.** `MoveCreatures` (`GameServerCreatures.cs:290`) feeds the nearest player into
+     `CreatureBehaviour.Step`, which makes an aggressor/pack-hunter move **toward** any player within
+     `CreatureAggroRange` (10) — with **no give-up timer**. So while you stay within ~10 blocks an aggressor (or
+     a provoked territorial one, `ProvokeTimer`) keeps coming + attacking (the damage loop at `:142-177`)
+     indefinitely. (Running >10 away already breaks aggro, but staying near = relentless.)
+   - **(b) Spawn clusters on you/the ship.** `TrySpawnCreatureNear` (`:198`) spawns each creature at
+     `player.Position + SpawnRing[...]` where the ring is a **tight 7–13 block** circle, biome-gated by the spot.
+     With a small cap (4/player, ≤12) + 70-block despawn, fauna only ever exists in a tight cluster around the
+     player — and since you start/return at the ship, it reads as "they only spawn at the ship".
+
+   ### Plan
+   - **(a) Give-up / leash:** add a per-creature `ChaseTimer` + `GiveUpTimer` (on `CombatEntity`). An aggressor
+     chasing within aggro range accumulates `ChaseTimer`; past a cap it **gives up** — sets a `GiveUpTimer`
+     cooldown during which it ignores the player (wanders off, `Step` gets `nearest = null`) **and does not
+     attack** — then can re-engage. `ChaseTimer` decays when no player is near.
+   - **(b) Spread spawns:** widen + randomise the spawn placement (farther out, e.g. ~18–45 blocks at a
+     scattered angle/rotor) so creatures populate the **surrounding biomes out of immediate sight** and you meet
+     them as you explore, instead of popping in 7–13 blocks away. Keep the biome-native gating.
+
+   **Questions:** (1) Give-up feel — roughly how long should an aggressor chase before giving up, and how long
+   should it leave you alone after? (default ~12 s chase → ~10 s cooldown). (2) Spawn spread — OK to spawn
+   creatures **farther out + scattered** (so you discover them around the biome) rather than right next to you?
 8. **Task 4 — content-styled icons** for everything pickup-able / hand-held. (Detailed below.)
 9. **Feature — holographic visor HUD.** Analyse + plan: can the in-game UI be adapted so it looks like a
    **holographic HUD projected onto the inside of an outward-curved glass** (the space-suit visor glass)? Look
