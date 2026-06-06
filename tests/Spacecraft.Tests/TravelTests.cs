@@ -49,6 +49,40 @@ public sealed class TravelTests : IDisposable
             && b.Id != server.ActiveLocationId);
 
     [Fact]
+    public void Reload_RestoresPlayerToTheLastPlanet_NotHome()
+    {
+        var repo = new SqliteWorldRepository(new SaveGamePaths(_root, "reload"));
+        using (repo)
+        {
+            var config = new ServerConfig { WorldName = "reload", Seed = 1, AutoSaveIntervalMinutes = 9999, PlaceStarterShip = false };
+            config.Rules.FreeSpaceFlight = true;
+
+            string destId;
+            string homeId;
+
+            // First run: travel to another planet, then persist the player.
+            var server = new SvGameServer(config, _content, new LoopbackServerTransport(new LoopbackLink()), repo);
+            server.Start();
+            homeId = server.ActiveLocationId;
+            var session = server.AddLocalPlayer("Pilot");
+            server.Ship.Modules.Add("jump_generator");
+            var dest = OtherPlanet(server);
+            destId = dest.Id;
+            server.Travel("Pilot", destId);
+            Assert.Equal(destId, session.CurrentLocationId); // now on the other planet
+            Assert.NotEqual(homeId, destId);
+            repo.SavePlayer(session.State); // persist (incl. CurrentLocationId)
+
+            // Reload: a fresh server from the SAME save restores the player to that planet, not the home world.
+            var server2 = new SvGameServer(config, _content, new LoopbackServerTransport(new LoopbackLink()), repo);
+            server2.Start();
+            var session2 = server2.AddLocalPlayer("Pilot");
+            Assert.Equal(destId, session2.CurrentLocationId);
+            Assert.Equal(destId, server2.ActiveLocationId);
+        }
+    }
+
+    [Fact]
     public void Travel_SwitchesActiveWorld_ToAnotherPlanet()
     {
         var server = Started(out var repo);

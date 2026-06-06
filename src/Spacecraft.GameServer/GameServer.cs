@@ -1088,6 +1088,21 @@ public sealed partial class GameServer
         }
     }
 
+    /// <summary>The body to place a (re)joining player on: the one they were last on (persisted per-player)
+    /// if it is a real landable body, otherwise the home/default body — for a first join, or a transient
+    /// save location like a station / in space.</summary>
+    private (string Body, string Type) RestoreJoinBody(Shared.State.PlayerState state)
+    {
+        if (_galaxy?.FindBody(state.CurrentLocationId) is { } b
+            && b.Kind is CelestialKind.Planet or CelestialKind.Moon or CelestialKind.AsteroidField
+            && !string.IsNullOrEmpty(b.PlanetType))
+        {
+            return (b.Id, b.PlanetType);
+        }
+
+        return (_meta.ActiveLocationId, _meta.DefaultPlanetType);
+    }
+
     private void HandleJoin(int connectionId, JoinRequest join)
     {
         if (join.ProtocolVersion != Protocol.Version)
@@ -1117,10 +1132,6 @@ public sealed partial class GameServer
             return;
         }
 
-        // Ensure the join world (the default/start body) is resident + the active cursor before placing
-        // the player and sending them world data — it may have been unloaded if everyone had left it.
-        LoadWorld(_meta.DefaultPlanetType, _meta.ActiveLocationId);
-
         var state = _repo.LoadPlayer(name) ?? CreateNewPlayer(name);
 
         // A configured admin name is granted the Admin role (the world creator keeps WorldAdmin).
@@ -1129,7 +1140,12 @@ public sealed partial class GameServer
             state.Role = PlayerRole.Admin;
         }
 
-        var session = new PlayerSession(connectionId, state) { Joined = true, CurrentLocationId = _meta.ActiveLocationId };
+        // Return the player to the body they were last on (persisted per-player), not always the home world.
+        // Ensure that body's world is resident + the active cursor before placing them + sending world data.
+        var (joinBody, joinBodyType) = RestoreJoinBody(state);
+        LoadWorld(joinBodyType, joinBody);
+
+        var session = new PlayerSession(connectionId, state) { Joined = true, CurrentLocationId = joinBody };
         _sessions[connectionId] = session;
         SetupPlayerShip(session); // give the player their own ship, stamped into their world
         EnsureSafeSpawn(session); // self-heal a position persisted mid-fall (don't load them into the void)
@@ -1139,7 +1155,7 @@ public sealed partial class GameServer
         {
             PlayerId = state.PlayerId,
             WorldSeed = _meta.Seed,
-            PlanetType = _meta.DefaultPlanetType,
+            PlanetType = joinBodyType,
             PlanetName = planetName,
             SystemName = systemName,
         });
@@ -1213,7 +1229,12 @@ public sealed partial class GameServer
         }
 
         int connectionId = _nextLocalConnectionId--;
-        var session = new PlayerSession(connectionId, state) { Joined = true, CurrentLocationId = _meta.ActiveLocationId };
+
+        // Return the player to the body they were last on (persisted); home/default for a fresh player.
+        var (joinBody, joinBodyType) = RestoreJoinBody(state);
+        LoadWorld(joinBodyType, joinBody);
+
+        var session = new PlayerSession(connectionId, state) { Joined = true, CurrentLocationId = joinBody };
         _sessions[connectionId] = session;
         SetupPlayerShip(session); // local/test players get their own ship too
         EnsureSafeSpawn(session); // self-heal a position persisted mid-fall (don't load them into the void)

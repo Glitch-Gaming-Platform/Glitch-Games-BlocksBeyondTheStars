@@ -25,6 +25,11 @@ public sealed class PlayerState
     public float Yaw { get; set; }
     public float Pitch { get; set; }
 
+    /// <summary>The celestial-body id of the world this player is on (empty until the join places them).
+    /// Persisted so a save/load returns the player to the body they were last on, at <see cref="Position"/>
+    /// there — not always the home world. The session mirrors this via <c>PlayerSession.CurrentLocationId</c>.</summary>
+    public string CurrentLocationId { get; set; } = string.Empty;
+
     /// <summary>Where the player respawns — the heal-tank in their ship's Medbay.</summary>
     public Vector3f RespawnPoint { get; set; } = Vector3f.Zero;
 

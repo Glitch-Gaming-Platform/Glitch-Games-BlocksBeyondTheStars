@@ -303,8 +303,9 @@ only then implement. Items marked *(analysis only)* must NOT be implemented yet.
      2026-06-07).** In the ship-interior void world (`Game.LoadingPlanetType == "ship_interior"`) the ship-tab
      button now reads **"Take the helm (fly)"** and calls `SendExitShip` (the skip-launch helm path) instead of
      `SendEnterSpace`; on a real surface it stays the normal "Launch into space".
-6. **Bug — save the player's position per planet.** When I land on another planet, my **position there** should
-   be saved too, so on **loading the save I'm back there** (not just the last/home world).
+6. ✅ **Bug — save the player's position per planet** (done 2026-06-07; scope: last planet). When I land on
+   another planet, my **position there** should be saved too, so on **loading the save I'm back there** (not
+   just the last/home world).
 
    ### Analysis (2026-06-07)
    **Root cause:** on join/load the player is **always placed on the home/default body**. `HandleJoin`
@@ -324,9 +325,13 @@ only then implement. Items marked *(analysis only)* must NOT be implemented yet.
    - *(If per-planet memory — option B below — also keep a per-body position map and restore it when you travel
      back to a previously-visited body, instead of the landing-zone spawn.)*
 
-   **Question:** how far should "position per planet" go? (a) restore me to the **last** planet I was on at my
-   position there (fixes the load-onto-home bug); or (b) full **per-planet memory** — remember my position on
-   **each** visited planet so traveling back returns me to where I left it (and on load I'm on the last one).
+   **Decision (user): (a) last planet.** **Implemented:** `PlayerState.CurrentLocationId` is now persisted
+   (added to `PlayerSnapshot` + the mappers; `PlayerSession.CurrentLocationId` delegates to it so every
+   existing assignment is saved). On join both paths (`HandleJoin`, `AddLocalPlayer`) call `RestoreJoinBody`:
+   if the saved body is a real landable galaxy body (planet/moon/asteroid) it loads + places the player there
+   at the saved `Position`; otherwise (first join, or a transient station/space save) it falls back to the home
+   body. Test `Reload_RestoresPlayerToTheLastPlanet_NotHome` (328 pass). *(Full per-planet memory — option b —
+   left for later if wanted.)*
 7. **Bug — creatures chase forever + spawn only at the ship.** Analyse: creatures seem to **follow the player
    constantly**. After a while, pursuing/attacking creatures should **leave the player alone**. Also: **where do
    creatures spawn?** Make sure they **don't only spawn at the ship** but are **distributed across their biomes**.

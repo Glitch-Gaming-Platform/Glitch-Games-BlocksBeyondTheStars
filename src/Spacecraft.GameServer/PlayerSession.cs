@@ -15,8 +15,13 @@ public sealed class PlayerSession
 
     /// <summary>The celestial-body id of the world this player is currently in. With multi-world, each
     /// player can be on a different body; the server sets <c>_worlds.Active</c> to this before handling the
-    /// player's messages / streaming their chunks. Empty until the join places them.</summary>
-    public string CurrentLocationId { get; set; } = string.Empty;
+    /// player's messages / streaming their chunks. Empty until the join places them. Mirrors
+    /// <see cref="State"/>.<c>CurrentLocationId</c> so it is persisted (restored to the last body on load).</summary>
+    public string CurrentLocationId
+    {
+        get => State.CurrentLocationId;
+        set => State.CurrentLocationId = value;
+    }
 
     /// <summary>Environment.TickCount of the last accepted chat line (rate limiting).</summary>
     public int LastChatTick { get; set; }
