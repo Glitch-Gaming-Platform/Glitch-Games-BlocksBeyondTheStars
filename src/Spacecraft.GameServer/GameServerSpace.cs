@@ -75,6 +75,19 @@ public sealed partial class GameServer
             && 0 >= _settlementMin.Z - margin && 0 <= _settlementMax.Z + margin;
     }
 
+    /// <summary>Test helper: seeds another player's protected landing zone on the active world (keyed to its
+    /// real location id, so the protection check actually finds it regardless of which body is active).</summary>
+    public void SeedProtectedZoneForTest(string ownerId, int centerX, int centerZ, int radius)
+    {
+        var zone = new Spacecraft.Shared.World.LandingZone
+        {
+            PlayerId = ownerId, LocationId = _world.LocationId,
+            CenterX = centerX, CenterZ = centerZ, Radius = radius, Protected = true,
+        };
+        _repo.SaveLandingZone(zone);
+        _landingZones[ownerId] = zone;
+    }
+
     /// <summary>True if the position lies in another player's protected landing zone.</summary>
     private bool IsLandingZoneBlockedForOther(string actorId, Vector3i pos)
     {

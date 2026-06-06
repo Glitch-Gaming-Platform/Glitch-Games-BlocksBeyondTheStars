@@ -61,8 +61,6 @@ public sealed class LandingZoneTests : IDisposable
     {
         using var repo = new SqliteWorldRepository(new SaveGamePaths(_root, "prot"));
         repo.Initialize();
-        // Seed another player's protected landing zone at the origin.
-        repo.SaveLandingZone(new LandingZone { PlayerId = "Alice", LocationId = "rocky", CenterX = 0, CenterZ = 0, Radius = 8, Protected = true });
 
         var link = new LoopbackLink();
         using var st = new LoopbackServerTransport(link);
@@ -77,6 +75,9 @@ public sealed class LandingZoneTests : IDisposable
         client.Connect("loopback", 0);
         client.Send(NetCodec.Encode(new JoinRequest { PlayerName = "Bob" }), DeliveryMode.ReliableOrdered);
         server.Tick(0.1);
+
+        // Seed another player's protected zone at the origin of THIS world (keyed to its real location id).
+        server.SeedProtectedZoneForTest("Alice", 0, 0, 8);
 
         // Make Bob a normal player (admins bypass protection) and move him into Alice's zone.
         var bob = server.Sessions[1].State;

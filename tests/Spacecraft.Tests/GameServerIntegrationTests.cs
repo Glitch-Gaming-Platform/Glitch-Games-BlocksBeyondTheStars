@@ -211,7 +211,7 @@ public sealed class GameServerIntegrationTests : IDisposable
         JoinAndDrain(server, client, "Walker");
         var session = server.Sessions[1];
 
-        const int C = Spacecraft.Shared.World.WorldConstants.Circumference;
+        int C = server.World.Circumference; // this world's size (varies per body)
 
         // Walk a full lap plus 50 east: the authoritative longitude wraps back into [0, C).
         client.Send(NetCodec.Encode(new MoveIntent { X = C + 50, Y = session.State.Position.Y, Z = 0 }),
@@ -250,7 +250,7 @@ public sealed class GameServerIntegrationTests : IDisposable
         JoinAndDrain(server, client, "Wanderer");
         var session = server.Sessions[1];
 
-        const int L = Spacecraft.Shared.World.WorldConstants.LatitudeLimit;
+        int L = Spacecraft.Shared.World.WorldConstants.LatitudeLimitFor(server.World.Circumference);
         float y = session.State.Position.Y;
 
         // Walk far north past the pole: the authoritative Z is clamped to the barrier (not an infinite strip).

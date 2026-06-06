@@ -157,11 +157,11 @@ internal sealed class WorldManager
 
     /// <summary>(Re)builds the world for a body and makes it active, NOT caching it — the single-world
     /// path (Start + travel today). Multi-world uses <see cref="GetOrCreate"/> instead.</summary>
-    public LoadedWorld Activate(PlanetType planet, string locationId)
+    public LoadedWorld Activate(PlanetType planet, string locationId, int circumference)
     {
         Active = new LoadedWorld
         {
-            World = new ServerWorld(_content, _generator, _repo, planet, locationId),
+            World = new ServerWorld(_content, _generator, _repo, planet, locationId, circumference),
             LocationId = locationId,
             PlanetType = planet.Key,
         };
@@ -170,7 +170,7 @@ internal sealed class WorldManager
 
     /// <summary>Returns the resident world for a body, creating (and caching) a fresh one if absent. Sets
     /// it active. <paramref name="isNew"/> tells the caller to run the one-time world init/stamp.</summary>
-    public LoadedWorld GetOrCreate(PlanetType planet, string locationId, out bool isNew)
+    public LoadedWorld GetOrCreate(PlanetType planet, string locationId, int circumference, out bool isNew)
     {
         if (_loaded.TryGetValue(locationId, out var w))
         {
@@ -181,7 +181,7 @@ internal sealed class WorldManager
 
         w = new LoadedWorld
         {
-            World = new ServerWorld(_content, _generator, _repo, planet, locationId),
+            World = new ServerWorld(_content, _generator, _repo, planet, locationId, circumference),
             LocationId = locationId,
             PlanetType = planet.Key,
         };

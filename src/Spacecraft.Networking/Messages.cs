@@ -865,6 +865,13 @@ public sealed class WorldEnvironment
     /// (green / brown / pink / purple …) regardless of the underlying tile. White = no tint.</summary>
     public int FloraTint { get; set; } = 0xFFFFFF;
 
+    /// <summary>This world's walkable east–west circumference in blocks (longitude wrap + day/night span).
+    /// Varies by body size — asteroids small, planets large — so the client wraps/renders at the right size.</summary>
+    public int Circumference { get; set; } = 6000;
+
+    /// <summary>Latitude (Z) bound from the equator (the invisible pole barrier), = Circumference / 4.</summary>
+    public int LatitudeLimit { get; set; } = 1500;
+
     /// <summary>0..1 cloud cover for this planet (frequency + thickness; 0 = clear skies).</summary>
     public float CloudDensity { get; set; } = 0.45f;
 

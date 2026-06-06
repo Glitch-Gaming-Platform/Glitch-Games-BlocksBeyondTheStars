@@ -31,7 +31,11 @@ public sealed class ServerWorld
     /// </summary>
     public string LocationId { get; }
 
-    public ServerWorld(GameContent content, WorldGenerator generator, IWorldRepository repo, PlanetType planet, string locationId)
+    /// <summary>This world's walkable east–west circumference (longitude wrap + the noise circular domain).
+    /// Varies by body size (asteroids small, planets large); the seam-free generation + chunk keys all use it.</summary>
+    public int Circumference { get; }
+
+    public ServerWorld(GameContent content, WorldGenerator generator, IWorldRepository repo, PlanetType planet, string locationId, int circumference)
     {
         _content = content;
         _generator = generator;
@@ -39,6 +43,7 @@ public sealed class ServerWorld
         Planet = planet;
         PlanetKey = planet.Key;
         LocationId = string.IsNullOrEmpty(locationId) ? planet.Key : locationId;
+        Circumference = circumference > 0 ? circumference : WorldConstants.Circumference;
     }
 
     public int LoadedChunkCount => _loaded.Count;
@@ -48,12 +53,13 @@ public sealed class ServerWorld
         // Longitude wraps: a chunk a whole lap away is the same chunk. Canonicalize X so the cache and
         // persistence stay coherent across the seam (terrain itself is generated seam-free, so generating
         // at the canonical coord yields the identical blocks).
-        coord = WorldConstants.CanonicalChunk(coord);
+        coord = WorldConstants.CanonicalChunk(coord, Circumference);
         if (_loaded.TryGetValue(coord, out var cached))
         {
             return cached;
         }
 
+        _generator.SetCircumference(Circumference); // generate this world at its own size
         var chunk = _generator.Generate(Planet, coord);
         foreach (var edit in _repo.LoadChunkEdits(LocationId, coord))
         {
@@ -67,7 +73,7 @@ public sealed class ServerWorld
 
     public BlockId GetBlock(Vector3i world)
     {
-        world = WorldConstants.CanonicalBlock(world); // longitude wraps
+        world = WorldConstants.CanonicalBlock(world, Circumference); // longitude wraps
         var chunk = GetOrLoadChunk(WorldConstants.WorldToChunk(world));
         var local = WorldConstants.WorldToLocal(world);
         return chunk.Get(local.X, local.Y, local.Z);
@@ -76,7 +82,7 @@ public sealed class ServerWorld
     /// <summary>Sets a block, persists the edit, and returns the previous block id.</summary>
     public BlockId SetBlock(Vector3i world, BlockId block)
     {
-        world = WorldConstants.CanonicalBlock(world); // longitude wraps: store/cache the canonical column
+        world = WorldConstants.CanonicalBlock(world, Circumference); // longitude wraps: store/cache the canonical column
         var chunk = GetOrLoadChunk(WorldConstants.WorldToChunk(world));
         var local = WorldConstants.WorldToLocal(world);
         var previous = chunk.Get(local.X, local.Y, local.Z);

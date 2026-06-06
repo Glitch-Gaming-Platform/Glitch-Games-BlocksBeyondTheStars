@@ -1,4 +1,5 @@
 using Spacecraft.Networking.Messages;
+using Spacecraft.Shared.World;
 
 namespace Spacecraft.GameServer;
 
@@ -162,6 +163,8 @@ public sealed partial class GameServer
             SunColor = _sunColor,
             CloudColor = _cloudColor,
             FloraTint = _floraTint,
+            Circumference = _world.Circumference,
+            LatitudeLimit = WorldConstants.LatitudeLimitFor(_world.Circumference),
             CloudDensity = _cloudDensity,
             Breathable = _breathable,
             SpaceSky = _spaceSky,

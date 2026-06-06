@@ -17,11 +17,23 @@ public sealed class WorldGenerator
     private readonly long _worldSeed;
     private readonly GameContent _content;
 
+    // The walkable east–west circumference of the world currently being generated (the noise circular domain
+    // + the longitude wrap). Set per active world by the server; defaults to the standard size so tests and
+    // any direct callers keep their 6000-block world.
+    private int _circumference = WorldConstants.Circumference;
+
     public WorldGenerator(long worldSeed, GameContent content)
     {
         _worldSeed = worldSeed;
         _content = content;
     }
+
+    /// <summary>The circumference this generator is currently producing terrain for.</summary>
+    public int Circumference => _circumference;
+
+    /// <summary>Sets the world circumference for subsequent generation/queries (the server calls this when the
+    /// active world changes, so terrain, surface-height and flora all wrap at the right size).</summary>
+    public void SetCircumference(int circumference) => _circumference = circumference;
 
     /// <summary>
     /// Stable string hash (FNV-1a) — unlike <c>string.GetHashCode</c> this is identical
@@ -60,7 +72,7 @@ public sealed class WorldGenerator
     public int SurfaceHeight(PlanetType planet, int worldX, int worldZ)
     {
         long seed = PlanetSeed(planet);
-        double n = Noise.FbmCylX(seed, worldX, worldZ, WorldConstants.Circumference, planet.TerrainScale, octaves: 4);
+        double n = Noise.FbmCylX(seed, worldX, worldZ, _circumference, planet.TerrainScale, octaves: 4);
         double h = (n - 0.5) * 2.0; // [-1, 1] base rolling terrain
 
         // Regional terrain character: a large-scale field selects how rugged this area is (a blend across the
@@ -86,7 +98,7 @@ public sealed class WorldGenerator
         int rot = (int)((us >> 8) % (ulong)pool);       // …starting at a seed-rotated offset in the list
 
         // A broad field (much larger than the base terrain) picks a position across the subset + blends it.
-        double rug = Noise.FbmCylX(s, worldX, worldZ, WorldConstants.Circumference, planet.TerrainScale * 6.0, octaves: 3);
+        double rug = Noise.FbmCylX(s, worldX, worldZ, _circumference, planet.TerrainScale * 6.0, octaves: 3);
         double pos = (rug < 0 ? 0 : (rug > 0.9999 ? 0.9999 : rug)) * count; // [0, count)
         int i0 = (int)pos;
         int i1 = i0 + 1 < count ? i0 + 1 : count - 1;
@@ -178,7 +190,7 @@ public sealed class WorldGenerator
             int surfaceY = SurfaceHeight(planet, worldX, worldZ);
 
             // Per-column biome → surface/sub-surface blocks (single-biome worlds use index 0).
-            int biomeIndex = biomes.Count <= 1 ? 0 : BiomeIndex(seed, worldX, worldZ, biomes.Count);
+            int biomeIndex = biomes.Count <= 1 ? 0 : BiomeIndex(seed, worldX, worldZ, biomes.Count, _circumference);
             var surfaceId = biomes[biomeIndex].Surface;
             var subSurfaceId = biomes[biomeIndex].Sub;
 
@@ -200,7 +212,7 @@ public sealed class WorldGenerator
                 // Carve caves below the surface layer.
                 if (planet.CaveThreshold > 0 && depth > 1)
                 {
-                    double cave = Noise.ValueCylX(seed + 7777, worldX, worldY, worldZ, WorldConstants.Circumference, 22.0, 16.0, 22.0);
+                    double cave = Noise.ValueCylX(seed + 7777, worldX, worldY, worldZ, _circumference, 22.0, 16.0, 22.0);
                     if (cave > planet.CaveThreshold)
                     {
                         continue; // cave => air
@@ -219,7 +231,7 @@ public sealed class WorldGenerator
 
                     if (block == deepId && planet.DataCacheRarity > 0 && !dataCacheId.IsAir)
                     {
-                        double r = Noise.Value01(seed + 4242, WorldConstants.WrapX(worldX), worldY, worldZ);
+                        double r = Noise.Value01(seed + 4242, WorldConstants.WrapX(worldX, _circumference), worldY, worldZ);
                         if (r < planet.DataCacheRarity)
                         {
                             block = dataCacheId;
@@ -239,7 +251,7 @@ public sealed class WorldGenerator
                 int fy = surfaceY + 1;
                 int fly = fy - origin.Y;
                 if (!floraId.IsAir && fly >= 0 && fly < WorldConstants.ChunkSize
-                    && Noise.Value01(seed + 9001, WorldConstants.WrapX(worldX), 7, worldZ) < planet.FloraDensity)
+                    && Noise.Value01(seed + 9001, WorldConstants.WrapX(worldX, _circumference), 7, worldZ) < planet.FloraDensity)
                 {
                     chunk.Set(lx, fly, lz, floraId);
                 }
@@ -291,12 +303,12 @@ public sealed class WorldGenerator
         for (int wx = origin.X - crown; wx < origin.X + cs + crown; wx++)
         for (int wz = origin.Z - crown; wz < origin.Z + cs + crown; wz++)
         {
-            if (Noise.Value01(seed + 5150, WorldConstants.WrapX(wx), 11, wz) >= density)
+            if (Noise.Value01(seed + 5150, WorldConstants.WrapX(wx, _circumference), 11, wz) >= density)
             {
                 continue;
             }
 
-            var surf = biomes[biomes.Count <= 1 ? 0 : BiomeIndex(seed, wx, wz, biomes.Count)].Surface;
+            var surf = biomes[biomes.Count <= 1 ? 0 : BiomeIndex(seed, wx, wz, biomes.Count, _circumference)].Surface;
             if (surf != grassId && surf != dirtId && surf != mudId)
             {
                 continue; // trees only on grassy / earthy ground
@@ -308,7 +320,7 @@ public sealed class WorldGenerator
                 continue; // not in the sea
             }
 
-            int height = 4 + (int)(Noise.Value01(seed + 5151, WorldConstants.WrapX(wx), 13, wz) * 3.99); // 4..7
+            int height = 4 + (int)(Noise.Value01(seed + 5151, WorldConstants.WrapX(wx, _circumference), 13, wz) * 3.99); // 4..7
             int topY = sy + height;
 
             for (int ty = sy + 1; ty <= topY; ty++)
@@ -341,7 +353,7 @@ public sealed class WorldGenerator
             }
 
             // Coarse 3D noise produces vein-like clusters; rarity is the fraction kept.
-            double n = Noise.ValueCylX(seed + 100 + i * 31, x, y, z, WorldConstants.Circumference, 9.0, 9.0, 9.0);
+            double n = Noise.ValueCylX(seed + 100 + i * 31, x, y, z, _circumference, 9.0, 9.0, 9.0);
             if (n > 1.0 - ore.Rarity)
             {
                 var oreBlock = _content.GetBlock(ore.Block);
@@ -390,7 +402,7 @@ public sealed class WorldGenerator
     public int BiomeIndexAt(PlanetType planet, int worldX, int worldZ)
     {
         int count = ResolveBiomes(planet).Count;
-        return count <= 1 ? 0 : BiomeIndex(PlanetSeed(planet), worldX, worldZ, count);
+        return count <= 1 ? 0 : BiomeIndex(PlanetSeed(planet), worldX, worldZ, count, _circumference);
     }
 
     /// <summary>How many distinct biomes this planet's world uses.</summary>
@@ -398,9 +410,9 @@ public sealed class WorldGenerator
 
     /// <summary>Broad low-frequency noise picks a biome per column (multi-biome worlds). The scale is
     /// large so each biome is a big contiguous region (so per-biome weather covers a meaningful area).</summary>
-    private static int BiomeIndex(long seed, int worldX, int worldZ, int count)
+    private static int BiomeIndex(long seed, int worldX, int worldZ, int count, int circumference)
     {
-        double n = Noise.FbmCylX(seed ^ 0x0B10E, worldX, worldZ, WorldConstants.Circumference, 360.0, octaves: 3);
+        double n = Noise.FbmCylX(seed ^ 0x0B10E, worldX, worldZ, circumference, 360.0, octaves: 3);
         int idx = (int)(n * count);
         return idx < 0 ? 0 : (idx >= count ? count - 1 : idx);
     }
@@ -412,7 +424,7 @@ public sealed class WorldGenerator
         int worldX, int worldZ, int surfaceY, int fluidLevel, BlockId kelpId, BlockId lilyId, double floraDensity)
     {
         int columnDepth = fluidLevel - surfaceY; // water cells above the seabed (>= 1 here)
-        double roll = Noise.Value01(seed + 9007, WorldConstants.WrapX(worldX), 11, worldZ);
+        double roll = Noise.Value01(seed + 9007, WorldConstants.WrapX(worldX, _circumference), 11, worldZ);
 
         // Kelp needs at least a little depth; it grows from the seabed up a few cells, capped just below the
         // surface so the top of the column stays open water. Only if this world activated the kelp archetype.
@@ -511,7 +523,7 @@ public sealed class WorldGenerator
         ResolveFlora(planet);
         if (_floraBySurface.TryGetValue(surface.Value, out var pool) && pool.Length > 0)
         {
-            int idx = (int)(Noise.Value01(seed + 9101, WorldConstants.WrapX(worldX), 3, worldZ) * pool.Length);
+            int idx = (int)(Noise.Value01(seed + 9101, WorldConstants.WrapX(worldX, _circumference), 3, worldZ) * pool.Length);
             if (idx >= pool.Length)
             {
                 idx = pool.Length - 1;

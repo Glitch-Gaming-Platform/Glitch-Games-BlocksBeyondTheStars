@@ -393,7 +393,7 @@ public sealed partial class GameServer
         return removed > 0;
     }
 
-    private static Vector3f? NearestPlayerPosition(List<PlayerSession> targets, Vector3f from)
+    private Vector3f? NearestPlayerPosition(List<PlayerSession> targets, Vector3f from)
     {
         Vector3f? best = null;
         float bestSq = float.MaxValue;

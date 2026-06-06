@@ -255,7 +255,14 @@ public sealed partial class GameServer
         var planet = _content.GetPlanet(planetTypeKey)
                      ?? throw new InvalidOperationException($"Unknown planet type '{planetTypeKey}'.");
 
-        var world = _worlds.GetOrCreate(planet, locationId, out bool isNew);
+        // The walkable circumference varies by body: asteroids are tiny, moons small, planets large
+        // (deterministic from the body id + its size class), and the noise/wrap/chunk keys all use it.
+        var worldBody = _galaxy?.FindBody(locationId);
+        var sizeClass = WorldConstants.SizeClassFor(worldBody?.Kind ?? CelestialKind.Planet, planet.Key);
+        int circumference = WorldConstants.CircumferenceFor(locationId, sizeClass);
+
+        var world = _worlds.GetOrCreate(planet, locationId, circumference, out bool isNew);
+        _generator.SetCircumference(world.World.Circumference); // active world's size for direct gen queries
         if (!isNew)
         {
             return world; // already resident — keep its fauna/structures/edits
@@ -840,7 +847,7 @@ public sealed partial class GameServer
             {
                 // Canonicalize longitude so chunks just west of the seam (center.X+dx < 0) stream as the
                 // wrapped chunk from the far side — the player can see across X = 0 ≡ X = Circumference.
-                var coord = WorldConstants.CanonicalChunk(new ChunkCoord(center.X + dx, center.Y + dy, center.Z + dz));
+                var coord = WorldConstants.CanonicalChunk(new ChunkCoord(center.X + dx, center.Y + dy, center.Z + dz), _world.Circumference);
                 if (session.SentChunks.Contains(coord))
                 {
                     continue;
@@ -1183,13 +1190,15 @@ public sealed partial class GameServer
             // authoritative X is canonical [0, Circumference). Latitude (Z) is NOT wrapped — instead it's
             // bounded by the pole barrier at ±LatitudeLimit, so a player can't wander off into an infinite
             // north/south strip. On surface worlds only (stations/space have their own small coordinate space).
+            int circ = _world.Circumference; // this world's size (asteroids small, planets large)
             float z = move.Z;
             if (!InStation(session.State.PlayerId) && !InSpace(session.State.PlayerId))
             {
-                z = System.Math.Clamp(z, -WorldConstants.LatitudeLimit, WorldConstants.LatitudeLimit);
+                int lat = WorldConstants.LatitudeLimitFor(circ);
+                z = System.Math.Clamp(z, -lat, lat);
             }
 
-            session.State.Position = new Vector3f((float)WorldConstants.WrapX(move.X), move.Y, z);
+            session.State.Position = new Vector3f((float)WorldConstants.WrapX(move.X, circ), move.Y, z);
             session.State.Yaw = move.Yaw;
             session.State.Pitch = move.Pitch;
         }
@@ -1763,11 +1772,11 @@ public sealed partial class GameServer
 
     // ---------------- Helpers ----------------
 
-    private static bool WithinReach(PlayerState player, Vector3i block)
+    private bool WithinReach(PlayerState player, Vector3i block)
     {
         // Longitude wraps: measure the X distance the short way round so a block just across the seam
         // (canonical X numerically far, physically adjacent) is still reachable.
-        double dx = WorldConstants.WrapDeltaX((block.X + 0.5) - player.Position.X);
+        double dx = WorldConstants.WrapDeltaX((block.X + 0.5) - player.Position.X, _world.Circumference);
         double dy = (block.Y + 0.5) - player.Position.Y;
         double dz = (block.Z + 0.5) - player.Position.Z;
         return dx * dx + dy * dy + dz * dz <= MaxReach * MaxReach;
@@ -1775,11 +1784,11 @@ public sealed partial class GameServer
 
     /// <summary>Squared distance between two on-planet positions measured the short way round the longitude
     /// seam — every surface proximity check uses this so a creature/door/vendor/container just across X = 0 is
-    /// adjacent, not a world away. (Space combat keeps plain distances — space isn't a cylinder.)</summary>
-    private static double WrapDistSq(Vector3f a, Vector3f b) => WorldConstants.WrapDistanceSquared(a, b);
+    /// adjacent, not a world away, at this world's size. (Space combat keeps plain distances.)</summary>
+    private double WrapDistSq(Vector3f a, Vector3f b) => WorldConstants.WrapDistanceSquared(a, b, _world.Circumference);
 
     /// <summary>Wrap-aware squared distance from a position to a block cell (the cell's min corner).</summary>
-    private static double WrapDistSq(Vector3f a, Vector3i b) => WorldConstants.WrapDistanceSquared(a, new Vector3f(b.X, b.Y, b.Z));
+    private double WrapDistSq(Vector3f a, Vector3i b) => WorldConstants.WrapDistanceSquared(a, new Vector3f(b.X, b.Y, b.Z), _world.Circumference);
 
     private ToolProperties ActiveTool(PlayerState player)
     {

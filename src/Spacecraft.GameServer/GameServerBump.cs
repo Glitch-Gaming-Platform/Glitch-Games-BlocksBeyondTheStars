@@ -138,5 +138,5 @@ public sealed partial class GameServer
         }
     }
 
-    private static float Dist2(Vector3f a, Vector3i b) => (float)WrapDistSq(a, b); // longitude-wrap aware
+    private float Dist2(Vector3f a, Vector3i b) => (float)WrapDistSq(a, b); // longitude-wrap aware
 }
