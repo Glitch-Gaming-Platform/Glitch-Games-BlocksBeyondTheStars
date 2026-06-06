@@ -587,6 +587,15 @@ public sealed partial class GameServer
             UpdateAboard(session);
 
             var p = session.State;
+
+            // Walk out of the ship's hatch while it floats in space → step straight onto an EVA spacewalk
+            // (rather than falling into the void around the interior). The door you already have IS the airlock.
+            if (InShipInterior(p.PlayerId) && SteppedOutOfShipHull(p.Position))
+            {
+                StartEvaFromShip(p.PlayerId);
+                continue; // transitioned out of this world — skip the rest of the on-foot tick for this player
+            }
+
             DecayTeleportCooldown(p.PlayerId, dt);
             TickStealth(session, dt);
             TickJetpack(session, dt);

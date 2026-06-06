@@ -185,14 +185,6 @@ public sealed partial class GameServer
         AddStation("lab", cx - dx, floor, cz + dz, "data_cache");      // research console (Tech menu)
         AddStation("console", cx + dx, floor, cz + dz, "data_cache");  // ship-expansion console (Ship menu)
 
-        // Only when this ship is its own in-space interior: the existing hatch IS the airlock. Register a
-        // marker AT the door (no block placed, so it never obstructs the real doorway on planets) — E there
-        // cycles out on an EVA. On planets there's no airlock at all, just the normal door.
-        if (_world.PlanetKey == ShipInteriorType)
-        {
-            _stations.Add(("airlock", new Vector3f(cx + 0.5f, y0 + 1f, cz - _shipHalfZ + 1.5f)));
-        }
-
         // Respawn at an open tile in the middle of the ship (next to the heal-tank).
         _healTank = new Vector3f(cx + 0.5f, y0 + 2f, cz + 0.5f);
 
@@ -343,6 +335,23 @@ public sealed partial class GameServer
         _stations.Add((type, new Vector3f(x + 0.5f, y, z + 0.5f)));
     }
 
+    /// <summary>True when the player has stepped out of the ship's hull box — through the hatch, off the
+    /// edge, or off the floor into the surrounding void. Used to turn "walk out the door in the in-space ship
+    /// interior" into an EVA instead of a fall. Derives the hull centre/floor from the heal-tank + half-extents.</summary>
+    private bool SteppedOutOfShipHull(Vector3f pos)
+    {
+        if (!_shipStamped)
+        {
+            return false;
+        }
+
+        float cx = _healTank.X - 0.5f, cz = _healTank.Z - 0.5f, y0 = _healTank.Y - 2f;
+        const float margin = 0.4f;
+        return pos.Y < y0 - margin
+            || pos.X < cx - _shipHalfX - margin || pos.X > cx + _shipHalfX + margin
+            || pos.Z < cz - _shipHalfZ - margin || pos.Z > cz + _shipHalfZ + margin;
+    }
+
     private const int ShipFoundationDepth = 6; // plug caves this deep under the ship so you can't fall into one
 
     /// <summary>Fills any cave/void directly under the ship's footprint with solid ground, so a player who
@@ -461,19 +470,6 @@ public sealed partial class GameServer
                 {
                     Send(session, new ServerMessage { Text = "Cockpit — open the menu (Tab) → Map to travel to another planet." });
                     SendStarMap(session);
-                }
-
-                break;
-
-            case "airlock":
-                // Cycle out into space on an EVA — only meaningful while the ship is floating in space.
-                if (InShipInterior(session.State.PlayerId))
-                {
-                    StartEvaFromShip(session.State.PlayerId);
-                }
-                else
-                {
-                    Send(session, new ServerMessage { Text = "Airlock — it only cycles out when the ship is in space." });
                 }
 
                 break;

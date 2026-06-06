@@ -102,25 +102,6 @@ public sealed class ShipInteriorTests : IDisposable
     }
 
     [Fact]
-    public void AirlockInsideTheShip_StepsOutIntoAnEva()
-    {
-        var server = Started(out var repo);
-        using (repo)
-        {
-            var session = server.AddLocalPlayer("Pilot");
-            server.EnterSpace("Pilot");
-            server.EnterShipInterior("Pilot");
-            Assert.True(server.InShipInterior("Pilot"));
-
-            // The airlock cycles out into the flight view as a floating EVA suit.
-            server.UseStation("Pilot", "airlock");
-            Assert.True(server.InSpace("Pilot"));
-            Assert.False(server.InShipInterior("Pilot"));
-            Assert.True(session.State.InEva);
-        }
-    }
-
-    [Fact]
     public void Eva_CannotLandOnAPlanet_OnlyAnAsteroid()
     {
         var server = Started(out var repo);
@@ -145,7 +126,9 @@ public sealed class ShipInteriorTests : IDisposable
             var p = session.State;
             server.EnterSpace("Pilot");
             server.EnterShipInterior("Pilot");
-            server.UseStation("Pilot", "airlock"); // floating in EVA, in a space instance
+            // Walk out the hatch into the void → an EVA spacewalk.
+            p.Position = new Spacecraft.Shared.Geometry.Vector3f(p.Position.X, p.Position.Y, p.Position.Z - 1000f);
+            server.Tick(0.1);
             Assert.True(p.InEva);
             Assert.True(server.InSpace("Pilot"));
 
@@ -183,6 +166,28 @@ public sealed class ShipInteriorTests : IDisposable
 
             Assert.Single(bobSees);
             Assert.Equal("Ann", bobSees[0].Name);
+        }
+    }
+
+    [Fact]
+    public void WalkingOutTheHatchInSpace_StartsAnEva()
+    {
+        var server = Started(out var repo);
+        using (repo)
+        {
+            var session = server.AddLocalPlayer("Pilot");
+            var p = session.State;
+            server.EnterSpace("Pilot");
+            server.EnterShipInterior("Pilot");
+            Assert.True(server.InShipInterior("Pilot"));
+
+            // Step well outside the hull — out the hatch into the surrounding void.
+            p.Position = new Spacecraft.Shared.Geometry.Vector3f(p.Position.X, p.Position.Y, p.Position.Z - 1000f);
+            server.Tick(0.1);
+
+            Assert.False(server.InShipInterior("Pilot")); // turned into an EVA, not a fall
+            Assert.True(server.InSpace("Pilot"));
+            Assert.True(p.InEva);
         }
     }
 
