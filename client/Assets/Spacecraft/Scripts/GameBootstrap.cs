@@ -88,6 +88,7 @@ namespace Spacecraft.Client
         public ShipCombatStatus ShipCombat { get; private set; }
         public SpaceState Space { get; private set; }       // current space instance (null when not flying)
         public bool InSpace { get; private set; }
+        public bool SpaceSkipLaunch { get; private set; }    // entered space already airborne (helm) → no take-off anim
         public NetCombatEntity[] PlanetEnemies { get; private set; } = System.Array.Empty<NetCombatEntity>();
 
         /// <summary>Live procedural creatures near the player (fauna), with their species descriptor.</summary>
@@ -333,7 +334,16 @@ namespace Spacecraft.Client
             Network.StarMapReceived += m => StarMap = m;
             Network.MissionsReceived += m => Missions = m;
             Network.ShipCombatStatusChanged += m => ShipCombat = m;
-            Network.SpaceStateReceived += m => { Space = m; InSpace = true; };
+            Network.SpaceStateReceived += m =>
+            {
+                if (!InSpace)
+                {
+                    SpaceSkipLaunch = m.SkipLaunch; // latched on entry only (later updates don't re-trigger Enter)
+                }
+
+                Space = m;
+                InSpace = true;
+            };
             Network.SpaceClosed += m => { InSpace = false; Space = null; LastMessage = m.Reason; };
             Network.StationBoardedReceived += m => LastMessage = $"Boarded {m.Name}.";
             Network.PlanetEnemiesReceived += m => PlanetEnemies = m.Enemies;

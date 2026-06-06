@@ -96,8 +96,9 @@ public sealed partial class GameServer
         session.State.InEva = false;
         session.SentChunks.Clear();
 
-        // Back into the flight view, and put the ship back exactly where it was parked.
-        EnterSpace(playerId);
+        // Back into the flight view, and put the ship back exactly where it was parked. Skip the take-off
+        // sequence — you never landed, you just stepped back to the helm.
+        EnterSpace(playerId, skipLaunch: true);
         if (_playerInstance.TryGetValue(playerId, out var iid) && _spaceInstances.TryGetValue(iid, out var inst))
         {
             inst.ShipPosition = ret.ShipPos;

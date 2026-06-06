@@ -650,6 +650,10 @@ public sealed class SpaceState
     public string InstanceId { get; set; } = string.Empty;
     public string Kind { get; set; } = string.Empty;
     public NetCombatEntity[] Entities { get; set; } = System.Array.Empty<NetCombatEntity>();
+
+    /// <summary>True when the flight view should appear without the take-off sequence — you were already in
+    /// space (e.g. taking the helm again from inside the ship), so there is no launch from a surface.</summary>
+    public bool SkipLaunch { get; set; }
 }
 
 /// <summary>A space entity was destroyed (asteroid mined or enemy defeated).</summary>

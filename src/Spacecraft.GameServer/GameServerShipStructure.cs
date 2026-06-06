@@ -443,8 +443,18 @@ public sealed partial class GameServer
                 break;
 
             case "cockpit":
-                Send(session, new ServerMessage { Text = "Cockpit — open the menu (Tab) → Map to travel to another planet." });
-                SendStarMap(session);
+                // Inside the ship while it floats in space, the cockpit is the helm: take it to fly again
+                // (no take-off — you never landed). On a surface it's the star map / travel console.
+                if (InShipInterior(session.State.PlayerId))
+                {
+                    ExitShipToFlight(session.State.PlayerId);
+                }
+                else
+                {
+                    Send(session, new ServerMessage { Text = "Cockpit — open the menu (Tab) → Map to travel to another planet." });
+                    SendStarMap(session);
+                }
+
                 break;
         }
     }

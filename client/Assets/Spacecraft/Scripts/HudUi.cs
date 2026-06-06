@@ -210,7 +210,11 @@ namespace Spacecraft.Client
             string prompt = string.Empty;
             if (!string.IsNullOrEmpty(Game.NearbyStation))
             {
-                prompt = $"{loc.Get("ui.hud.use")}: {loc.Get($"ui.station.{Game.NearbyStation}")}";
+                // Inside the ship while it floats in space, the cockpit reads as the helm (take it to fly again).
+                string stationKey = (Game.NearbyStation == "cockpit" && Game.LoadingPlanetType == "ship_interior")
+                    ? "ui.station.helm"
+                    : $"ui.station.{Game.NearbyStation}";
+                prompt = $"{loc.Get("ui.hud.use")}: {loc.Get(stationKey)}";
             }
             else if (HoldingScanner())
             {

@@ -214,7 +214,7 @@ public sealed partial class GameServer
     // ---------------- Enter / leave space ----------------
 
     /// <summary>Launches the player into a space instance around the ship's location.</summary>
-    public void EnterSpace(string playerId)
+    public void EnterSpace(string playerId, bool skipLaunch = false)
     {
         var session = FindSessionByPlayerId(playerId);
 
@@ -248,7 +248,7 @@ public sealed partial class GameServer
 
         if (session is not null)
         {
-            SendSpaceState(session, instance);
+            SendSpaceState(session, instance, skipLaunch);
             SendShipCombatStatus(session);
             SendStarMap(session); // the space view needs the system's bodies to render + land on them
         }
@@ -843,12 +843,13 @@ public sealed partial class GameServer
         Z = e.Position.Z,
     };
 
-    private void SendSpaceState(PlayerSession session, SpaceInstance instance)
+    private void SendSpaceState(PlayerSession session, SpaceInstance instance, bool skipLaunch = false)
         => Send(session, new SpaceState
         {
             InstanceId = instance.Id,
             Kind = instance.Kind,
             Entities = instance.Entities.Select(ToNet).ToArray(),
+            SkipLaunch = skipLaunch,
         });
 
     private void BroadcastSpaceState(SpaceInstance instance)

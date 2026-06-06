@@ -84,6 +84,24 @@ public sealed class ShipInteriorTests : IDisposable
     }
 
     [Fact]
+    public void UsingTheCockpitInsideTheShip_TakesTheHelm()
+    {
+        var server = Started(out var repo);
+        using (repo)
+        {
+            server.AddLocalPlayer("Pilot");
+            server.EnterSpace("Pilot");
+            server.EnterShipInterior("Pilot");
+            Assert.True(server.InShipInterior("Pilot"));
+
+            // The cockpit is the helm while floating in space — using it flies again.
+            server.UseStation("Pilot", "cockpit");
+            Assert.True(server.InSpace("Pilot"));
+            Assert.False(server.InShipInterior("Pilot"));
+        }
+    }
+
+    [Fact]
     public void EnterShipInterior_OnlyWorksFromSpace()
     {
         var server = Started(out var repo);

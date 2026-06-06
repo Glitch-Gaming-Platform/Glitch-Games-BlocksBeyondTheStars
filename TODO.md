@@ -152,9 +152,14 @@ only then implement. Items marked *(analysis only)* must NOT be implemented yet.
        `EnterShipIntent`/`ExitShipIntent` + dispatch + `SendEnterShip`/`SendExitShip`; cleared on respawn. Tests
        `EnterShipInterior_ThenHelm_RoundTripsThroughTheFlightView`, `EnterShipInterior_OnlyWorksFromSpace`
        (321 pass).
-     - ⏳ **Client (next).** Flight-view prompt/key to step inside (`SendEnterShip`); on-foot **helm console**
-       (E → `SendExitShip`, flight view) and **airlock** (E → EVA) prompts inside the ship; skip the take-off
-       animation when returning to the helm.
+     - ✅ **Client (done 2026-06-07; needs in-engine test).** Flight view: **F** steps inside the ship
+       (`SendEnterShip`), cruise hint updated. Inside the ship the **cockpit is the helm** — using it (E, the
+       existing station interaction) calls `ExitShipToFlight` (server branches the cockpit on `InShipInterior`);
+       the HUD prompt reads **"Take the helm (fly)"** there (`ui.station.helm`). Returning to the helm **skips
+       the take-off animation**: new `SpaceState.SkipLaunch` (set by `EnterSpace(skipLaunch:true)` from
+       `ExitShipToFlight`), latched on entry in `GameBootstrap.SpaceSkipLaunch`, so `SpaceView.Enter` starts in
+       `Cruise` with no roar. Test `UsingTheCockpitInsideTheShip_TakesTheHelm`. *(Airlock→EVA is stage 5; EVA is
+       still `G` from cruise for now.)*
    - ⏳ **Stage 5 — move EVA to the airlock.** EVA starts from the airlock (inside the ship), not from cruise
      `G`; reuse stages 1–2 (float + oxygen + board-back). EVA → board returns you to the ship **interior** at
      the airlock. Update the cruise hint (no more `G EVA`).

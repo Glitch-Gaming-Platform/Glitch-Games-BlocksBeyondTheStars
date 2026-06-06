@@ -247,6 +247,13 @@ namespace Spacecraft.Client
                 return;
             }
 
+            // F: leave the helm and step inside the ship — walk around its interior while it floats here.
+            if (Input.GetKeyDown(KeyCode.F))
+            {
+                Game.Network?.SendEnterShip();
+                return;
+            }
+
             // G: step outside the ship for an EVA spacewalk — float free in the suit (oxygen drains).
             if (Input.GetKeyDown(KeyCode.G))
             {
@@ -729,7 +736,9 @@ namespace Spacecraft.Client
         private void Enter()
         {
             _active = true;
-            _phase = Phase.Launch;
+            // Taking the helm again from inside the ship (or any "already airborne" entry) drops straight into
+            // free flight — no take-off sequence, since you never landed.
+            _phase = Game.SpaceSkipLaunch ? Phase.Cruise : Phase.Launch;
             _seq = 0f;
             _yaw = 0f;
             _pitch = 0f;
@@ -762,8 +771,11 @@ namespace Spacecraft.Client
             _lastHull = Game.ShipCombat?.Hull ?? -1f;
             _lastShield = Game.ShipCombat?.Shield ?? -1f;
 
-            // Launch roar + a looping engine bed for the flight.
-            ClientAudio.Instance?.Cue("ship_launch");
+            // Launch roar + a looping engine bed for the flight. No roar when we skip the take-off (helm).
+            if (!Game.SpaceSkipLaunch)
+            {
+                ClientAudio.Instance?.Cue("ship_launch");
+            }
             var engClip = Resources.Load<AudioClip>("audio/engine_idle") ?? ProceduralAudio.Generate("engine_idle");
             if (engClip != null)
             {
