@@ -587,12 +587,16 @@ ElevenLabs sounds — no further per-batch confirmation needed; keys are in `too
 - ⏳ **Phase 3 — FloraGenerator + names** — random flora species per world/biome (archetype-based: tuft / bush
   / stalk / frond / cap …) with properties (edible/toxic, drops) + look (shape, size). A **procedural name
   generator** for flora.
-- ⏳ **Phase 4 — fauna polish + names** — wilder creature colours (pink/violet/yellow/brown more often),
-  per-**biome** species affinity (not just per-planet), and a **generated species name** shown to the player
-  **on scan** (creatures currently use a fixed `creature.generic.name`).
-- ⏳ **Phase 5 — asset generation (paid, approved)** — (a) regenerate all flora tiles **grayscale** so the
-  per-planet tint works + add kelp/lily; (b) more creature hides if new parts are added; (c) more ElevenLabs
-  creature call variants for sound variety. Bundle via `bundle_textures.py` / `gen_batch.py`.
+- ◑ **Phase 4 — fauna polish + names** — ✅ **names + colours done** (`3c1500c`): a shared `NameGenerator`
+  coins per-species names (shown on scan as the readout subject; rides `NetCreature.Name`); `PickColor` now
+  makes ~half of species vivid exotics (HSV hues → pink/violet/yellow/teal). ⏳ **still to do:** per-**biome**
+  species affinity (spawn species by the player's current biome, not just per-planet).
+- ◑ **Phase 5 — asset generation (paid, approved)** — ✅ **(a) flora textures complete**: generated +
+  bundled `flora_kelp` + `flora_lily` (OpenAI), so **all 15 `flora_*` blocks now have tiles** (audit confirmed
+  flora 15/15 + creature hides 12/12 covered; only special blocks — lights/force-field/ladder/stairs/data-cache
+  — use BaseColor, by design). Grayscale regen is unnecessary — the Phase-2 shader re-tints by luminance, so
+  the existing colour tiles already work. ⏳ **still to do:** (b) more creature hides only if new body parts
+  are added; (c) **more ElevenLabs creature call variants** for sound variety.
 
 Also still in the backlog: **multiplayer player-name reservation**.
 

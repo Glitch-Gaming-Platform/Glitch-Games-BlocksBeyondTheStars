@@ -58,6 +58,9 @@ TEXTURES = [
     ("flora_glowcap", "bioluminescent glowing cyan mushrooms in the dark, top-down"),
     ("flora_frostflower", "pale icy blue crystalline frost flower with frosty petals, top-down"),
     ("flora_emberbloom", "charred dark plant with glowing orange ember blossoms, top-down"),
+    # Aquatic flora (the planet flora tint re-colours these on the client; the tile gives the pattern).
+    ("flora_kelp", "tall ribbon-like green seaweed kelp blades swaying underwater, top-down"),
+    ("flora_lily", "round flat green lily pads floating on water with a small white blossom, top-down"),
 ]
 
 
