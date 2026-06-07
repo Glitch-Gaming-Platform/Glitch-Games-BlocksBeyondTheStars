@@ -42,6 +42,12 @@ namespace Spacecraft.Client
         private Image _wreckBar;
         private Button _wreckClaim;
 
+        // Damage feedback (B21): a red screen flash + a cause label when health drops.
+        private Image _dmgFlash;
+        private Text _dmgCause;
+        private float _prevHealth = 100f, _flashTimer, _causeTimer;
+        private string _causeKey = string.Empty;
+
         private void LateUpdate()
         {
             if (Game?.Localizer == null)
@@ -50,6 +56,8 @@ namespace Spacecraft.Client
             }
 
             EnsureBuilt();
+            UpdateDamageFeedback(); // always, so the health baseline tracks even while a menu is open
+
             bool show = !Game.MenuOpen;
             if (_canvas.enabled != show)
             {
@@ -60,6 +68,52 @@ namespace Spacecraft.Client
             {
                 Refresh();
             }
+        }
+
+        /// <summary>Flashes the screen red + names the cause whenever the player's health drops (B21), so
+        /// environmental damage (lava, suffocation, starvation) or a hit never kills you "out of nowhere".</summary>
+        private void UpdateDamageFeedback()
+        {
+            float dt = Time.deltaTime;
+            float h = Game.Health;
+            if (h < _prevHealth - 0.05f)
+            {
+                float drop = _prevHealth - h;
+                _flashTimer = Mathf.Min(0.6f, 0.22f + drop * 0.03f); // a bigger hit flashes longer
+                _causeTimer = 2.2f;
+                _causeKey = InferDamageCause();
+            }
+
+            _prevHealth = h;
+
+            if (_flashTimer > 0f) { _flashTimer = Mathf.Max(0f, _flashTimer - dt); }
+            if (_dmgFlash != null)
+            {
+                var c = _dmgFlash.color;
+                c.a = Mathf.Clamp01(_flashTimer / 0.6f) * 0.38f; // peak ~0.38 — clear but not blinding
+                _dmgFlash.color = c;
+            }
+
+            if (_causeTimer > 0f) { _causeTimer -= dt; }
+            if (_dmgCause != null)
+            {
+                bool showCause = _causeTimer > 0f && Game.Health > 0f && !Game.MenuOpen;
+                _dmgCause.text = showCause && Game.Localizer != null ? Game.Localizer.Get(_causeKey) : string.Empty;
+            }
+        }
+
+        /// <summary>Best-effort cause of the latest health loss from local state — lava (most acute) first,
+        /// then suffocation / starvation, else a generic hit (creature/fall).</summary>
+        private string InferDamageCause()
+        {
+            var p = Game.PlayerPosition;
+            var id = Game.World != null
+                ? Game.World.GetBlock(Mathf.FloorToInt(p.x), Mathf.FloorToInt(p.y), Mathf.FloorToInt(p.z))
+                : default;
+            if (Game.Content?.BlockById(id)?.Key == "lava") { return "ui.hud.dmg_lava"; }
+            if (Game.Oxygen <= 0.5f) { return "ui.hud.dmg_suffocate"; }
+            if (Game.Hunger <= 0.5f) { return "ui.hud.dmg_starve"; }
+            return "ui.hud.dmg_hit";
         }
 
         private void OnDestroy()
@@ -82,6 +136,17 @@ namespace Spacecraft.Client
             _canvas = UiKit.CreateDiegeticCanvas("HudUI", W, H); // routed through the visor HUD camera when active
             _canvas.sortingOrder = 10;
             var root = _canvas.transform;
+
+            // Damage feedback (B21): full-screen red flash (behind the HUD so bars stay readable) + a cause label.
+            var flashGo = new GameObject("DamageFlash", typeof(RectTransform));
+            flashGo.transform.SetParent(root, false);
+            var frt = flashGo.GetComponent<RectTransform>();
+            frt.anchorMin = Vector2.zero; frt.anchorMax = Vector2.one; frt.offsetMin = frt.offsetMax = Vector2.zero;
+            _dmgFlash = flashGo.AddComponent<Image>();
+            _dmgFlash.sprite = UiKit.SolidSprite;
+            _dmgFlash.color = new Color(0.85f, 0.06f, 0.05f, 0f);
+            _dmgFlash.raycastTarget = false;
+            _dmgCause = UiKit.AddText(root, W / 2f - 220, H / 2f - 90, 440, 28, string.Empty, 20, new Color(1f, 0.45f, 0.4f), TextAnchor.MiddleCenter, FontStyle.Bold);
 
             // Crosshair.
             _crosshair = new GameObject("Crosshair", typeof(RectTransform));

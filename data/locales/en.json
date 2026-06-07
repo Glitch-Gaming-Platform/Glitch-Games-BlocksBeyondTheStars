@@ -278,6 +278,10 @@
 
   "ui.hud.health": "Health",
   "ui.hud.oxygen": "Oxygen",
+  "ui.hud.dmg_lava": "Burning — lava!",
+  "ui.hud.dmg_suffocate": "Suffocating — no oxygen!",
+  "ui.hud.dmg_starve": "Starving!",
+  "ui.hud.dmg_hit": "Taking damage!",
   "ui.hud.energy": "Energy",
   "ui.hud.hunger": "Hunger",
   "ui.hud.breathable": "breathable",

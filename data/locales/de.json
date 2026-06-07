@@ -283,6 +283,10 @@
 
   "ui.hud.health": "Gesundheit",
   "ui.hud.oxygen": "Sauerstoff",
+  "ui.hud.dmg_lava": "Verbrennung — Lava!",
+  "ui.hud.dmg_suffocate": "Erstickung — kein Sauerstoff!",
+  "ui.hud.dmg_starve": "Du verhungerst!",
+  "ui.hud.dmg_hit": "Du nimmst Schaden!",
   "ui.hud.energy": "Energie",
   "ui.hud.hunger": "Hunger",
   "ui.hud.breathable": "atembar",

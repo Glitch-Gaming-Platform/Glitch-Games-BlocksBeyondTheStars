@@ -1221,6 +1221,10 @@ B12 (organic **meandering** wander — hold a hashed heading per segment + weave
 circles), B14 (weapon-aware attack animation — blade **slash arc**, gun **recoil**, else jab), B4 **partial**
 (ship editor: added **Hinged Door**, relabelled **Medbay → "Medbay (Heal-Tank)"** + "Sliding Door"). *Playtest
 wanted.* **B4 remainder + B22 still open** — see those entries.
+**✅ Fixed 2026-06-07 (B21 — damage feedback, built):** on-foot **red screen flash** + a **cause label** in
+`HudUi` whenever health drops, cause inferred from local state (in **lava** → "Burning", O₂≤0 → "Suffocating",
+hunger≤0 → "Starving", else "Taking damage"), DE+EN. No more dying "out of nowhere" — you see the flash + why.
+Client-only. *Playtest wanted.*
 
 - **B1 — Creature sounds carry too far; should fade with distance, be silent when far. [VALID]**
   `ClientAudio.At` plays 3D at `minDistance 4`, `maxDistance 45` with Unity's default (logarithmic) rolloff →
