@@ -685,6 +685,12 @@
   "block.crate.name": "Lagerkiste",
   "item.crate.name": "Lagerkiste",
   "item.crate.desc": "Platziere sie zum Lagern an einer Basis: G nehmen, H einlagern.",
+  "block.door_hinge.name": "Scharniertür",
+  "item.door_hinge.name": "Scharniertür",
+  "item.door_hinge.desc": "Platziere sie, um eine Basis abzutrennen: E zum Auf- und Zuschwingen. Abbauen gibt sie zurück.",
+  "block.door_slide.name": "Schiebetür",
+  "item.door_slide.name": "Schiebetür",
+  "item.door_slide.desc": "Platziere sie als automatische Sci-Fi-Tür, die beim Näherkommen aufgeht. Abbauen gibt sie zurück.",
   "ui.hud.stash": "Lager",
   "ui.hud.stash_keys": "G nehmen · H einlagern"
 }

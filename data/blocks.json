@@ -65,5 +65,7 @@
   { "key": "steel_floor",  "nameKey": "block.steel_floor.name",  "hardness": 2.5, "requiredTool": "drill", "minToolTier": 1, "drops": [ { "item": "steel_floor", "count": 1 } ] },
   { "key": "metal_panel",  "nameKey": "block.metal_panel.name",  "hardness": 2.8, "requiredTool": "drill", "minToolTier": 1, "drops": [ { "item": "metal_panel", "count": 1 } ] },
   { "key": "concrete",     "nameKey": "block.concrete.name",     "hardness": 2.0, "requiredTool": "drill", "minToolTier": 1, "drops": [ { "item": "concrete", "count": 1 } ] },
-  { "key": "crate",        "nameKey": "block.crate.name",        "hardness": 1.6, "requiredTool": "none",  "minToolTier": 0, "drops": [ { "item": "crate", "count": 1 } ] }
+  { "key": "crate",        "nameKey": "block.crate.name",        "hardness": 1.6, "requiredTool": "none",  "minToolTier": 0, "drops": [ { "item": "crate", "count": 1 } ] },
+  { "key": "door_hinge",   "nameKey": "block.door_hinge.name",   "hardness": 1.5, "requiredTool": "none",  "minToolTier": 0, "drops": [ { "item": "door_hinge", "count": 1 } ] },
+  { "key": "door_slide",   "nameKey": "block.door_slide.name",   "hardness": 1.5, "requiredTool": "none",  "minToolTier": 0, "drops": [ { "item": "door_slide", "count": 1 } ] }
 ]

@@ -816,11 +816,13 @@ only then implement. Items marked *(analysis only)* must NOT be implemented yet.
    **server** — it holds the context + the toggle); (b) backend framework (FastAPI recommended); (c) cache + cost
    controls; (d) how the backend process is launched (manual `uv run` first; later a launcher script / bundled).
    **Out of scope here:** no code — this entry is the plan; implement only when greenlit.
-16. 🔄 **Task 5 — crafting / tech-tree / materials overhaul + more metals & rare earths.** (Big, staged — full
+16. ✅ **Task 5 — crafting / tech-tree / materials overhaul + more metals & rare earths.** (Big, staged — full
    Analysis + Plan below.) **Done so far: Stage 1** (14 metals/rare-earths + alloy tier + soft-lock/dead-station
    cleanups), **Stage 3** (placeable workbench/forge = on-world crafting + decor blocks), **Stage 3b** (placeable
-   storage crate), **Stage 4** (ships & ship parts fold onto the new materials), **Stage 2** (knowledge-economy +
-   ore depth-tier rebalance). **Remaining: a placeable door** (the last Stage-3 follow-up).
+   storage crate), **Stage 3c** (placeable hinge + slide doors), **Stage 4** (ships & ship parts fold onto the new
+   materials), **Stage 2** (knowledge-economy + ore depth-tier rebalance). **✅ All stages done** — every Task-5
+   sub-stage is complete (in-engine playtest still wanted for the on-world build objects: crate, doors, workbench/
+   forge, + the visor HUD).
 
    ### Analysis (2026-06-07)
    **Current graph** (`data/{items,blocks,recipes,blueprints,ship_modules,ships,planets}.json`):
@@ -881,7 +883,23 @@ only then implement. Items marked *(analysis only)* must NOT be implemented yet.
      `DepositContainerIntent` (NetCodec **98**), `DepositToContainer`, place/mine hooks, a `PlaceBlock` test
      entrypoint, and a crate-specific HUD prompt ("Stash · G take · H store"). Tested: `CrateStorageTests`
      (stash-not-tools + take-back, mining returns contents) — **358 green**. *(Placeable door still a follow-up.)*
-   - 🔄 **Stage 3c — Placeable door (analysis + plan 2026-06-07).**
+   - ✅ **Stage 3c — Placeable doors (done 2026-06-07; needs in-engine test).** Two new placeable blocks —
+     **`door_hinge`** (manual: press **E** to swing it open/shut) and **`door_slide`** (sci-fi auto door: opens
+     as you approach, auto-closes) — both crafted at a workbench (3 `metal_panel` + 1/2 `circuit_board`). They
+     **reuse the existing door entity system end-to-end, so the client needed no changes**: placing one calls a
+     new server **`PlaceDoor`** that fills the (air) cell with a width-1 `ServerDoor` (wall axis from the jambs or
+     the player's facing), **persists** it by cell (new `door` table + `SaveDoor`/`ListDoors`/`DeleteDoor`), and
+     broadcasts the `DoorList` the client already renders/animates/collides. **`LoadPlayerDoors`** re-appends the
+     persisted player doors after every deterministic rebuild (`RegisterDoors`/`RegisterStationDoors`) + on world
+     load, so settlement/ship stamps never wipe them. **Mining** is intercepted (a door fills an air cell):
+     `RemovePlayerDoorAt` removes the door, returns the item, and persist-deletes — to remove an open door, close
+     it (E for hinge; step back so the slide auto-closes — `Reach 6` > slide range `4.5`). **Tested:**
+     `PlaceableDoorTests` (place→register+persist+consume, E toggles, mine returns the item + forgets it, and a
+     **reload** re-loads the door) — **363 green**; client + bundled server rebuilt. *(The collider-to-mine feel +
+     the animation want a playtest.)*
+
+     <details><summary>Original analysis + plan (kept)</summary>
+
      **As-is (mapped):** the game already has a full **door system** — doors are **server-authoritative entities**
      (`ServerDoor` in `GameServerDoors.cs`), *not* voxel blocks: a doorway stays **air**, and a door entity fills
      the gap. The client `DoorView.cs` already renders them as GameObjects, **animates** them (slide panels
@@ -904,6 +922,7 @@ only then implement. Items marked *(analysis only)* must NOT be implemented yet.
      the `door` item; if it's open, press **E** to close first. Server-unit-testable (place → `DoorCount`/persisted
      → interact toggles → mine removes + drops); the **feel** (collider-to-mine mapping, animation) needs a
      **playtest**. *(Door **kind** + recipe to confirm with the user before building.)*
+     </details>
    - ✅ **Stage 4 — Ships & ship parts on the new materials (done 2026-06-07).** Folded the new alloys/electronics
      into ship + module builds: **hauler** craftCost += steel + circuit_board (heavy hull + avionics), **scout**
      += light_alloy + circuit_board (light + sensors); module builds **hull_plating** += steel, **shield_generator**

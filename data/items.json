@@ -114,5 +114,7 @@
   { "key": "steel_floor", "nameKey": "item.steel_floor.name", "category": "block", "maxStack": 99, "placesBlock": "steel_floor" },
   { "key": "metal_panel", "nameKey": "item.metal_panel.name", "category": "block", "maxStack": 99, "placesBlock": "metal_panel" },
   { "key": "concrete",    "nameKey": "item.concrete.name",    "category": "block", "maxStack": 99, "placesBlock": "concrete" },
-  { "key": "crate",       "nameKey": "item.crate.name",       "category": "block", "maxStack": 99, "placesBlock": "crate", "descriptionKey": "item.crate.desc" }
+  { "key": "crate",       "nameKey": "item.crate.name",       "category": "block", "maxStack": 99, "placesBlock": "crate", "descriptionKey": "item.crate.desc" },
+  { "key": "door_hinge",  "nameKey": "item.door_hinge.name",  "category": "block", "maxStack": 99, "placesBlock": "door_hinge", "descriptionKey": "item.door_hinge.desc" },
+  { "key": "door_slide",  "nameKey": "item.door_slide.name",  "category": "block", "maxStack": 99, "placesBlock": "door_slide", "descriptionKey": "item.door_slide.desc" }
 ]

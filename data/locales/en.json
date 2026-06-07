@@ -680,6 +680,12 @@
   "block.crate.name": "Storage Crate",
   "item.crate.name": "Storage Crate",
   "item.crate.desc": "Place it to stash items at a base: G to take, H to store.",
+  "block.door_hinge.name": "Hinged Door",
+  "item.door_hinge.name": "Hinged Door",
+  "item.door_hinge.desc": "Place it to wall off a base: press E to swing it open or shut. Mine it to take it back.",
+  "block.door_slide.name": "Sliding Door",
+  "item.door_slide.name": "Sliding Door",
+  "item.door_slide.desc": "Place it for an automatic sci-fi door that opens as you approach. Mine it to take it back.",
   "ui.hud.stash": "Stash",
   "ui.hud.stash_keys": "G take · H store"
 }
