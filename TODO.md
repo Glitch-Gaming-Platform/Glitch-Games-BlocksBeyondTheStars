@@ -1272,8 +1272,64 @@ B5 (hard-block hardness ×1.6 — stone 3.8→6.1, ores/metals up; soft blocks u
   still makes hostiles (Aggressive 15 / PackHunter 5 weights in `CreatureGenerator`) + the aggro range bites.
   *Fix:* lower the hostile weights / aggro range / damage, or make more species flee. Pairs with B13.
 
-*(All 18 are recorded only — none fixed yet, per the user. Many are quick tunables (B1/B5/B9/B10/B13/B18), a few
-are features (B7/B11) or rendering work (B6/B8), and B15 needs an in-engine look.)*
+### Second batch (reported 2026-06-07)
+- **B19 — No lava on lava planets? [PARTIAL/PLAYTEST]** The code **does** generate a lava sea: the lava planet's
+  `surfaceBlock "basalt"` → `volcanic` → `lavaAb 0.55`, and `WorldGenerator.ResolveSeaFluid` pools **lava in
+  basins** below ~`BaseHeight − 0.25·Amplitude` (≈ Y 50 on the lava world). So lava only fills **low ground**;
+  on high terrain / the landing zone you may see none. *Investigate in-engine:* dig down to ~Y 50 / find a basin;
+  if still none, it's a gen/render bug. *(Possible tweak: raise `lavaAb` so lava is more visible.)*
+- **B20 — Player avatar has no face. [VALID]** The procedural avatar has no facial features (eyes/visor). *Fix:*
+  add a face — at least eyes / a helmet visor — to the avatar model (`AvatarBuilder`/`AvatarEditor`).
+- **B21 — "Died suddenly with no idea why" — audit the damage indicators. [VALID + analysis]**
+  **Damage sources (all server-side, `GameServer.TickEnvironment` + combat):** **oxygen suffocation** — toxic/
+  airless atmosphere (or being submerged) drains O₂; at 0 → **Health −5/s** (`GameServer.cs:651-653`); **lava** —
+  standing in lava → **Health −15/s** (kills from full in ~7s!) (`:658-660`); **starvation** — hunger 0 → **−3/s**
+  (`:677-679`); **fall damage** (`HandleFallDamage`, scales with impact speed); **creature** attacks
+  (`GameServerCreatures.cs:181`) + **NPC enemy** attacks (`GameServerEnemies.cs:73`); **toxic food** (negative
+  `ConsumeHealth`). **Display gap:** the HUD has health/O₂/hunger **bars** (bigger since item 19), but there is
+  **no on-foot damage feedback** — no red hurt-flash/vignette, no hit indicator, and **no cause warning**
+  ("Suffocating" / "Burning — lava" / "Starving"). The space view has a hit flash; on foot there's none. So a
+  fast drain (lava 15/s, or O₂ hitting 0) kills with only a quietly-emptying bar → "out of nowhere". *Fix:* add
+  an on-foot damage cue — a red flash/vignette pulse on health loss + a short cause label, and verify each source
+  decrements health correctly. *(Likely culprit for the sudden deaths: lava or a fast O₂ drain on a toxic world.)*
+- **B22 — Vendor "E" opens the inventory/crafting menu, not a trade screen. [VALID]** A vendor sets
+  `NearbyStation = "market"` and **E** calls `GameMenu.OpenMarket()`, which just opens the unified **crafting/tech
+  menu on the "market" category** (`GameMenu.cs:69` — its own comment flags the "crafting list instead of the
+  vendor's trade view" issue), not a dedicated barter screen. *Fix:* give the vendor its own trade/barter screen
+  (or a clearly trade-only view) instead of the crafting menu.
+- **B23 — Station doors don't auto-open/close; open radius too large. [VALID — not fixed by the hatch change]**
+  Station slide doors are registered via `RegisterStationDoors → MakeDoor("slide", …)` with the **default
+  `SlideDoorOpenRange = 4.5`**; the per-door tighter range from the ship-hatch fix (1.8) was applied **only** to
+  ship-stamp doors, not stations. In a station's tight rooms 4.5 means you're always within range → doors stay
+  open. *Fix:* give station (and tight interior) slide doors a smaller open range, like the hatch.
+
+*(All recorded only — none fixed yet, per the user. Quick tunables: B1/B5/B9/B10/B13/B18 (done), B9-style B23.
+Features: B7/B11. Rendering: B6/B8/B17/B20. B15/B19 need an in-engine look; B21 is the damage-feedback audit.)*
+
+## 📋 More feature requests — 2026-06-07 (backlog only, analysis-first, not started)
+29. **In-game integration of the editors (load player-made ships/stations/settlements + content).** *(Analysis +
+   effort estimate first.)* The ship editor, **space-station / city / village (structure) editor**, **material
+   editor**, **blueprint editor** and **ship-parts editor** exist as standalone tools — can their **outputs be
+   loaded into an actual game / own server / singleplayer** so players *use* what they built? **Assess the effort
+   per editor:** where each editor saves its design, what format, and what the server/worldgen would need to
+   ingest it (stamp a player-designed station/settlement into a system; register a player-designed ship as
+   craftable; load player material/blueprint/ship-part definitions as content). Likely needs a persistence/import
+   path + a content-merge layer. *Estimate complexity per editor + a staged plan.*
+30. **Harvestable water + lava, flowing placement, and a fire system.** *(Analysis first.)* **Partly exists:**
+   `water`/`lava` blocks are `mineable` (drill **tier 3**) and placing a fluid flows (`RegisterFluidSource`). The
+   request: make water **harvestable** (confirm it works / lower the tool gate?) and when **placed it flows**;
+   make **lava** harvestable too, and when **placed it ignites the surroundings** — the **flora catches fire**
+   (needs a **new fire system**: fire spreads across flammable blocks, a **visual flame effect + sound**, burns
+   them away); and **water extinguishes fire**. New systems: a fire/burning simulation (server) + flame VFX/SFX
+   (client) + flammability per block + water↔fire interaction. Medium-large.
+31. **Player-created missions (a real player-to-player mission board).** *(Analysis first.)* A player can **post a
+   mission** others accept from a mission board: the poster types a **name + description**, **stakes a reward**
+   (an item/material they give up) and defines **what the completer receives**; on success the **poster is
+   notified** and gets back a **multiple of their stake**. The poster sets the **objectives** — e.g. *mine N of a
+   material*, *travel to a place* — with **multi-select** (several objectives per mission). Builds on the existing
+   mission board + `GameServerMissions`/`StoredMission` persistence (admin/player-created missions already persist)
+   + the NPC-memory/relationship hooks. Needs: a post-mission UI, objective tracking + verification, the
+   stake/escrow + payout, and cross-player notification. Big-ish.
 
 ---
 
