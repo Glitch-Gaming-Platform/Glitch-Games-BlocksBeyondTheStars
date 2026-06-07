@@ -1459,6 +1459,32 @@ Client-only. *Playtest wanted.*
   Woo over `ClientWorld` — the source of truth, always in sync, immune to collider rebuild/recook lag + seams;
   fluids passed through to match the collider). Mining/placing now never silently fails when a block is in front.
   Client build verified. *Playtest to confirm.*
+  **Update 2026-06-07 (still happens after the fix):** the raymarch/reach fix did **not** resolve it, so it is
+  **not** a targeting miss. The user's pattern: mining gets **stuck for a while** (several blocks in a row won't
+  break), then **un-sticks** (some block suddenly mines) and **the previously-stuck blocks then work too**. That
+  "all blocked, then all allowed" cadence points at a **per-player global gate**, not a per-block one — i.e. a
+  **mining cooldown / rate-limit / swing-lock** (client or server) that drops dig attempts within a window, OR a
+  server-tick/cadence (e.g. mines only processed on a timer; progressive `_miningProgress` gated by a cooldown).
+  Re-investigate: a `GetMouseButtonDown` vs continuous-hold mismatch, any mine cooldown/swing-lock in
+  `PlayerController`, and any per-player throttle in `GameServer.HandleMine`/the tick loop. Tool power (Basic
+  Drill `MiningPower` vs mud/grass hardness 0.6) may mean a click only adds partial progress, so a block needs
+  several clicks — feels like "won't mine" until enough accumulate.
+  **Root cause found 2026-06-07 (the real one):** there are **two** mining paths and the first fix only touched
+  one. Path A `HandleInteract` (single click, bare hands) → now voxel-raymarched. **Path B `HandleDrillAudio`**
+  (drill **held**, sends a mine every 0.28 s) still used **`Physics.Raycast`** — and the user mines with the
+  **Basic Drill**, so all their mining went through Path B. After a block breaks the chunk collider is rebuilt;
+  the raycast misses for a frame, and the `if (Physics.Raycast(...))` wrapped the **whole** drill body, so the
+  tick/mine/sparks all stalled until it settled — then everything resumed (exactly "stuck, then a block mines and
+  the stuck ones work"). **[FIXED 2026-06-07]** `HandleDrillAudio` now targets via `AimBlock` (the voxel
+  raymarch) too — sparks use the targeted cell centre. Both mining paths are now collider-independent. Client
+  build verified. *Playtest to confirm.*
+- **B33 — Station NPC name labels show through onto the planet below. [VALID — reported 2026-06-07]** While on a
+  planet surface, the player sees floating **NPC name overlays** for NPCs that are actually aboard a **space
+  station orbiting above** (a different world/instance). The NPC name-label HUD/world-space text isn't scoped to
+  the player's current world — labels for entities in another instance (the station's void world) still render.
+  *Fix:* gate the NPC name-tag rendering to NPCs in the player's **active world/instance** only (or clear the
+  station's NPC list on the client when not aboard it). Where: the client NPC name-label renderer (`NpcView` /
+  HUD nameplates) + how station NPCs are broadcast/scoped. Small-medium.
 - **B15 update (red 2-block thing — now leaning "creature"):** it **damages you on touch** and **can't be
   scanned**, **no texture**. **User's read (2026-06-07): it's a creature, not lava** — lava wouldn't spawn as a
   lone two-block thing. So most likely a **hostile fauna creature** rendered **red** (hostile tint) with a

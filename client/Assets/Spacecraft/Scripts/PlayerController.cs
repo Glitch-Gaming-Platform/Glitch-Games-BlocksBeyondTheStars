@@ -524,24 +524,30 @@ namespace Spacecraft.Client
                 return;
             }
 
-            if (Physics.Raycast(new Ray(Camera.transform.position, Camera.transform.forward), out var hit, Reach))
+            // Target via the voxel grid, NOT Physics.Raycast: right after a block breaks the chunk collider is
+            // rebuilt, and a raycast against it can miss for a frame — which stalled the WHOLE drill (no tick, no
+            // mine, no sparks) until it settled, then everything resumed. That stall was the "mining gets stuck,
+            // then a block suddenly mines and the stuck ones work too" bug (B32). The voxel world never stalls.
+            if (!AimBlock(out var hitCell, out _))
             {
-                ClientAudio.Instance?.DrillTick();
-                TriggerSwing(); // keep the mining chop going while the drill is held
-                if (Weapons != null && Time.time >= _nextDrillSpark)
-                {
-                    _nextDrillSpark = Time.time + 0.07f;
-                    Weapons.Sparks(hit.point, new Color(1f, 0.85f, 0.5f), 3);
-                }
+                return;
+            }
 
-                // Hard blocks need several hits — keep sending mine attempts while the drill is held
-                // (the server accumulates effort until the block breaks).
-                if (Time.time >= _nextDrillMine)
-                {
-                    _nextDrillMine = Time.time + 0.28f; // slower, weightier mining (was 0.18)
-                    var b = FloorVec(hit.point - hit.normal * 0.5f);
-                    Game.Network?.SendMine(b.x, b.y, b.z);
-                }
+            ClientAudio.Instance?.DrillTick();
+            TriggerSwing(); // keep the mining chop going while the drill is held
+            var center = new Vector3(hitCell.x + 0.5f, hitCell.y + 0.5f, hitCell.z + 0.5f);
+            if (Weapons != null && Time.time >= _nextDrillSpark)
+            {
+                _nextDrillSpark = Time.time + 0.07f;
+                Weapons.Sparks(center, new Color(1f, 0.85f, 0.5f), 3);
+            }
+
+            // Hard blocks need several hits — keep sending mine attempts while the drill is held
+            // (the server accumulates effort until the block breaks).
+            if (Time.time >= _nextDrillMine)
+            {
+                _nextDrillMine = Time.time + 0.28f; // slower, weightier mining (was 0.18)
+                Game.Network?.SendMine(hitCell.x, hitCell.y, hitCell.z);
             }
         }
 
