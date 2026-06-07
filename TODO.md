@@ -1478,6 +1478,17 @@ Client-only. *Playtest wanted.*
   the stuck ones work"). **[FIXED 2026-06-07]** `HandleDrillAudio` now targets via `AimBlock` (the voxel
   raymarch) too — sparks use the targeted cell centre. Both mining paths are now collider-independent. Client
   build verified. *Playtest to confirm.*
+  **Real root cause 2026-06-07 (third pass — precise):** still happened; the user now sees HUD **"mine: block is
+  already empty"** while **scanning the same cell shows grass**. So it's a genuine **client↔server desync**: the
+  CLIENT renders+scans a block (grass) that the SERVER has as **air**. The client only ever learns of edits via
+  `BlockChanged`; some server path set the cell to air **without a broadcast the client applied**, leaving a
+  **ghost block** in the stale client chunk. Confirmed non-broadcasting `SetBlock(air)` paths: the structure
+  **stamps** (ship/settlement/wreck/station clear cells to air — incl. the B27 doorstep carve) and any **re-stamp**
+  (ship expand/return) that modifies chunks a client already has. **[FIXED 2026-06-07 — self-heal]** `HandleMine`'s
+  "already empty" branch now calls **`ResyncStaleChunk`**: it sends the authoritative block for the cell
+  immediately AND drops the chunk from the session's `SentChunks` so `StreamChunks` re-sends the current chunk next
+  tick — every ghost in it vanishes. Robust against ANY desync source (not just stamps). 367 tests green; client
+  build verified. *Follow-up if still seen: make the live re-stamps broadcast their clears so ghosts never form.*
 - **B33 — Station NPC name labels show through onto the planet below. [VALID — reported 2026-06-07]** While on a
   planet surface, the player sees floating **NPC name overlays** for NPCs that are actually aboard a **space
   station orbiting above** (a different world/instance). The NPC name-label HUD/world-space text isn't scoped to

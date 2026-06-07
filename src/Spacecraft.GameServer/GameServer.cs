@@ -1001,6 +1001,16 @@ public sealed partial class GameServer
         }
     }
 
+    /// <summary>Heals a stale client chunk view (a "ghost" block the server no longer has): confirms the cell's
+    /// authoritative block immediately and forgets the chunk on this session so <see cref="StreamChunks"/> re-sends
+    /// the current authoritative chunk next tick — clearing every ghost in it at once.</summary>
+    private void ResyncStaleChunk(PlayerSession session, Vector3i pos)
+    {
+        Send(session, new BlockChanged { X = pos.X, Y = pos.Y, Z = pos.Z, Block = _world.GetBlock(pos).Value });
+        var coord = WorldConstants.CanonicalChunk(WorldConstants.WorldToChunk(pos), _world.Circumference);
+        session.SentChunks.Remove(coord); // not-sent again → StreamChunks re-streams it on the next tick
+    }
+
     // ---------------- Connection handling ----------------
 
     private void OnClientConnected(int connectionId)
@@ -1410,6 +1420,12 @@ public sealed partial class GameServer
         var current = _world.GetBlock(pos);
         if (current.IsAir)
         {
+            // The client aimed at a block here but the server has air — its chunk view is STALE (a ghost block).
+            // This happens when something cleared the cell to air without the client learning of it (e.g. a
+            // structure stamp / re-stamp that SetBlock-cleared terrain but didn't broadcast, leaving an already-
+            // streamed client out of date). Heal it: confirm the empty cell now and re-stream the authoritative
+            // chunk so every ghost in it disappears — otherwise the player keeps "mining" a block that isn't there.
+            ResyncStaleChunk(session, pos);
             Reject(session, "mine", "Block is already empty.");
             return;
         }
