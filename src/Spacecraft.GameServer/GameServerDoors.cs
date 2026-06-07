@@ -21,6 +21,8 @@ namespace Spacecraft.GameServer;
 public sealed partial class GameServer
 {
     private const float SlideDoorOpenRange = 4.5f;   // a slide door opens for a player within this range
+    private const float ShipHatchOpenRange = 1.8f;   // …but the ship's own hatch opens only when you walk right
+                                                     // up to it, so it stays sealed/closed where you spawn inside
     private const double SlideDoorAutoClose = 1.4;   // …and closes this many seconds after the last one leaves
     private const float HingeDoorReach = 3f;         // how close a player must stand to toggle a hinge door
 
@@ -35,6 +37,7 @@ public sealed partial class GameServer
         public bool Open;
         public double AutoCloseTimer;  // slide doors: counts down once no player is near
         public bool PlayerBuilt;       // placed by a player (persisted + removable by mining), not stamped
+        public float OpenRange = 4.5f; // proximity at which a slide door opens (SlideDoorOpenRange; tighter for the hatch)
     }
 
     private List<ServerDoor> _doors => _worlds.Active.Doors;
@@ -65,12 +68,14 @@ public sealed partial class GameServer
             }
         }
 
-        // Designed-ship doorways (every player's ship stamped into this world — sci-fi sliders).
+        // Designed-ship doorways (every player's ship stamped into this world — sci-fi sliders). The ship's own
+        // hatch gets a tighter open range so it stays sealed/closed where you spawn inside, opening only when you
+        // walk right up to it to leave.
         foreach (var stamp in _worlds.Active.ShipStamps.Values)
         {
             foreach (var pos in stamp.Doors)
             {
-                _doors.Add(MakeDoor("slide", pos));
+                _doors.Add(MakeDoor("slide", pos, ShipHatchOpenRange));
             }
         }
 
@@ -101,7 +106,7 @@ public sealed partial class GameServer
 
     /// <summary>Builds a door at a marker, probing the surrounding blocks to find the wall axis and the full
     /// width of the air gap so the panel/collider lines up with the doorway regardless of how it was cut.</summary>
-    private ServerDoor MakeDoor(string kind, Vector3f markerPos)
+    private ServerDoor MakeDoor(string kind, Vector3f markerPos, float openRange = SlideDoorOpenRange)
     {
         int bx = (int)System.Math.Floor(markerPos.X);
         int by = (int)System.Math.Floor(markerPos.Y);
@@ -132,7 +137,7 @@ public sealed partial class GameServer
             by,
             (axisX ? bz : bz + centre) + 0.5f);
 
-        return new ServerDoor { Id = _nextDoorId++, Kind = kind, Pos = pos, AxisX = axisX, Width = width };
+        return new ServerDoor { Id = _nextDoorId++, Kind = kind, Pos = pos, AxisX = axisX, Width = width, OpenRange = openRange };
     }
 
     private bool IsSolidBlock(int x, int y, int z) => !_world.GetBlock(new Vector3i(x, y, z)).IsAir;
@@ -160,7 +165,7 @@ public sealed partial class GameServer
                 continue; // hinge doors are manual (HandleDoorInteract)
             }
 
-            bool near = targets.Any(p => WrapDistSq(p, door.Pos) <= SlideDoorOpenRange * SlideDoorOpenRange);
+            bool near = targets.Any(p => WrapDistSq(p, door.Pos) <= door.OpenRange * door.OpenRange);
             if (near)
             {
                 door.AutoCloseTimer = SlideDoorAutoClose;

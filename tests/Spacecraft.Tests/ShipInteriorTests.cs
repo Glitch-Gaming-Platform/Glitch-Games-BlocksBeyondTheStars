@@ -102,6 +102,30 @@ public sealed class ShipInteriorTests : IDisposable
     }
 
     [Fact]
+    public void ShipHatchDoor_StaysSealedAtTheSpawn_ButOpensWhenYouWalkUpToIt()
+    {
+        var server = Started(out var repo);
+        using (repo)
+        {
+            var session = server.AddLocalPlayer("Pilot");
+            server.EnterSpace("Pilot");
+            server.EnterShipInterior("Pilot"); // standing inside the ship at the heal-tank
+
+            var hatch = server.DoorSnapshots.First(d => d.Kind == "slide"); // the ship's own hatch
+            Assert.False(hatch.Open);                                       // starts closed
+
+            // At the heal-tank spawn (a few blocks from the hatch) the tighter-range hatch stays sealed.
+            server.TickForTest(0.5);
+            Assert.False(server.DoorSnapshots.First(d => d.Id == hatch.Id).Open);
+
+            // Walk right up to the hatch → it slides open.
+            session.State.Position = hatch.Pos;
+            server.TickForTest(0.2);
+            Assert.True(server.DoorSnapshots.First(d => d.Id == hatch.Id).Open);
+        }
+    }
+
+    [Fact]
     public void Eva_CannotLandOnAPlanet_OnlyAnAsteroid()
     {
         var server = Started(out var repo);

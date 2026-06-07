@@ -303,6 +303,12 @@ only then implement. Items marked *(analysis only)* must NOT be implemented yet.
      2026-06-07).** In the ship-interior void world (`Game.LoadingPlanetType == "ship_interior"`) the ship-tab
      button now reads **"Take the helm (fly)"** and calls `SendExitShip` (the skip-launch helm path) instead of
      `SendEnterSpace`; on a real surface it stays the normal "Launch into space".
+   - ✅ **5f — Ship hatch starts sealed (done 2026-06-07; user feedback).** The hatch's sliding door used to be
+     **open on spawn** because you spawn at the heal-tank, which is inside the slide door's 4.5-block open range.
+     Added a **per-door `OpenRange`** (`ServerDoor.OpenRange`, used in `TickDoors`); the **ship hatch** now uses a
+     tighter **`ShipHatchOpenRange = 1.8`** so it stays **closed where you spawn** and only slides open when you
+     **walk right up to it** to leave. Settlement/station slide doors keep 4.5. Test
+     `ShipHatchDoor_StaysSealedAtTheSpawn_ButOpensWhenYouWalkUpToIt` (364 green). Server rebuilt.
 6. ✅ **Bug — save the player's position per planet** (done 2026-06-07; scope: last planet). When I land on
    another planet, my **position there** should be saved too, so on **loading the save I'm back there** (not
    just the last/home world).
@@ -1007,7 +1013,7 @@ only then implement. Items marked *(analysis only)* must NOT be implemented yet.
    if it must *feel* like a sphere (poles exist) and a ~1-2 week effort is acceptable. **(C) true sphere is out of
    scope.** Either way the orbit/star-system view needs no change. *(Estimate only — confirm direction before any
    build.)*
-19. ✅ **Feature — bigger HUDs + weaker visor + menu matches HUD look (done 2026-06-07; needs in-engine test).**
+19. ✅ **Feature — bigger HUDs + weaker visor + menu matches HUD look (done 2026-06-07; ✅ confirmed good in-game).**
    All four parts shipped (client-only; ~1.25× HUD, visor ~0.6, translucent menu, all chosen with the user):
    **(a) Bigger HUDs** — `UiKit.CreateCanvas`/`CreateDiegeticCanvas` take an optional reference resolution; the
    **HUD canvases** (person `HudUi` + `SpaceView` flight overlay) now use **1536×864** (`UiKit.HudRefW/HudRefH`)
@@ -1086,8 +1092,14 @@ only then implement. Items marked *(analysis only)* must NOT be implemented yet.
    you can never actually fly an EVA suit down onto one. **To do:** add asteroid galaxy bodies to the flight
    view's landables (+ the land/approach prompt) so the asteroid-only EVA-landing rule becomes usable. The
    `asteroid` planet type + its ore/terrain already generate; this is mostly wiring asteroids into the landables
-   + the descent. *(Decide: EVA-only on foot, or also ship-landable?)*
-25. **Full per-planet position memory (option b)** *(from item 6).* Today only the **last** planet's position is
+   + the descent. **Decision (user 2026-06-07): make asteroids landable *with the ship too* (like planets/moons),
+   not EVA-only** — so add asteroid bodies to the ship's `_landables` as well + allow `HandleLeaveSpace` ship-landing
+   on them.
+25. ⏭️ **SKIPPED (user 2026-06-07) — covered by item 6a + the fixed landing zone.** You already land at the same
+   persisted landing zone (with your ship) on every visit, and a reload restores your current body + position, so
+   a per-body position map adds little and would *separate you from your just-landed ship* on travel-back. Left
+   out by decision. *(Original below for reference.)*
+   **Full per-planet position memory (option b)** *(from item 6).* Today only the **last** planet's position is
    restored on load (`PlayerState.CurrentLocationId` + `Position`). Option b = keep a **per-body position map** so
    travelling **back** to a previously-visited body drops you where you left it (instead of the landing-zone
    spawn). **To do:** persist a `{ locationId → position }` map on the player snapshot; on arrival at a visited
@@ -1096,7 +1108,8 @@ only then implement. Items marked *(analysis only)* must NOT be implemented yet.
 26. **Intermediate ship tier** *(from item 16, Stage 4).* Stage 4 folded the new alloys/electronics onto the
    existing ships (starter/hauler/scout) but **deferred a genuinely new mid-tier ship** between them. **To do
    (data-only):** add 1–2 intermediate ships (stats + craftCost on the new materials + blueprint + bilingual
-   names + texture not needed since ships are voxel-built). Small + balance-driven.
+   names + texture not needed since ships are voxel-built). Small + balance-driven. **Decision (user 2026-06-07):
+   a balanced **corvette** between scout (fast/light) and hauler (slow/cargo) — mid hull/shield/cargo/speed.**
 27. **Already-listed future work (see "Not started / larger future work" near the end):** **W5 — poles**
    (bound latitude Z with an ice-wall/barrier biome; relates to item 18), **per-species/planet flora colour
    tint** (a `ChunkMesher` tint-UV pass, requested 2026-06-06), **texture audit**, **uGUI theme/icon polish**.
