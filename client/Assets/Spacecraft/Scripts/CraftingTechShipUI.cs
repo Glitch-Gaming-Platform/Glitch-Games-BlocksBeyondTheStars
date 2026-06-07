@@ -160,6 +160,10 @@ namespace Spacecraft.Client
             // Server feedback (craft/unlock/build result) — shown here since the HUD toast is hidden while a menu is open.
             _feedback = UiKit.AddText(root, 40, 1018, 1840, 30, string.Empty, 22, UiKit.Ok, TextAnchor.MiddleCenter, FontStyle.Bold);
 
+            // Top-most "visor glass" overlay: the HUD's helmet look (cyan rim glow + faint scanlines), no
+            // curvature, click-through — so the menu reads as inside the helmet without displacing its buttons.
+            VisorMenuGlass.Add(root);
+
             _built = true;
         }
 
