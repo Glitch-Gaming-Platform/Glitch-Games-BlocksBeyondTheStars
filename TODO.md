@@ -886,9 +886,42 @@ only then implement. Items marked *(analysis only)* must NOT be implemented yet.
    **Open scope questions → see chat.**
 17. **Task 6 — drastically more flora & fauna variety** (with generated textures + sounds). (Detailed below; big.)
 18. **Analysis only — make a world more spherical (vertical wrap too).** *(Analysis only — do NOT implement.)*
-   Analyse and estimate: how could the game be changed so a world can be circumnavigated **not only horizontally
-   but also vertically** — i.e. how to make a world behave **more like a sphere**. Assess what's **realistically
-   possible**, weighing **complexity and performance cost**. For now, just **estimate and analyse**.
+   Analyse and estimate: how could a world be circumnavigated **not only horizontally but also vertically** — more
+   like a sphere. Assess what's **realistically possible**, weighing **complexity and performance cost**.
+
+   ### Analysis + estimate (2026-06-07) — no implementation
+   **Today the world is a CYLINDER (proven by Task 2/2b):** X is a **wrapping longitude** (`WorldConstants.
+   Circumference`, per-body, seam-free via circular-domain noise `Noise.FbmCylX`/`ValueCylX`), the server wraps
+   the player's X and the client renders the nearest wrapped copy (`SceneX`); **Z (latitude) is NOT wrapped** —
+   it's bounded by an invisible **pole barrier** (`WorldConstants.LatitudeLimit`); **Y is unbounded**. Chunks are
+   3D, X-canonicalised in the chunk key. The **orbit/star-map view already draws bodies as spheres** (`BodySize-
+   Scale`/`OrbitDiameterFor`) — so the *space view is fine regardless*; only the **walkable surface topology** is
+   the question. ~30 sites depend on the wrap helpers (`WrapX`/`WrapDeltaX`/`Canonical*`/`WrapDistanceSquared`).
+
+   **Three realistic options (cheap → expensive):**
+   - **(A) Torus — wrap Z like X (cheapest, ~days).** Mirror the entire X-wrap machinery on Z: a `CircumferenceZ`,
+     circular noise in Z, Z-canonical chunk keys, `WrapDeltaZ`/`WrapDistance` over both axes, client `SceneZ`,
+     drop the pole barrier. You can then circle **both** ways seam-free. **Cost:** moderate, well-understood
+     (it's the X work again). **Perf:** identical to today. **Catch:** topologically a **donut, not a sphere** —
+     no poles; "south" loops straight back to "north". Functionally satisfies "circle vertically too", but it
+     isn't really spherical.
+   - **(B) Pole-pinch cylinder (moderate, ~1-2 weeks).** Keep the cylinder grid, but at the latitude limit the
+     player **crosses the pole** instead of hitting a wall: a coordinate transform flips them to the antipode
+     (X += half-circumference, Z direction reversed). Gives genuine **sphere-like traversal** (over the poles and
+     back) on the existing grid with **no grid rewrite**. **Perf:** identical (a transform at the seam). **Catch:**
+     the grid doesn't converge at the poles (a pole is a *line*, not a *point*), so there's a visible **pole-seam
+     line** + mild distortion near it; needs careful handling of movement/rendering/structures crossing the seam.
+   - **(C) True sphere — cubed-sphere voxel world (expensive, multi-month rewrite).** Map the surface to a
+     **cubed-sphere** (6 face-grids with edge seams) so longitude truly converges at poles. **Touches everything:**
+     chunk addressing, meshing, physics/movement, noise domain, persistence keys, structure stamping, the wrap
+     helpers — a near-total worldgen/engine rewrite. **Perf:** workable but heavier (face-seam handling, non-
+     uniform cells). **Verdict: not worth it** for this game's scope.
+
+   **Recommendation:** if "circumnavigate vertically too" is the goal, **(A) torus** is the pragmatic win
+   (cheap, zero perf cost, reuses the X machinery) — accept that it's a donut. **(B) pole-pinch** is the choice
+   if it must *feel* like a sphere (poles exist) and a ~1-2 week effort is acceptable. **(C) true sphere is out of
+   scope.** Either way the orbit/star-system view needs no change. *(Estimate only — confirm direction before any
+   build.)*
 19. **Feature — bigger HUD elements (requested 2026-06-07).** The player HUD elements (the **vitals/status bars,
    the hotbar, compass, etc.**) should be shown **larger**. Must stay **resolution-independent**: the user has a
    **high-resolution monitor** but it must also fit on **other resolutions**. *(Context: the HUD is built on a
