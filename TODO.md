@@ -1370,12 +1370,14 @@ Client-only. *Playtest wanted.*
   leave the interior by passing through the glass. NPC pathing/bounds don't treat the station hull/glass as a
   wall (glass is non-solid for movement, or NPCs aren't bounded to the interior). *Fix:* bound station NPCs to
   the interior (treat hull + glass as walls for them, or clamp them to the station's room).
-- **B15 update (red 2-block thing — new clues):** it **damages you on touch** and **can't be scanned**, **no
-  texture**. *(So it's most likely either **lava** — now more abundant after B19 — which deals contact damage,
-  isn't a scan target, and would read as glowing red, possibly with a missing/odd lava texture; or a **hostile
-  creature** with a failed hide texture. Damage-on-touch fits lava best.)* When tackled: confirm whether the
-  block at that spot is `lava` (a missing `lava` texture / odd 2-deep pool) vs a creature, then fix the texture/
-  render. Pairs with B21 (now the contact damage at least flashes "Burning — lava!").
+- **B15 update (red 2-block thing — now leaning "creature"):** it **damages you on touch** and **can't be
+  scanned**, **no texture**. **User's read (2026-06-07): it's a creature, not lava** — lava wouldn't spawn as a
+  lone two-block thing. So most likely a **hostile fauna creature** rendered **red** (hostile tint) with a
+  **failed/missing hide texture** (`CreatureBuilder.PickHide` returned null → untextured red material) and a
+  **minimal body** (e.g. ~2 stacked cubes: body + head, legs=0). The "can't scan" is the real puzzle — creatures
+  *should* be scannable (`GameServerScanning`), so either the scan missed it (range/aim) or this entity isn't a
+  normal creature. **When tackled:** make `PickHide` never return null (always fall back to a real hide so a
+  creature can't render as bare red cubes), give a sane minimal body, and check why the scan didn't catch it.
 Features: B7/B11. Rendering: B6/B8/B17/B20. B15/B19 need an in-engine look; B21 is the damage-feedback audit.)*
 
 ## 📋 More feature requests — 2026-06-07 (backlog only, analysis-first, not started)
