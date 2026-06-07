@@ -934,7 +934,31 @@ only then implement. Items marked *(analysis only)* must NOT be implemented yet.
      path to `cable`; new ores mine + smelt; content-load + locale-parity stay green.
 
    **Open scope questions → see chat.**
-17. **Task 6 — drastically more flora & fauna variety** (with generated textures + sounds). (Detailed below; big.)
+17. 🔄 **Task 6 — drastically more flora & fauna variety** (with generated textures + sounds). (Detailed below; big.)
+
+   ### Analysis (2026-06-07) — as-is + plan
+   **As-is (mapped):** Three deterministic-from-seed systems, all already fairly rich:
+   - **Flora = fixed archetypes.** 15 `flora_*` blocks (`data/blocks.json`) each with a host-surface list in
+     `FloraCatalog` + a 64² texture; `FloraGenerator` per world just coins a name + rolls toxic/active per
+     archetype (no per-world data). So **more flora variety = add archetypes** (block + `FloraCatalog` entry +
+     texture + bilingual name). `FloraTests` enforces every host surface keeps ≥1 active species (adding more is safe).
+   - **Fauna = fully procedural.** `CreatureGenerator` builds species from fields (habitat/temperament/size/legs/
+     wings/horns/segments/eyes/colour/glow + a **hide texture** from **12** grayscale tiles); `CreatureBuilder`
+     renders the blocky body + tints it. So **more fauna variety = more hide textures + richer generator rolls**.
+   - **Sound already has real recordings** (~112 clips in `client/Assets/Resources/audio/`): **12 signature creature
+     calls** (chirp/croak/growl/…) + **6 size×disposition voice banks × 5 states** + 6 biome ambiences; a procedural
+     synth is only the fallback. So **more fauna audio = add new call types** (1 ElevenLabs clip each, listed in
+     `CreatureView`) — the most-heard creature sound.
+   **Pipeline:** OpenAI textures via `gen_textures.py` (blocks/flora) + `gen_creatures.py` (grayscale hides) →
+   `bundle_textures.py` → `client/Assets/Resources/textures/*.bytes`; ElevenLabs via `gen_sound.py` →
+   `client/Assets/Resources/audio/*.mp3` (auto-loaded by key). Guards: `FloraTests`, `CreatureTests`,
+   locale-parity, content-load.
+   **Plan:** (1) **+ new flora archetypes** — new `flora_*` blocks across biomes (palm/moss/succulent/pitcher/
+   puffball/lichen/coral/sporepod…), each block + `FloraCatalog` hosts + OpenAI texture + DE/EN name; (2) **+ new
+   creature hide textures** — new grayscale tiles + add them to `CreatureBuilder`'s hide-selection pools so the
+   procedural creatures actually use them; (3) **+ new creature calls** — new ElevenLabs call clips added to
+   `CreatureView`'s call list (and optionally a wider colour/body roll in `CreatureGenerator`). Test + build + commit.
+   **Scope/counts to confirm with the user before generating.**
 18. **Analysis only — make a world more spherical (vertical wrap too).** *(Analysis only — do NOT implement.)*
    Analyse and estimate: how could a world be circumnavigated **not only horizontally but also vertically** — more
    like a sphere. Assess what's **realistically possible**, weighing **complexity and performance cost**.
