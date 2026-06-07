@@ -77,5 +77,11 @@
 
   { "key": "steel_wall",   "station": "workshop", "inputs": [ { "item": "steel", "count": 1 } ],  "outputs": [ { "item": "steel_wall", "count": 4 } ] },
   { "key": "bronze_block", "station": "workshop", "inputs": [ { "item": "bronze", "count": 2 } ], "outputs": [ { "item": "bronze_block", "count": 1 } ] },
-  { "key": "brass_block",  "station": "workshop", "inputs": [ { "item": "brass", "count": 2 } ],  "outputs": [ { "item": "brass_block", "count": 1 } ] }
+  { "key": "brass_block",  "station": "workshop", "inputs": [ { "item": "brass", "count": 2 } ],  "outputs": [ { "item": "brass_block", "count": 1 } ] },
+
+  { "key": "workbench",   "station": "workshop", "inputs": [ { "item": "iron_plate", "count": 4 }, { "item": "steel", "count": 1 } ], "outputs": [ { "item": "workbench", "count": 1 } ] },
+  { "key": "forge",       "station": "workshop", "inputs": [ { "item": "stone", "count": 6 }, { "item": "iron_plate", "count": 4 } ],  "outputs": [ { "item": "forge", "count": 1 } ] },
+  { "key": "steel_floor", "station": "workshop", "inputs": [ { "item": "steel", "count": 1 } ],                                      "outputs": [ { "item": "steel_floor", "count": 4 } ] },
+  { "key": "metal_panel", "station": "workshop", "inputs": [ { "item": "iron_plate", "count": 2 } ],                                 "outputs": [ { "item": "metal_panel", "count": 4 } ] },
+  { "key": "concrete",    "station": "hand",     "inputs": [ { "item": "stone", "count": 4 }, { "item": "sand", "count": 1 } ],      "outputs": [ { "item": "concrete", "count": 4 } ] }
 ]

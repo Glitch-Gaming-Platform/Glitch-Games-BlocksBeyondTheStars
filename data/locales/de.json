@@ -669,5 +669,17 @@
   "item.reactor_fuel.name": "Reaktorbrennstoff",
   "item.carbide.name": "Karbidspitze",
   "item.magnet.name": "Magnet",
-  "item.light_alloy.name": "Leichtmetall"
+  "item.light_alloy.name": "Leichtmetall",
+  "block.workbench.name": "Werkbank",
+  "item.workbench.name": "Werkbank",
+  "item.workbench.desc": "Platziere sie, um Werkstatt-Rezepte auf einer Welt zu fertigen — ohne Schiff.",
+  "block.forge.name": "Schmiede",
+  "item.forge.name": "Schmiede",
+  "item.forge.desc": "Platziere sie, um auf einer Welt zu verhütten und zu raffinieren — ohne Schiff.",
+  "block.steel_floor.name": "Stahlboden",
+  "item.steel_floor.name": "Stahlboden",
+  "block.metal_panel.name": "Metallpaneel",
+  "item.metal_panel.name": "Metallpaneel",
+  "block.concrete.name": "Beton",
+  "item.concrete.name": "Beton"
 }

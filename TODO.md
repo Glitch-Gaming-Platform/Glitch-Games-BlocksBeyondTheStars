@@ -854,8 +854,13 @@ only then implement. Items marked *(analysis only)* must NOT be implemented yet.
      (e.g. steel = iron+carbon, bronze = copper+tin, electronics = silver/gold+silicate, battery cells from
      lithium, alloy plates) that gate the existing advanced items, turning the flat tree into clear stages; rework
      unlock/recipe costs to use them; rebalance the data_fragment/knowledge economy.
-   - **Stage 3 — Buildable world objects.** New place-able functional/decorative blocks for building on worlds
-     (per the "what objects" question) + their recipes/textures.
+   - ✅ **Stage 3 — Buildable world objects (done 2026-06-07).** New placeable blocks for base-building on
+     worlds: a **workbench** (enables **workshop** crafting when you stand near it, no ship needed) and a
+     **forge** (enables **refinery** crafting) — `StationAvailable` now also accepts a placed station block via
+     `NearStationBlock` (3-block reach) — plus decorative building blocks (**steel_floor**, **metal_panel**,
+     **concrete**). Each = block + item + generated texture + recipe + bilingual name. **Tested:** `WorkbenchTests`
+     (workbench→workshop, forge→refinery on a world without the ship) — 356 green. Client + bundled server rebuilt.
+     *(Storage crate + placeable door remain for a Stage 3b follow-up.)*
    - **Stage 4 — Ship parts & ships** folded onto the new materials (alloys for hulls, electronics for modules),
      with intermediate ship tiers.
    - Tests at each stage: every recipe input/unlock cost is obtainable; no dead-end outputs; every planet has a

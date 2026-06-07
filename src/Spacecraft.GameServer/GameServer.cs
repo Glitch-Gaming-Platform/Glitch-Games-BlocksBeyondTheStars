@@ -1973,9 +1973,15 @@ public sealed partial class GameServer
             return MarketAvailable(player); // barter trade console — no module needed
         }
 
+        // Off the ship, a placed workbench/forge enables crafting on a world — base-building (Task 5 Stage 3).
         if (!player.AboardShip)
         {
-            return false;
+            return station switch
+            {
+                CraftingStation.Workshop => NearStationBlock(player, "workbench"),
+                CraftingStation.Refinery => NearStationBlock(player, "forge"),
+                _ => false,
+            };
         }
 
         var moduleKey = station switch
@@ -1987,6 +1993,37 @@ public sealed partial class GameServer
         };
 
         return moduleKey.Length > 0 && _ship.HasModule(moduleKey);
+    }
+
+    /// <summary>True when a placed crafting-station block (workbench/forge) sits within reach of the player,
+    /// so they can craft at a base on a world without being aboard the ship (Task 5 Stage 3).</summary>
+    private bool NearStationBlock(Shared.State.PlayerState player, string blockKey)
+    {
+        if (_content.GetBlock(blockKey) is not { } def || def.NumericId.Value == 0)
+        {
+            return false;
+        }
+
+        ushort id = def.NumericId.Value;
+        int px = (int)System.Math.Floor(player.Position.X);
+        int py = (int)System.Math.Floor(player.Position.Y);
+        int pz = (int)System.Math.Floor(player.Position.Z);
+        const int reach = 3;
+        for (int dx = -reach; dx <= reach; dx++)
+        {
+            for (int dy = -2; dy <= 2; dy++)
+            {
+                for (int dz = -reach; dz <= reach; dz++)
+                {
+                    if (_world.GetBlock(new Shared.Geometry.Vector3i(px + dx, py + dy, pz + dz)).Value == id)
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
     }
 
     /// <summary>

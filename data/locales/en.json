@@ -664,5 +664,17 @@
   "item.reactor_fuel.name": "Reactor Fuel",
   "item.carbide.name": "Carbide Bit",
   "item.magnet.name": "Magnet",
-  "item.light_alloy.name": "Light Alloy"
+  "item.light_alloy.name": "Light Alloy",
+  "block.workbench.name": "Workbench",
+  "item.workbench.name": "Workbench",
+  "item.workbench.desc": "Place it to craft workshop recipes on a world, away from your ship.",
+  "block.forge.name": "Forge",
+  "item.forge.name": "Forge",
+  "item.forge.desc": "Place it to smelt and refine on a world, away from your ship.",
+  "block.steel_floor.name": "Steel Floor",
+  "item.steel_floor.name": "Steel Floor",
+  "block.metal_panel.name": "Metal Panel",
+  "item.metal_panel.name": "Metal Panel",
+  "block.concrete.name": "Concrete",
+  "item.concrete.name": "Concrete"
 }

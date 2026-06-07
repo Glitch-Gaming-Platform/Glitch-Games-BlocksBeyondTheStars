@@ -80,6 +80,12 @@ TEXTURES = [
     ("steel_wall", "brushed steel sci-fi wall plate with panel seams and bolts"),
     ("bronze_block", "polished bronze metal block with a warm golden-brown sheen"),
     ("brass_block", "polished brass metal block with a bright yellow-gold sheen"),
+    # Task 5 Stage 3 — buildable world objects (placeable functional + decorative blocks).
+    ("workbench", "a sci-fi metal workbench worktop with hand tools, a vice and scattered parts, top-down"),
+    ("forge", "a stone and metal forge furnace with glowing orange molten metal inside, top-down"),
+    ("steel_floor", "an industrial steel floor grating panel with diamond tread plate, top-down"),
+    ("metal_panel", "a riveted dark metal wall panel with seams and bolts, top-down"),
+    ("concrete", "a plain light grey concrete surface with a subtle rough texture, top-down"),
 ]
 
 

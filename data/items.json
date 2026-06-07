@@ -107,5 +107,11 @@
 
   { "key": "steel_wall",   "nameKey": "item.steel_wall.name",   "category": "block", "maxStack": 99, "placesBlock": "steel_wall" },
   { "key": "bronze_block", "nameKey": "item.bronze_block.name", "category": "block", "maxStack": 99, "placesBlock": "bronze_block" },
-  { "key": "brass_block",  "nameKey": "item.brass_block.name",  "category": "block", "maxStack": 99, "placesBlock": "brass_block" }
+  { "key": "brass_block",  "nameKey": "item.brass_block.name",  "category": "block", "maxStack": 99, "placesBlock": "brass_block" },
+
+  { "key": "workbench",   "nameKey": "item.workbench.name",   "category": "block", "maxStack": 99, "placesBlock": "workbench",   "descriptionKey": "item.workbench.desc" },
+  { "key": "forge",       "nameKey": "item.forge.name",       "category": "block", "maxStack": 99, "placesBlock": "forge",       "descriptionKey": "item.forge.desc" },
+  { "key": "steel_floor", "nameKey": "item.steel_floor.name", "category": "block", "maxStack": 99, "placesBlock": "steel_floor" },
+  { "key": "metal_panel", "nameKey": "item.metal_panel.name", "category": "block", "maxStack": 99, "placesBlock": "metal_panel" },
+  { "key": "concrete",    "nameKey": "item.concrete.name",    "category": "block", "maxStack": 99, "placesBlock": "concrete" }
 ]

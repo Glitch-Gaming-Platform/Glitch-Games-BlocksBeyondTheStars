@@ -58,5 +58,11 @@
 
   { "key": "steel_wall",    "nameKey": "block.steel_wall.name",    "hardness": 3.2, "requiredTool": "drill", "minToolTier": 1, "drops": [ { "item": "steel_wall", "count": 1 } ] },
   { "key": "bronze_block",  "nameKey": "block.bronze_block.name",  "hardness": 2.8, "requiredTool": "drill", "minToolTier": 1, "drops": [ { "item": "bronze_block", "count": 1 } ] },
-  { "key": "brass_block",   "nameKey": "block.brass_block.name",   "hardness": 2.8, "requiredTool": "drill", "minToolTier": 1, "drops": [ { "item": "brass_block", "count": 1 } ] }
+  { "key": "brass_block",   "nameKey": "block.brass_block.name",   "hardness": 2.8, "requiredTool": "drill", "minToolTier": 1, "drops": [ { "item": "brass_block", "count": 1 } ] },
+
+  { "key": "workbench",    "nameKey": "block.workbench.name",    "hardness": 2.5, "requiredTool": "drill", "minToolTier": 1, "drops": [ { "item": "workbench", "count": 1 } ] },
+  { "key": "forge",        "nameKey": "block.forge.name",        "hardness": 3.0, "requiredTool": "drill", "minToolTier": 1, "emission": 0.6, "drops": [ { "item": "forge", "count": 1 } ] },
+  { "key": "steel_floor",  "nameKey": "block.steel_floor.name",  "hardness": 2.5, "requiredTool": "drill", "minToolTier": 1, "drops": [ { "item": "steel_floor", "count": 1 } ] },
+  { "key": "metal_panel",  "nameKey": "block.metal_panel.name",  "hardness": 2.8, "requiredTool": "drill", "minToolTier": 1, "drops": [ { "item": "metal_panel", "count": 1 } ] },
+  { "key": "concrete",     "nameKey": "block.concrete.name",     "hardness": 2.0, "requiredTool": "drill", "minToolTier": 1, "drops": [ { "item": "concrete", "count": 1 } ] }
 ]
