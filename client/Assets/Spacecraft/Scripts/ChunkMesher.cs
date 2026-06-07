@@ -266,7 +266,9 @@ namespace Spacecraft.Client
                 case "flora_emberbloom": return 0.95f;
                 case "data_cache": return 0.90f;
                 case "flora_glowcap": return 0.85f;
+                case "flora_glowvine": return 0.80f;
                 case "flora_crystal": return 0.70f;
+                case "flora_sporepod": return 0.55f;
                 case "crystal": return 0.50f;
                 case "flora_frostflower": return 0.40f;
                 case "copper_ore": return 0.28f;

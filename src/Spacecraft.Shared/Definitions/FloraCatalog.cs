@@ -40,5 +40,27 @@ public static class FloraCatalog
         new Species("flora_emberbloom",  new[] { "basalt" }),
         // Crystalline (crystal/stone/basalt).
         new Species("flora_crystal",     new[] { "crystal", "stone", "basalt" }),
+
+        // --- Task 6: more variety ---
+        // Temperate / jungle greenery.
+        new Species("flora_palm",        new[] { "grass", "sand" }),
+        new Species("flora_orchid",      new[] { "grass", "mud" }),
+        new Species("flora_bellflower",  new[] { "grass" }),
+        new Species("flora_glowvine",    new[] { "grass", "mud" }),       // bioluminescent (see ChunkMesher.GlowFor)
+        // Stony / rocky.
+        new Species("flora_moss",        new[] { "stone", "dirt" }),
+        new Species("flora_sporepod",    new[] { "crystal", "stone" }),   // faintly glowing
+        // Desert.
+        new Species("flora_succulent",   new[] { "sand" }),
+        new Species("flora_thornbush",   new[] { "sand", "dirt" }),
+        // Swamp / wetland.
+        new Species("flora_pitcher",     new[] { "mud", "grass" }),
+        new Species("flora_puffball",    new[] { "mud", "dirt" }),
+        // Harsh worlds.
+        new Species("flora_lichen",      new[] { "ice", "stone" }),
+        new Species("flora_ashweed",     new[] { "basalt" }),
+        // Aquatic — coral reefs + seagrass on the seabed.
+        new Species("flora_coral",       new[] { "sand", "stone" }, Aquatic: true),
+        new Species("flora_seagrass",    new[] { "sand", "dirt", "mud" }, Aquatic: true),
     };
 }

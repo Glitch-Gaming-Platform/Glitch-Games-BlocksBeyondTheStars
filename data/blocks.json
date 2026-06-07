@@ -67,5 +67,19 @@
   { "key": "concrete",     "nameKey": "block.concrete.name",     "hardness": 2.0, "requiredTool": "drill", "minToolTier": 1, "drops": [ { "item": "concrete", "count": 1 } ] },
   { "key": "crate",        "nameKey": "block.crate.name",        "hardness": 1.6, "requiredTool": "none",  "minToolTier": 0, "drops": [ { "item": "crate", "count": 1 } ] },
   { "key": "door_hinge",   "nameKey": "block.door_hinge.name",   "hardness": 1.5, "requiredTool": "none",  "minToolTier": 0, "drops": [ { "item": "door_hinge", "count": 1 } ] },
-  { "key": "door_slide",   "nameKey": "block.door_slide.name",   "hardness": 1.5, "requiredTool": "none",  "minToolTier": 0, "drops": [ { "item": "door_slide", "count": 1 } ] }
+  { "key": "door_slide",   "nameKey": "block.door_slide.name",   "hardness": 1.5, "requiredTool": "none",  "minToolTier": 0, "drops": [ { "item": "door_slide", "count": 1 } ] },
+  { "key": "flora_palm",      "nameKey": "block.flora_palm.name",      "hardness": 0.4, "requiredTool": "none", "minToolTier": 0, "drops": [ { "item": "plant_fiber", "count": 2 } ] },
+  { "key": "flora_moss",      "nameKey": "block.flora_moss.name",      "hardness": 0.2, "requiredTool": "none", "minToolTier": 0, "drops": [ { "item": "plant_fiber", "count": 1 } ] },
+  { "key": "flora_orchid",    "nameKey": "block.flora_orchid.name",    "hardness": 0.2, "requiredTool": "none", "minToolTier": 0, "drops": [ { "item": "plant_fiber", "count": 1 }, { "item": "berries", "count": 1 } ] },
+  { "key": "flora_succulent", "nameKey": "block.flora_succulent.name", "hardness": 0.4, "requiredTool": "none", "minToolTier": 0, "drops": [ { "item": "plant_fiber", "count": 1 }, { "item": "berries", "count": 1 } ] },
+  { "key": "flora_pitcher",   "nameKey": "block.flora_pitcher.name",   "hardness": 0.3, "requiredTool": "none", "minToolTier": 0, "drops": [ { "item": "plant_fiber", "count": 1 }, { "item": "berries", "count": 1 } ] },
+  { "key": "flora_puffball",  "nameKey": "block.flora_puffball.name",  "hardness": 0.2, "requiredTool": "none", "minToolTier": 0, "drops": [ { "item": "plant_fiber", "count": 1 } ] },
+  { "key": "flora_lichen",    "nameKey": "block.flora_lichen.name",    "hardness": 0.2, "requiredTool": "none", "minToolTier": 0, "drops": [ { "item": "plant_fiber", "count": 1 } ] },
+  { "key": "flora_coral",     "nameKey": "block.flora_coral.name",     "hardness": 1.4, "requiredTool": "none", "minToolTier": 0, "drops": [ { "item": "crystal", "count": 1 } ] },
+  { "key": "flora_seagrass",  "nameKey": "block.flora_seagrass.name",  "hardness": 0.3, "requiredTool": "none", "minToolTier": 0, "drops": [ { "item": "plant_fiber", "count": 2 } ] },
+  { "key": "flora_sporepod",  "nameKey": "block.flora_sporepod.name",  "hardness": 0.3, "requiredTool": "none", "minToolTier": 0, "drops": [ { "item": "plant_fiber", "count": 1 }, { "item": "crystal", "count": 1 } ] },
+  { "key": "flora_thornbush", "nameKey": "block.flora_thornbush.name", "hardness": 0.5, "requiredTool": "none", "minToolTier": 0, "drops": [ { "item": "plant_fiber", "count": 2 } ] },
+  { "key": "flora_bellflower","nameKey": "block.flora_bellflower.name","hardness": 0.2, "requiredTool": "none", "minToolTier": 0, "drops": [ { "item": "plant_fiber", "count": 1 }, { "item": "berries", "count": 1 } ] },
+  { "key": "flora_ashweed",   "nameKey": "block.flora_ashweed.name",   "hardness": 0.4, "requiredTool": "none", "minToolTier": 0, "drops": [ { "item": "plant_fiber", "count": 1 } ] },
+  { "key": "flora_glowvine",  "nameKey": "block.flora_glowvine.name",  "hardness": 0.3, "requiredTool": "none", "minToolTier": 0, "drops": [ { "item": "plant_fiber", "count": 1 }, { "item": "crystal", "count": 1 } ] }
 ]

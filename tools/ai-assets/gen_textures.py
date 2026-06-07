@@ -61,6 +61,21 @@ TEXTURES = [
     # Aquatic flora (the planet flora tint re-colours these on the client; the tile gives the pattern).
     ("flora_kelp", "tall ribbon-like green seaweed kelp blades swaying underwater, top-down"),
     ("flora_lily", "round flat green lily pads floating on water with a small white blossom, top-down"),
+    # Task 6 — more flora variety.
+    ("flora_palm", "small tropical palm plant with broad green fan fronds, top-down"),
+    ("flora_moss", "soft green moss patch carpeting rock with tiny fronds, top-down"),
+    ("flora_orchid", "exotic purple and pink orchid blossoms on slender green stems, top-down"),
+    ("flora_succulent", "fleshy green rosette succulent plant like aloe and agave, top-down"),
+    ("flora_pitcher", "carnivorous pitcher plant with red-veined tubular traps, top-down"),
+    ("flora_puffball", "cluster of round pale puffball mushrooms on a swamp floor, top-down"),
+    ("flora_lichen", "crusty pale grey-green lichen growth spreading on frosty rock, top-down"),
+    ("flora_coral", "branching pink and orange coral reef growth, top-down"),
+    ("flora_seagrass", "tufts of bright green underwater seagrass blades on the seabed, top-down"),
+    ("flora_sporepod", "bulbous alien spore pods with a faint glowing teal sheen, top-down"),
+    ("flora_thornbush", "spiky tangled thorn bush with dark twigs and small leaves, top-down"),
+    ("flora_bellflower", "drooping clusters of blue and violet bell-shaped flowers, top-down"),
+    ("flora_ashweed", "scorched grey-black volcanic weed with brittle ashen stalks, top-down"),
+    ("flora_glowvine", "bioluminescent glowing green-cyan vine with luminous leaves in the dark, top-down"),
     # Task 5 — new metal / rare-earth / raw-resource ores (grey host rock with the metal's veins).
     ("gold_ore", "grey stone with bright shiny yellow gold ore veins"),
     ("silver_ore", "grey stone with bright metallic silver-white ore veins"),
@@ -87,6 +102,8 @@ TEXTURES = [
     ("metal_panel", "a riveted dark metal wall panel with seams and bolts, top-down"),
     ("concrete", "a plain light grey concrete surface with a subtle rough texture, top-down"),
     ("crate", "a sci-fi metal storage crate container box with a hinged lid and corner latches, top-down"),
+    ("door_hinge", "a closed metal hinged door panel set in a frame, with a round handle and visible hinges, front view"),
+    ("door_slide", "a closed sci-fi sliding blast door with a centre seam and glowing status light, front view"),
 ]
 
 
