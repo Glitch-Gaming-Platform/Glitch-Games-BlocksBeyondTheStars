@@ -257,8 +257,8 @@ namespace Spacecraft.Client
         /// <summary>Last server feedback line (craft result / rejection / message) for a HUD toast.</summary>
         public string LastMessage { get; private set; } = string.Empty;
 
-        /// <summary>The last cell the player tried to mine (set by the controller) — used to annotate a mine
-        /// rejection with what the CLIENT believes is there, to diagnose client↔server block desyncs (B32).</summary>
+        /// <summary>The last cell the player tried to mine (set by the controller) — if the server rejects the
+        /// dig as already-empty, the client clears its ghost block there to heal a stale chunk view (B32).</summary>
         public Vector3Int LastMineCell;
 
         /// <summary>The item key in a personal inventory slot, or empty if none.</summary>
@@ -400,24 +400,20 @@ namespace Spacecraft.Client
             Network.ActionRejected += m =>
             {
                 Debug.Log($"Action '{m.Action}' rejected: {m.Reason}");
-                if (m.Action == "mine")
+                LastMessage = $"{m.Action}: {m.Reason}";
+
+                // The server is authoritative: if a dig is rejected because the cell is "already empty", the
+                // client's view of it is stale — a ghost block (a cell some server path cleared to air without a
+                // broadcast the client applied). Clear it directly so the phantom vanishes at once and the next
+                // dig hits whatever is actually behind it, instead of "mining" a block that isn't there (B32).
+                if (m.Action == "mine" && !string.IsNullOrEmpty(m.Reason) && m.Reason.Contains("empty")
+                    && World != null)
                 {
                     var c = LastMineCell;
-                    string clientKey = Content?.BlockById(World?.GetBlock(c.x, c.y, c.z) ?? default)?.Key ?? "?";
-                    LastMessage = $"{m.Reason}  tgt({c.x},{c.y},{c.z})=client:{clientKey}  pos({Mathf.FloorToInt(PlayerPosition.x)},{Mathf.FloorToInt(PlayerPosition.y)},{Mathf.FloorToInt(PlayerPosition.z)})";
-
-                    // The server says this cell is empty — it's authoritative, so clear the client's ghost block
-                    // here directly (don't wait on a re-stream). If the cell really was the visible block, the
-                    // phantom vanishes and the next dig hits whatever is actually behind it (B32).
-                    if (!string.IsNullOrEmpty(m.Reason) && m.Reason.Contains("empty")
-                        && World != null && World.ApplyBlockChange(c.x, c.y, c.z, 0, out var ghostCoord))
+                    if (World.ApplyBlockChange(c.x, c.y, c.z, 0, out var ghostCoord))
                     {
                         _dirty.Add(ghostCoord);
                     }
-                }
-                else
-                {
-                    LastMessage = $"{m.Action}: {m.Reason}";
                 }
             };
             Network.ServerMessageReceived += m => { Debug.Log(m.Text); LastMessage = m.Text; };

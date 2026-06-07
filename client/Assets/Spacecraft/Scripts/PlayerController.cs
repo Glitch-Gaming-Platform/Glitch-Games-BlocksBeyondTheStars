@@ -547,7 +547,7 @@ namespace Spacecraft.Client
             if (Time.time >= _nextDrillMine)
             {
                 _nextDrillMine = Time.time + 0.28f; // slower, weightier mining (was 0.18)
-                Game.LastMineCell = hitCell; // diagnostic: annotate a possible "already empty" rejection (B32)
+                Game.LastMineCell = hitCell; // so an "already empty" rejection can clear the ghost here (B32)
                 Game.Network?.SendMine(hitCell.x, hitCell.y, hitCell.z);
             }
         }
@@ -1034,7 +1034,7 @@ namespace Spacecraft.Client
 
             if (mine)
             {
-                Game.LastMineCell = hitCell; // diagnostic: annotate a possible "already empty" rejection (B32)
+                Game.LastMineCell = hitCell; // so an "already empty" rejection can clear the ghost here (B32)
                 Game.Network.SendMine(hitCell.x, hitCell.y, hitCell.z);
                 TriggerSwing();
             }

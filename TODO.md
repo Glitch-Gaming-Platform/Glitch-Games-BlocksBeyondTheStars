@@ -1489,6 +1489,14 @@ Client-only. *Playtest wanted.*
   immediately AND drops the chunk from the session's `SentChunks` so `StreamChunks` re-sends the current chunk next
   tick — every ghost in it vanishes. Robust against ANY desync source (not just stamps). 367 tests green; client
   build verified. *Follow-up if still seen: make the live re-stamps broadcast their clears so ghosts never form.*
+  **✅ RESOLVED 2026-06-07 (user-confirmed: "problem no longer occurs").** The server-side re-stream alone wasn't
+  enough (timing / a stale client chunk GameObject). The fix that worked: a **client-side ghost clear** — the
+  server is authoritative, so when a dig is rejected as **"already empty"**, the client now sets that cell to air
+  locally (+ remesh) using the last-mined cell (`GameBootstrap.ActionRejected` + `PlayerController.LastMineCell`).
+  The phantom block vanishes on the first dig and the next dig hits what's actually behind it. Kept the server
+  `ResyncStaleChunk` too (belt-and-suspenders). Root cause stands: structure **stamps** `SetBlock`-clear terrain
+  without a `BlockChanged` broadcast → stale already-streamed clients get ghost blocks; *optional hardening: have
+  live re-stamps broadcast their clears so ghosts never form in the first place.*
 - **B33 — Station NPC name labels show through onto the planet below. [VALID — reported 2026-06-07]** While on a
   planet surface, the player sees floating **NPC name overlays** for NPCs that are actually aboard a **space
   station orbiting above** (a different world/instance). The NPC name-label HUD/world-space text isn't scoped to
