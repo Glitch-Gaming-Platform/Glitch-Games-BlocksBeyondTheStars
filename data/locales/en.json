@@ -676,5 +676,10 @@
   "block.metal_panel.name": "Metal Panel",
   "item.metal_panel.name": "Metal Panel",
   "block.concrete.name": "Concrete",
-  "item.concrete.name": "Concrete"
+  "item.concrete.name": "Concrete",
+  "block.crate.name": "Storage Crate",
+  "item.crate.name": "Storage Crate",
+  "item.crate.desc": "Place it to stash items at a base: G to take, H to store.",
+  "ui.hud.stash": "Stash",
+  "ui.hud.stash_keys": "G take · H store"
 }

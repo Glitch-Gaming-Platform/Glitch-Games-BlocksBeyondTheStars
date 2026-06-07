@@ -1098,6 +1098,7 @@ public sealed partial class GameServer
             case SwitchShipIntent switchShip: HandleSwitchShip(session, switchShip); break;
             case ConsumeItemIntent consume: HandleConsume(session, consume); break;
             case LootContainerIntent loot: HandleLootContainer(session, loot); break;
+            case DepositContainerIntent dep: HandleDepositContainer(session, dep); break;
             case ShipMoveIntent shipMove: HandleShipMove(session, shipMove); break;
             case DisassembleIntent disassemble: HandleDisassemble(session, disassemble); break;
             case TradeRequestIntent tradeReq: HandleTradeRequest(session, tradeReq); break;
@@ -1290,6 +1291,15 @@ public sealed partial class GameServer
         }
     }
 
+    /// <summary>Places a block from a held item for a player (test/util entrypoint).</summary>
+    public void PlaceBlock(string playerId, int x, int y, int z, string itemKey)
+    {
+        if (FindSessionByPlayerId(playerId) is { } session)
+        {
+            HandlePlace(session, new PlaceBlockIntent { X = x, Y = y, Z = z, ItemKey = itemKey });
+        }
+    }
+
     /// <summary>Applies a single mining hit (for tests that need to observe per-hit progress).</summary>
     public void MineBlockOnce(string playerId, int x, int y, int z)
     {
@@ -1472,6 +1482,11 @@ public sealed partial class GameServer
         _world.SetBlock(pos, BlockId.Air);
         _miningProgress.Remove(pos);
 
+        if (def.Key == "crate")
+        {
+            RemoveCrateContainer(pos, pool); // mining a crate returns its stored contents (Task 5 Stage 3b)
+        }
+
         // A toxic flora species yields poisonous berries instead of edible ones (the scan warns which is which).
         bool toxicFlora = IsFlora(current.Value)
             && _floraSpeciesByBlock.TryGetValue(current.Value, out var fsp) && fsp.Toxic;
@@ -1610,6 +1625,11 @@ public sealed partial class GameServer
         }
 
         _world.SetBlock(pos, blockDef.NumericId);
+
+        if (blockDef.Key == "crate")
+        {
+            PlaceCrate(pos); // a placed storage crate becomes a lootable/stash-able container (Task 5 Stage 3b)
+        }
 
         BroadcastToWorld(new BlockChanged { X = pos.X, Y = pos.Y, Z = pos.Z, Block = blockDef.NumericId.Value });
         if (IsFluid(blockDef.NumericId.Value))

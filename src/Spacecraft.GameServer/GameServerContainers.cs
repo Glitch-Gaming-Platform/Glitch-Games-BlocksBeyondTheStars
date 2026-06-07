@@ -104,6 +104,92 @@ public sealed partial class GameServer
     private void HandleLootContainer(PlayerSession session, LootContainerIntent intent)
         => LootContainer(session.State.PlayerId, intent.ContainerId);
 
+    /// <summary>Stashes a player's loose raw/refined materials into a nearby storage crate (Task 5 Stage 3b):
+    /// every Material/Component stack moves in (tools/weapons/equipment stay with the player). Persisted.</summary>
+    public void DepositToContainer(string playerId, string containerId)
+    {
+        var session = FindSessionByPlayerId(playerId);
+        if (session is null)
+        {
+            return;
+        }
+
+        var container = _containers.FirstOrDefault(c => c.Id == containerId && c.Kind == "crate");
+        if (container is null)
+        {
+            Reject(session, "stash", "No such crate.");
+            return;
+        }
+
+        var center = new Vector3f(container.Position.X + 0.5f, container.Position.Y + 0.5f, container.Position.Z + 0.5f);
+        if (WrapDistSq(session.State.Position, center) > LootReach * LootReach)
+        {
+            Reject(session, "stash", "Crate is out of reach.");
+            return;
+        }
+
+        var inv = session.State.Inventory;
+        var toStash = new Dictionary<string, int>();
+        for (int i = 0; i < inv.SlotCount; i++)
+        {
+            if (inv.Slots[i] is { IsEmpty: false } s
+                && _content.GetItem(s.Item)?.Category is Shared.Definitions.ItemCategory.Material or Shared.Definitions.ItemCategory.Component)
+            {
+                toStash[s.Item] = (toStash.TryGetValue(s.Item, out var have) ? have : 0) + s.Count;
+            }
+        }
+
+        if (toStash.Count == 0)
+        {
+            Reject(session, "stash", "No loose materials to store.");
+            return;
+        }
+
+        var merged = container.Items.Where(s => !s.IsEmpty).ToDictionary(s => s.Item, s => s.Count);
+        foreach (var (item, count) in toStash)
+        {
+            inv.Remove(item, count);
+            merged[item] = (merged.TryGetValue(item, out var have) ? have : 0) + count;
+        }
+
+        container.Items = merged.Select(kv => new ItemStack(kv.Key, kv.Value)).ToList();
+        _repo.SaveContainer(container);
+        SendInventory(session);
+        BroadcastContainers();
+    }
+
+    private void HandleDepositContainer(PlayerSession session, DepositContainerIntent intent)
+        => DepositToContainer(session.State.PlayerId, intent.ContainerId);
+
+    /// <summary>Places a storage crate the player just built into the world as an (empty) lootable container.</summary>
+    private void PlaceCrate(Vector3i pos)
+        => AddContainer(new StoredContainer
+        {
+            Id = "crate_" + System.Guid.NewGuid().ToString("N"),
+            Planet = _world.LocationId,
+            Kind = "crate",
+            Position = pos,
+            Items = new List<ItemStack>(),
+        });
+
+    /// <summary>Mining a storage crate returns its stored contents to the miner and removes the container.</summary>
+    private void RemoveCrateContainer(Vector3i pos, MaterialPool pool)
+    {
+        if (_containers.FirstOrDefault(c => c.Kind == "crate" && c.Position.Equals(pos)) is not { } container)
+        {
+            return;
+        }
+
+        foreach (var s in container.Items.Where(s => !s.IsEmpty))
+        {
+            pool.Add(s.Item, s.Count);
+        }
+
+        _containers.Remove(container);
+        _repo.DeleteContainer(container.Id);
+        BroadcastContainers();
+    }
+
     private static NetContainer ToNetContainer(StoredContainer c) => new()
     {
         Id = c.Id,

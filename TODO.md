@@ -860,7 +860,13 @@ only then implement. Items marked *(analysis only)* must NOT be implemented yet.
      `NearStationBlock` (3-block reach) — plus decorative building blocks (**steel_floor**, **metal_panel**,
      **concrete**). Each = block + item + generated texture + recipe + bilingual name. **Tested:** `WorkbenchTests`
      (workbench→workshop, forge→refinery on a world without the ship) — 356 green. Client + bundled server rebuilt.
-     *(Storage crate + placeable door remain for a Stage 3b follow-up.)*
+   - ✅ **Stage 3b — Storage crate (done 2026-06-07).** A placeable **crate** is a persistent container for base
+     storage: placing it registers a container (reusing `StoredContainer`/`GameServerContainers`), **H stashes**
+     all your loose materials/components into the nearest crate (tools/weapons stay), **G takes** them back out
+     (existing loot path), and **mining** the crate returns its contents + the crate block. New
+     `DepositContainerIntent` (NetCodec **98**), `DepositToContainer`, place/mine hooks, a `PlaceBlock` test
+     entrypoint, and a crate-specific HUD prompt ("Stash · G take · H store"). Tested: `CrateStorageTests`
+     (stash-not-tools + take-back, mining returns contents) — **358 green**. *(Placeable door still a follow-up.)*
    - **Stage 4 — Ship parts & ships** folded onto the new materials (alloys for hulls, electronics for modules),
      with intermediate ship tiers.
    - Tests at each stage: every recipe input/unlock cost is obtainable; no dead-end outputs; every planet has a

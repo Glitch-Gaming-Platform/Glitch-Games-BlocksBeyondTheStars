@@ -478,7 +478,15 @@ namespace Spacecraft.Client
                 if (d < bestSq) { bestSq = d; nearest = c; }
             }
 
-            return nearest == null ? string.Empty : $"{loc.Get("ui.hud.loot")} ({nearest.ItemCount})";
+            if (nearest == null)
+            {
+                return string.Empty;
+            }
+
+            // A storage crate (Task 5 Stage 3b) shows the take/store keys; salvage capsules just say "loot".
+            return nearest.Kind == "crate"
+                ? $"{loc.Get("ui.hud.stash")} ({nearest.ItemCount})  ·  {loc.Get("ui.hud.stash_keys")}"
+                : $"{loc.Get("ui.hud.loot")} ({nearest.ItemCount})";
         }
 
         private bool HoldingScanner()

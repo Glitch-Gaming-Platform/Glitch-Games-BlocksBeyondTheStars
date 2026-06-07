@@ -113,5 +113,6 @@
   { "key": "forge",       "nameKey": "item.forge.name",       "category": "block", "maxStack": 99, "placesBlock": "forge",       "descriptionKey": "item.forge.desc" },
   { "key": "steel_floor", "nameKey": "item.steel_floor.name", "category": "block", "maxStack": 99, "placesBlock": "steel_floor" },
   { "key": "metal_panel", "nameKey": "item.metal_panel.name", "category": "block", "maxStack": 99, "placesBlock": "metal_panel" },
-  { "key": "concrete",    "nameKey": "item.concrete.name",    "category": "block", "maxStack": 99, "placesBlock": "concrete" }
+  { "key": "concrete",    "nameKey": "item.concrete.name",    "category": "block", "maxStack": 99, "placesBlock": "concrete" },
+  { "key": "crate",       "nameKey": "item.crate.name",       "category": "block", "maxStack": 99, "placesBlock": "crate", "descriptionKey": "item.crate.desc" }
 ]

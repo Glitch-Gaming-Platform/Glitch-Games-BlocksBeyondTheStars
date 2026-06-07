@@ -201,6 +201,11 @@ namespace Spacecraft.Client
                 LootNearestContainer();
             }
 
+            if (Input.GetKeyDown(KeyCode.H))
+            {
+                DepositToNearestCrate();
+            }
+
             if (Input.GetKeyDown(KeyCode.R))
             {
                 RepairWreckCell();
@@ -352,6 +357,38 @@ namespace Spacecraft.Client
             {
                 ClientAudio.Instance?.Cue("loot");
                 Game.Network.SendLootContainer(nearest);
+            }
+        }
+
+        /// <summary>Stash loose materials into the nearest storage crate (Task 5 Stage 3b).</summary>
+        private void DepositToNearestCrate()
+        {
+            if (Game?.Network == null)
+            {
+                return;
+            }
+
+            string nearest = null;
+            float bestSq = 6f * 6f;
+            foreach (var c in Game.Containers)
+            {
+                if (c.Kind != "crate")
+                {
+                    continue;
+                }
+
+                float d = (Game.ScenePos(c.X + 0.5f, c.Y + 0.5f, c.Z + 0.5f) - transform.position).sqrMagnitude;
+                if (d < bestSq)
+                {
+                    bestSq = d;
+                    nearest = c.Id;
+                }
+            }
+
+            if (nearest != null)
+            {
+                ClientAudio.Instance?.Cue("loot");
+                Game.Network.SendDepositContainer(nearest);
             }
         }
 

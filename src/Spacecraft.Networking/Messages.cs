@@ -178,6 +178,12 @@ public sealed class LootContainerIntent
     public string ContainerId { get; set; } = string.Empty;
 }
 
+/// <summary>Client stashes its loose materials into a nearby storage crate (Task 5 Stage 3b).</summary>
+public sealed class DepositContainerIntent
+{
+    public string ContainerId { get; set; } = string.Empty;
+}
+
 /// <summary>Client reports its ship's position while flying in space (server validates + checks collisions).</summary>
 public sealed class ShipMoveIntent
 {

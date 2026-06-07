@@ -122,6 +122,9 @@ public static class NetCodec
 
         // Client -> Server (item 11: knowledge trading).
         Register(97, typeof(TradeKnowledgeIntent));
+
+        // Client -> Server (Task 5 Stage 3b: storage crate deposit).
+        Register(98, typeof(DepositContainerIntent));
     }
 
     private static void Register(byte tag, Type type)

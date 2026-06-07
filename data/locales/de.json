@@ -681,5 +681,10 @@
   "block.metal_panel.name": "Metallpaneel",
   "item.metal_panel.name": "Metallpaneel",
   "block.concrete.name": "Beton",
-  "item.concrete.name": "Beton"
+  "item.concrete.name": "Beton",
+  "block.crate.name": "Lagerkiste",
+  "item.crate.name": "Lagerkiste",
+  "item.crate.desc": "Platziere sie zum Lagern an einer Basis: G nehmen, H einlagern.",
+  "ui.hud.stash": "Lager",
+  "ui.hud.stash_keys": "G nehmen · H einlagern"
 }

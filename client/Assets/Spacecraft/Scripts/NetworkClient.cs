@@ -163,6 +163,8 @@ namespace Spacecraft.Client
 
         public void SendLootContainer(string containerId) => Send(new LootContainerIntent { ContainerId = containerId });
 
+        public void SendDepositContainer(string containerId) => Send(new DepositContainerIntent { ContainerId = containerId });
+
         // --- Crashed-ship wreck repair / claim ---
         public void SendRepairWreck(int x, int y, int z, string itemKey)
             => Send(new RepairWreckIntent { X = x, Y = y, Z = z, ItemKey = itemKey });

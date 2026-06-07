@@ -86,6 +86,7 @@ TEXTURES = [
     ("steel_floor", "an industrial steel floor grating panel with diamond tread plate, top-down"),
     ("metal_panel", "a riveted dark metal wall panel with seams and bolts, top-down"),
     ("concrete", "a plain light grey concrete surface with a subtle rough texture, top-down"),
+    ("crate", "a sci-fi metal storage crate container box with a hinged lid and corner latches, top-down"),
 ]
 
 
