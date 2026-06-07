@@ -104,6 +104,7 @@ TEXTURES = [
     ("crate", "a sci-fi metal storage crate container box with a hinged lid and corner latches, top-down"),
     ("door_hinge", "a closed metal hinged door panel set in a frame, with a round handle and visible hinges, front view"),
     ("door_slide", "a closed sci-fi sliding blast door with a centre seam and glowing status light, front view"),
+    ("asteroid_rock", "a rough grey pitted space asteroid rock surface, cratered stony texture with mineral flecks, seamless"),
 ]
 
 

@@ -81,16 +81,19 @@ namespace Spacecraft.Client
             int eyes = Mathf.Clamp(c.Eyes, 0, 8);
             if (eyes > 0)
             {
-                var eyeMat = Unlit(c.Glows ? new Color(0.85f, 1f, 0.95f) : new Color(0.97f, 0.97f, 0.85f));
-                var pupilMat = Unlit(new Color(0.06f, 0.06f, 0.08f));
-                float eyeSize = unit * 0.24f * headScale;
+                // Rounded (sphere) eyes — bigger, with a dark pupil + a small white glint so they look glossy (B17).
+                var eyeMat = Unlit(c.Glows ? new Color(0.85f, 1f, 0.95f) : new Color(0.97f, 0.97f, 0.88f));
+                var pupilMat = Unlit(new Color(0.04f, 0.04f, 0.06f));
+                var glintMat = Unlit(Color.white);
+                float eyeSize = unit * 0.32f * headScale; // bigger (was 0.24)
                 float spread = unit * headScale * (0.30f + 0.05f * eyes); // wider span the more eyes there are
                 for (int e = 0; e < eyes; e++)
                 {
                     float fx = eyes == 1 ? 0f : Mathf.Lerp(-spread, spread, e / (float)(eyes - 1));
                     var pos = new Vector3(fx, unit * 0.16f * headScale, unit * 0.70f * headScale);
-                    AddPartTo(_headPivot, "Eye" + e, pos, Vector3.one * eyeSize, eyeMat);
-                    AddPartTo(_headPivot, "Pupil" + e, pos + new Vector3(0f, 0f, eyeSize * 0.45f), Vector3.one * (eyeSize * 0.5f), pupilMat);
+                    AddPartTo(_headPivot, "Eye" + e, pos, Vector3.one * eyeSize, eyeMat, PrimitiveType.Sphere);
+                    AddPartTo(_headPivot, "Pupil" + e, pos + new Vector3(0f, 0f, eyeSize * 0.42f), Vector3.one * (eyeSize * 0.55f), pupilMat, PrimitiveType.Sphere);
+                    AddPartTo(_headPivot, "Glint" + e, pos + new Vector3(eyeSize * 0.16f, eyeSize * 0.18f, eyeSize * 0.5f), Vector3.one * (eyeSize * 0.16f), glintMat, PrimitiveType.Sphere);
                 }
             }
 
@@ -200,9 +203,9 @@ namespace Spacecraft.Client
         }
 
         /// <summary>Adds a render-only cube parented to an arbitrary transform (e.g. eyes on the head pivot).</summary>
-        private void AddPartTo(Transform parent, string partName, Vector3 localPos, Vector3 scale, Material mat)
+        private void AddPartTo(Transform parent, string partName, Vector3 localPos, Vector3 scale, Material mat, PrimitiveType shape = PrimitiveType.Cube)
         {
-            var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var go = GameObject.CreatePrimitive(shape);
             go.name = partName;
             var col = go.GetComponent<Collider>();
             if (col != null)

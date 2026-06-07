@@ -2025,7 +2025,7 @@ namespace Spacecraft.Client
         private Material _asteroidMat; // shared stone material for the field's asteroids (rebuilt per view)
 
         private Material AsteroidMat()
-            => _asteroidMat ??= Lit(new Color(0.52f, 0.50f, 0.47f), LoadTex("stone"), new Vector2(2f, 2f));
+            => _asteroidMat ??= Lit(new Color(0.62f, 0.60f, 0.57f), LoadTex("asteroid_rock") ?? LoadTex("stone"), new Vector2(1.5f, 1.5f));
 
         /// <summary>Slowly tumbles an asteroid about a fixed random axis (purely cosmetic).</summary>
         private sealed class Spin : MonoBehaviour

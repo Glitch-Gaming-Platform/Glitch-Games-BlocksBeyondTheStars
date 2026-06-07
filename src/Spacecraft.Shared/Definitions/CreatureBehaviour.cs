@@ -57,9 +57,16 @@ public static class CreatureBehaviour
 
         if (dirX == 0 && dirZ == 0)
         {
-            // Slow wander along a per-creature drift direction.
-            dirX = System.Math.Cos(wanderPhase);
-            dirZ = System.Math.Sin(wanderPhase);
+            // Organic wander (B12): hold a hashed heading for ~a couple of seconds, then turn to a new one, with
+            // a gentle weave within each segment — so creatures roam the biome in varied directions instead of
+            // milling on the spot in tight circles (which is what a continuously-rotating drift produced).
+            double seg = System.Math.Floor(wanderPhase / 2.2);
+            double h = seg * 0.61803398875;            // golden-ratio hash → a fresh heading per segment
+            h -= System.Math.Floor(h);
+            double heading = h * 6.2831853 + System.Math.Sin(wanderPhase * 1.7) * 0.4;
+            dirX = System.Math.Cos(heading);
+            dirZ = System.Math.Sin(heading);
+            // fall through to the shared step below (|dir| == 1, so distance == speed*dt)
         }
 
         float step = (float)(speed * dt);

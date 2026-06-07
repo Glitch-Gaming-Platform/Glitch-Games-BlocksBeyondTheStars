@@ -1214,6 +1214,13 @@ village doors close again; ship hatch stays 1.8), B3 (place guard now only rejec
 pillar-jump by placing at your feet), B16 (right-click a held **consumable** → eat: wires up the existing
 `SendConsume` which was defined-but-never-called + a new ElevenLabs **eat** sound), B19 (volcanic lava abundance
 `0.55→0.7` so lava pools are higher/more visible). *Each still wants a playtest.*
+**✅ Fixed 2026-06-07 (medium batch, 365 green, built):** B2 (dedicated `asteroid_rock` OpenAI texture on the
+mineable rocks), B20 (avatar face made clearer — bigger eyes + a mouth; it already *had* eyes/visor, so the
+report was likely a pre-fix build), B17 (rounded **sphere** creature eyes — bigger, dark pupil + a white glint),
+B12 (organic **meandering** wander — hold a hashed heading per segment + weave, instead of milling in tight
+circles), B14 (weapon-aware attack animation — blade **slash arc**, gun **recoil**, else jab), B4 **partial**
+(ship editor: added **Hinged Door**, relabelled **Medbay → "Medbay (Heal-Tank)"** + "Sliding Door"). *Playtest
+wanted.* **B4 remainder + B22 still open** — see those entries.
 
 - **B1 — Creature sounds carry too far; should fade with distance, be silent when far. [VALID]**
   `ClientAudio.At` plays 3D at `minDistance 4`, `maxDistance 45` with Unity's default (logarithmic) rolloff →
@@ -1230,7 +1237,10 @@ pillar-jump by placing at your feet), B16 (right-click a held **consumable** →
   palette **does** include **Medbay** (the heal-tank) + a **Door** (door_slide) (`ShipEditor.cs:59-78`) — "no
   heal-tank" is a labelling/visibility issue. But newer placeables are missing (e.g. **crate**, **door_hinge**,
   workbench/forge, modules like refinery/detoxifier/oxygen_generator/cargo_hold_1). *Fix:* audit + complete the
-  ship palette, and do the same for the **station** + **settlement** editors.
+  ship palette, and do the same for the **station** + **settlement** editors. **Partly done 2026-06-07:** added
+  **Hinged Door** + relabelled Medbay/Door in the ship editor. **Remainder:** airlock/lab/console/crate in the
+  ship editor (needs an editor→stamp round-trip check that designed-ship station cells register correctly), and
+  the **station + settlement (structure) editors** audit.
 - **B5 — Stone (and other) mining still too fast. [VALID/tunable]** Stone `hardness 3.8` (`blocks.json`); the
   drill's mining power clears it quickly. *Fix:* raise stone + rock/metal hardness (and/or lower tool power) and
   rebalance the hardness table for a slower dig.
@@ -1301,7 +1311,8 @@ pillar-jump by placing at your feet), B16 (right-click a held **consumable** →
   `NearbyStation = "market"` and **E** calls `GameMenu.OpenMarket()`, which just opens the unified **crafting/tech
   menu on the "market" category** (`GameMenu.cs:69` — its own comment flags the "crafting list instead of the
   vendor's trade view" issue), not a dedicated barter screen. *Fix:* give the vendor its own trade/barter screen
-  (or a clearly trade-only view) instead of the crafting menu.
+  (or a clearly trade-only view) instead of the crafting menu. *(Deferred from the medium batch — it's a
+  medium-**large** new UI; do it as its own focused task.)*
 - **B23 — Station doors don't auto-open/close; open radius too large. [VALID — not fixed by the hatch change]**
   Station slide doors are registered via `RegisterStationDoors → MakeDoor("slide", …)` with the **default
   `SlideDoorOpenRange = 4.5`**; the per-door tighter range from the ship-hatch fix (1.8) was applied **only** to

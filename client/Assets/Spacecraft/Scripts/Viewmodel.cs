@@ -141,14 +141,32 @@ namespace Spacecraft.Client
             var rot = RestEuler;
             var posOff = RestPos + bob;
 
-            // Swing: a quick forward/down jab that eases back.
+            // Attack pose — shaped by the held item (B14): blades slash in an arc, guns kick back, the rest jab.
             if (_swingTimer > 0f)
             {
                 _swingTimer -= dt;
                 float t = 1f - Mathf.Clamp01(_swingTimer / SwingDuration);
                 float jab = Mathf.Sin(Mathf.Clamp01(t) * Mathf.PI); // 0→1→0
-                posOff += new Vector3(-0.05f, -0.06f, 0.12f) * jab;
-                rot += new Vector3(55f * jab, -8f * jab, 0f);
+
+                if (_kind == HeldItem.Kind.Blade)
+                {
+                    // A diagonal slash: the blade arcs down + sweeps across (yaw) with a wrist roll.
+                    posOff += new Vector3(0.11f - 0.22f * t, -0.10f * jab, 0.08f * jab);
+                    rot += new Vector3(62f * jab, Mathf.Lerp(34f, -34f, t), -42f * jab);
+                }
+                else if (_kind == HeldItem.Kind.Gun)
+                {
+                    // A sharp recoil kick: snap back + up fast, then settle.
+                    float kick = Mathf.Sin(Mathf.Clamp01(t) * Mathf.PI * 0.5f) * (1f - t);
+                    posOff += new Vector3(0f, 0.045f * kick, -0.11f * kick);
+                    rot += new Vector3(-24f * kick, 0f, 0f);
+                }
+                else
+                {
+                    // Tools / drill / block: a forward-down jab.
+                    posOff += new Vector3(-0.05f, -0.06f, 0.12f) * jab;
+                    rot += new Vector3(55f * jab, -8f * jab, 0f);
+                }
             }
 
             _holder.localPosition = posOff;
