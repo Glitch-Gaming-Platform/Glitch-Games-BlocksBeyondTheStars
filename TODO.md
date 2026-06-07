@@ -1007,10 +1007,17 @@ only then implement. Items marked *(analysis only)* must NOT be implemented yet.
    if it must *feel* like a sphere (poles exist) and a ~1-2 week effort is acceptable. **(C) true sphere is out of
    scope.** Either way the orbit/star-system view needs no change. *(Estimate only — confirm direction before any
    build.)*
-19. 🔄 **Feature — bigger HUDs + weaker visor + menu matches HUD look (requested 2026-06-07; in progress).**
-   Make **all** HUDs **larger** (person view **and** space/flight view), keep them **resolution-independent**;
-   make the **visor effect weaker** ("nicht ganz so stark"); and give the **in-game menu the same look & feel as
-   the HUDs**.
+19. ✅ **Feature — bigger HUDs + weaker visor + menu matches HUD look (done 2026-06-07; needs in-engine test).**
+   All four parts shipped (client-only; ~1.25× HUD, visor ~0.6, translucent menu, all chosen with the user):
+   **(a) Bigger HUDs** — `UiKit.CreateCanvas`/`CreateDiegeticCanvas` take an optional reference resolution; the
+   **HUD canvases** (person `HudUi` + `SpaceView` flight overlay) now use **1536×864** (`UiKit.HudRefW/HudRefH`)
+   so ScaleWithScreenSize draws them **~1.25× larger**, while the **menu stays at 1920×1080** (its absolute layout
+   intact). Expand match mode keeps it fitting 16:9/ultrawide/4K. **(b) Weaker visor** — base `_Intensity` 1→**0.6**
+   (preset 0.5→0.4) plus softer `_Curvature` 0.11→0.07, `_Chroma` 0.022→0.011, `_Reflect` 0.14→0.10, `_RimIntensity`
+   0.2→0.13 (glow/opacity kept for readability). **(c) Menu look** — the menu backdrop alpha **0.96→0.6** so it
+   reads as a translucent holographic overlay over the world/HUD (panels already use the HUD cyan palette); kept
+   flat (not routed through the visor — that would misalign clicks). Client rebuilt. *(Exact magnitudes want a
+   playtest — all are single constants, easy to nudge.)*
    ### Analysis (2026-06-07)
    - **HUD sizing.** All UI uses `UiKit` `CanvasScaler` ScaleWithScreenSize, **ref 1920×1080**, match=Expand.
      `HudUi` (person HUD, **diegetic** → visor RT) positions right/bottom elements with **absolute** `W/H=1920/1080`
@@ -1042,12 +1049,12 @@ only then implement. Items marked *(analysis only)* must NOT be implemented yet.
    non-voxel `SpaceInstance`** (asteroids/entities + a parked ship), **not a placeable voxel world** — so
    "placing blocks in space" needs either a buildable voxel volume in the flight/EVA view or a different model
    (e.g. build the station in a void world, then register + persist it as a new boardable body in the system).
-21. **Feature — loading screens always show + stay readable ≥3s (requested 2026-06-07).** The **landing/transition
-   loading screens** (landing on a **station** and on a **planet**) should **always appear** (not be skipped when a
-   load is fast) and stay **on screen for at least ~3 seconds** so the text on them can actually be read. *(So:
-   enforce a **minimum display time** on the landing/planet-arrival loading screen — show it even when the world is
-   already cached/instant, and hold it ≥3s before handing control back. Check both the station-board and the
-   planet-landing transitions use the same minimum.)*
+21. ✅ **Feature — loading screens always show + stay readable ≥3s (done 2026-06-07; needs in-engine test).**
+   `WorldLoadingOverlay` (the shared planet-landing + station-board veil) used to **skip** when the world was
+   already ready (fast/cached load) and only held `MinShow=0.7s`. Removed the skip-when-ready early return so the
+   veil **always** raises after the descent, and set **`MinShow=3.0s`** so it stays up long enough to read on both
+   transitions (`WorldReady` now only gates the fade-out, with the 25s safety cap unchanged). Client rebuilt.
+   *(Done together with item 19.)*
 22. **Analysis + plan — immersive tutorial / onboarding mode (requested 2026-06-07).** *(ANALYSIS + PLAN ONLY —
    do NOT implement yet.)* Design how a **tutorial mode** could **introduce a new player**: in-game **tips** that
    teach the **basic functions** (move/look, mine, place, craft at a station/workbench, inventory/hotbar, the suit

@@ -18,7 +18,7 @@ namespace Spacecraft.Client
 
         private const int DotCount = 12;       // spinner dots around the ring
         private const float Ring = 30f;        // spinner radius (reference units)
-        private const float MinShow = 0.7f;    // never just flash, even if the world is ready instantly
+        private const float MinShow = 3.0f;    // always hold the screen long enough to read it (planet + station)
         private const float MaxShow = 25f;     // hard safety: drop the veil even if "ready" never arrives
         private const float FadeIn = 0.30f;
         private const float FadeOut = 0.55f;
@@ -80,12 +80,9 @@ namespace Spacecraft.Client
 
                 _armed = false;
 
-                // If the surface streamed in during the descent there's nothing to hide — skip the veil.
-                if (Game != null && Game.WorldReady && _active == false)
-                {
-                    return;
-                }
-
+                // Always raise the veil (even if the surface already streamed in during the descent) so the
+                // landing/boarding screen is reliably shown + readable for ~MinShow seconds, not skipped on a
+                // fast/cached load. The minimum-on-screen time below holds it; WorldReady only gates the fade-out.
                 EnsureBuilt();
                 RefreshLabels();
                 _t = 0f;

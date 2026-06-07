@@ -15,7 +15,7 @@ namespace Spacecraft.Client
         public GameBootstrap Game;
 
         private const int Slots = 9;
-        private const float W = 1920f, H = 1080f;
+        private const float W = UiKit.HudRefW, H = UiKit.HudRefH; // smaller reference → a ~1.25× bigger HUD
 
         private static readonly Color Health = new Color(0.92f, 0.32f, 0.34f);
         private static readonly Color Oxygen = new Color(0.36f, 0.78f, 1f);
@@ -79,7 +79,7 @@ namespace Spacecraft.Client
                 return;
             }
 
-            _canvas = UiKit.CreateDiegeticCanvas("HudUI"); // routed through the visor HUD camera when active
+            _canvas = UiKit.CreateDiegeticCanvas("HudUI", W, H); // routed through the visor HUD camera when active
             _canvas.sortingOrder = 10;
             var root = _canvas.transform;
 

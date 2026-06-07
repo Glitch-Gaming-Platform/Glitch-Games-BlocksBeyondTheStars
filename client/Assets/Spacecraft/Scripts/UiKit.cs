@@ -101,9 +101,9 @@ namespace Spacecraft.Client
         /// <summary>Creates a canvas for the **diegetic HUD**: routed through the visor HUD camera (so the
         /// <c>Spacecraft/Visor</c> pass can curve/glow it) when that pipeline is up, otherwise a normal
         /// screen-space overlay. Menus/dialogs must keep using <see cref="CreateCanvas"/> (stay flat).</summary>
-        public static Canvas CreateDiegeticCanvas(string name)
+        public static Canvas CreateDiegeticCanvas(string name, float refW = 1920f, float refH = 1080f)
         {
-            var canvas = CreateCanvas(name);
+            var canvas = CreateCanvas(name, refW, refH);
             if (HudCamera != null && HudLayer >= 0)
             {
                 canvas.renderMode = RenderMode.ScreenSpaceCamera;
@@ -116,7 +116,11 @@ namespace Spacecraft.Client
             return canvas;
         }
 
-        public static Canvas CreateCanvas(string name)
+        // The HUD canvases use a smaller reference than the 1920×1080 menus, so ScaleWithScreenSize draws the
+        // same layout ~1.25× bigger (more readable on high-res monitors) while Expand keeps it fitting any aspect.
+        public const float HudRefW = 1536f, HudRefH = 864f;
+
+        public static Canvas CreateCanvas(string name, float refW = 1920f, float refH = 1080f)
         {
             if (Object.FindFirstObjectByType<EventSystem>() == null)
             {
@@ -130,7 +134,7 @@ namespace Spacecraft.Client
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             var scaler = go.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.referenceResolution = new Vector2(refW, refH);
             // Expand = scale by the smaller of the width/height ratios, so the whole 1920x1080 layout
             // always fits (no right-edge overflow on non-16:9 / high-res monitors); extra space is margin.
             scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand;

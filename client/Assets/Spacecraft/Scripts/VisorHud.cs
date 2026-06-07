@@ -25,12 +25,12 @@ namespace Spacecraft.Client
         private Vector3 _lastEuler;
         private Vector2 _parallax;
         private bool _active;
-        private float _intensity = 1f;
+        private float _intensity = 0.6f; // subtler visor effect by default (was 1.0 — user: "nicht ganz so stark")
 
         /// <summary>Always-on, just gentler under the reduced-effects / low-end preset.</summary>
         public void ApplyPreset(QualityPreset preset, bool reducedEffects)
         {
-            _intensity = reducedEffects ? 0.5f : 1f;
+            _intensity = reducedEffects ? 0.4f : 0.6f;
             if (_composite != null)
             {
                 _composite.Intensity = _intensity;
@@ -239,17 +239,17 @@ namespace Spacecraft.Client
 
             _mat.SetTexture("_HudTex", Hud);
             _mat.SetFloat("_Intensity", Intensity);
-            _mat.SetFloat("_Curvature", 0.11f);   // outward-curved visor bow
-            _mat.SetFloat("_Chroma", 0.022f);     // chromatic edge fringing
+            _mat.SetFloat("_Curvature", 0.07f);   // outward-curved visor bow (softened)
+            _mat.SetFloat("_Chroma", 0.011f);     // chromatic edge fringing (softened)
             _mat.SetFloat("_ScanCount", Mathf.Max(120f, Hud.height * 0.5f));
             _mat.SetFloat("_VisorTime", _time);
             _mat.SetVector("_Parallax", new Vector4(Parallax.x, Parallax.y, 0f, 0f));
             _mat.SetFloat("_Aspect", src.height > 0 ? (float)src.width / src.height : 1.78f);
             _mat.SetFloat("_HudOpacity", 0.97f);
             _mat.SetFloat("_Glow", 0.9f);         // emissive hologram glow
-            _mat.SetFloat("_Reflect", 0.14f);     // faint visor reflection of the world
+            _mat.SetFloat("_Reflect", 0.10f);     // faint visor reflection of the world (softened)
             _mat.SetColor("_RimColor", new Color(0.4f, 0.85f, 1f, 1f));
-            _mat.SetFloat("_RimIntensity", 0.2f); // visor glass edge glow
+            _mat.SetFloat("_RimIntensity", 0.13f); // visor glass edge glow (softened)
             Graphics.Blit(src, dst, _mat, 0);
         }
 

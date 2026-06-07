@@ -136,8 +136,9 @@ namespace Spacecraft.Client
             _canvas.sortingOrder = 50;
             var root = _canvas.transform;
 
-            // Full-screen dim backdrop.
-            UiKit.AddImage(root, 0, 0, W, H, UiKit.SolidSprite, new Color(0.02f, 0.04f, 0.08f, 0.96f));
+            // Full-screen dim backdrop — translucent so the world/HUD shows through (holographic-overlay look,
+            // matching the diegetic HUD) rather than a solid modal; still dark enough to keep panels readable.
+            UiKit.AddImage(root, 0, 0, W, H, UiKit.SolidSprite, new Color(0.02f, 0.04f, 0.08f, 0.6f));
 
             UiKit.AddLogo(root, 40, 14, 360, 40, "SPACECRAFT", 22);
 

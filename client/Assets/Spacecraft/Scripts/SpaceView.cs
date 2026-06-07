@@ -1565,7 +1565,7 @@ namespace Spacecraft.Client
                 return;
             }
 
-            _ui = UiKit.CreateCanvas("Space View Overlay");
+            _ui = UiKit.CreateCanvas("Space View Overlay", UiKit.HudRefW, UiKit.HudRefH); // ~1.25× bigger flight HUD
             _ui.sortingOrder = 12; // above the space HUD, below menus
 
             // Full-screen launch/landing fade.
