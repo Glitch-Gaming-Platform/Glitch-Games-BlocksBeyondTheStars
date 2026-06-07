@@ -1329,6 +1329,24 @@ wanted.* **B4 remainder + B22 still open** — see those entries.
   so "red dot" reliably means "enemy ship there". *(Relates to B21's missing on-foot feedback — the space HUD's
   contact cues are thin.)*
 
+### Third batch (reported 2026-06-07)
+- **B25 — Avatar has no face in the avatar editor; the in-game colour menu shows no avatar at all. [VALID]**
+  Two parts: **(a)** the standalone **avatar editor** (`AvatarEditor.cs`) renders the avatar but with **no face**
+  — it likely builds the body without the eyes/visor that `PlayerAvatar` now adds (B20), so its preview is blank;
+  align it with `PlayerAvatar`'s faced build. **(b)** the **in-game menu** section where you set your figure's
+  colours shows **no avatar preview at all** — add a live avatar preview there (rotating model), **with a face**,
+  so you can see your colour choices on the actual figure. *Fix:* share one faced avatar-build path between
+  `PlayerAvatar`, the avatar editor, and a new in-game colour-menu preview.
+- **B26 — Water can't be scanned, and you don't sink in / can't swim. [VALID/regression?]** Two issues: **(a)**
+  scanning a **water** block returns nothing (scanning targets creatures + ore/blocks — water may be excluded);
+  **(b)** the player **doesn't sink into / swim in** water — but **swimming was shipped in Task 1** (the chunk
+  collider excludes fluids so you sink + Jump=rise). So either a **regression** (the fluid-excluded collision
+  mesh isn't taking effect), or this world's "water" isn't generating as a real fluid (basins only flood below
+  the sea level — B7), or the body of water is too shallow to sink into. *Investigate:* confirm `ChunkMesher`
+  still excludes fluids from the collider + that the world actually has water (vs only sea-level basins, B7);
+  then make water scannable (a sensible scan result) + verify swimming. *(Possibly the same root as B7 — water
+  is sparse/sea-level-only.)*
+
 *(All recorded only — none fixed yet, per the user. Quick tunables: B1/B5/B9/B10/B13/B18 (done), B9-style B23.
 Features: B7/B11. Rendering: B6/B8/B17/B20. B15/B19 need an in-engine look; B21 is the damage-feedback audit.)*
 
