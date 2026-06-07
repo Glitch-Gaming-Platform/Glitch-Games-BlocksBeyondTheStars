@@ -1266,6 +1266,13 @@ Client-only. *Playtest wanted.*
     opaque queue → no GraphicsSettings always-include needed). Shader compiles clean; client build verified.
   - *Playtest:* check crown/bush density + whether distant foliage thins too much (alpha-test + mips); tune
     `--hole` (bake) or `_LeafCutoff` (shader) if so.
+  - **Follow-up 2026-06-07 (first build still looked solid):** three fixes — (1) **atlas overflow**: the block
+    atlas was only 8×8 = 64 tiles but `data/blocks.json` has **80 blocks**, so every block id ≥ 64 (newer flora +
+    doors) got an untextured grey, alpha-less tile (also no cutout). Bumped to **16×16** (256 slots). (2) Holes
+    were baked from the darkest *single pixels* → scattered sub-pixel specks that mip-average back to opaque;
+    re-baked on a **coarse 16×16 grid** so holes are chunky, visible gaps. (3) Reverted the "draw faces toward
+    foliage" culling back to a **thin shell**, so the holes show the sky/world BEHIND the tree (a dense volume
+    just showed more leaves through the holes → read as solid).
 - **B7 — How often is there water; lakes/ponds or only seas? [INVESTIGATED — only seas]** `WorldGenerator.
   ResolveSeaFluid` floods basins to **one global sea level** (`waterAbundance` default 0.55; no planet overrides),
   so worlds have **seas (flooded valleys)** but **no isolated lakes/ponds**. *Fix (feature):* add noise-pocket

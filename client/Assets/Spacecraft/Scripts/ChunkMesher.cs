@@ -135,11 +135,12 @@ namespace Spacecraft.Client
                     int nx = wx + dir.X, ny = wy + dir.Y, nz = wz + dir.Z;
                     var nb = worldBlock(nx, ny, nz);
                     // Opaque blocks hide faces behind solid neighbours but still draw faces behind glass/
-                    // fields (so you see the wall through the window) and behind cutout foliage (so you see
-                    // leaf layers + the block behind through the holes). See-through blocks only draw their
+                    // fields (so you see the wall through the window). See-through blocks only draw their
                     // faces toward open air — that culls glass↔glass seams + the hidden side against a wall.
-                    bool nbSeeThrough = nb.IsAir || IsTransparent(content, nb) || IsFoliageBlock(content, nb);
-                    bool drawFace = transparent ? nb.IsAir : nbSeeThrough;
+                    // Foliage is meshed as a thin shell (culled against its own kind), so the cutout holes in
+                    // the near leaf faces show the sky/world BEHIND the tree — a clearly see-through crown,
+                    // not a dense volume whose holes just reveal more leaves.
+                    bool drawFace = transparent ? nb.IsAir : (nb.IsAir || IsTransparent(content, nb));
                     if (!drawFace)
                     {
                         continue; // face hidden

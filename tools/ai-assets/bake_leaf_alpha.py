@@ -46,7 +46,7 @@ def leafiness(r: int, g: int, b: int) -> float:
     return lum * 0.75 + sat * 0.25
 
 
-def bake(key: str, hole: float, band: float) -> str:
+def bake(key: str, hole: float, grid: int) -> str:
     path = RES / f"{key}.bytes"
     if not path.exists():
         return f"--- {key}: no bundled tile, skipped"
@@ -56,41 +56,53 @@ def bake(key: str, hole: float, band: float) -> str:
         return f"!!! {key}: unexpected size {len(data)} (want {TILE*TILE*4}), skipped"
 
     img = Image.frombytes("RGBA", (TILE, TILE), data)  # raw layout preserved (we don't re-flip)
-    px = list(img.getdata())
+    px = img.load()
 
-    scores = sorted(leafiness(r, g, b) for r, g, b, _ in px)
-    cutoff = scores[min(len(scores) - 1, int(len(scores) * hole))]  # darkest `hole` fraction → holes
+    # Compute the mask on a COARSE grid so holes are chunky, connected gaps (visible at a distance + after
+    # mip-mapping) instead of scattered single pixels that just average back to opaque. Each coarse cell's
+    # leafiness is the mean over its block; the darkest `hole` fraction of cells become fully transparent.
+    cell = max(1, TILE // grid)
+    cells = []
+    for cy in range(0, TILE, cell):
+        for cx in range(0, TILE, cell):
+            tot, cnt = 0.0, 0
+            for y in range(cy, min(cy + cell, TILE)):
+                for x in range(cx, min(cx + cell, TILE)):
+                    r, g, b, _ = px[x, y]
+                    tot += leafiness(r, g, b)
+                    cnt += 1
+            cells.append((cx, cy, tot / cnt))
 
-    out = []
+    cutoff = sorted(s for _, _, s in cells)[min(len(cells) - 1, int(len(cells) * hole))]
+
     transparent = 0
-    for r, g, b, _ in px:
-        s = leafiness(r, g, b)
-        # Soft step around the cutoff for a slightly anti-aliased edge; near-binary so the cutout stays crisp.
-        a = 0.0 if s <= cutoff - band else (1.0 if s >= cutoff + band else (s - (cutoff - band)) / (2 * band))
-        ai = int(round(a * 255))
-        if ai < 128:
-            transparent += 1
-        out.append((r, g, b, ai))  # RGB untouched → normal atlas stays clean
+    for cx, cy, s in cells:
+        a = 0 if s <= cutoff else 255  # binary per coarse cell → crisp chunky leaf gaps
+        for y in range(cy, min(cy + cell, TILE)):
+            for x in range(cx, min(cx + cell, TILE)):
+                r, g, b, _ = px[x, y]
+                px[x, y] = (r, g, b, a)  # RGB untouched → normal atlas stays clean
+                if a == 0:
+                    transparent += 1
 
-    img.putdata(out)
     path.write_bytes(img.tobytes())
 
     OUT.mkdir(parents=True, exist_ok=True)  # also drop a viewable PNG for the record (un-flip for normal viewing)
     img.transpose(Image.FLIP_TOP_BOTTOM).save(OUT / f"{key}.png")
 
-    return f"ok  {key}: {transparent}/{len(px)} px transparent ({100*transparent/len(px):.0f}% holes)"
+    return f"ok  {key}: {transparent}/{TILE*TILE} px transparent ({100*transparent//(TILE*TILE)}% holes, {grid}x{grid} cells)"
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Bake alpha-cutout holes into foliage block tiles.")
     ap.add_argument("--hole", type=float, default=0.34, help="target transparent fraction per tile (0..1)")
-    ap.add_argument("--band", type=float, default=0.05, help="soft-edge half-width around the cutoff")
+    ap.add_argument("--grid", type=int, default=16, help="coarse mask resolution (NxN); lower = chunkier holes")
     ap.add_argument("--key", action="append", help="only bake this key (repeatable); default = all foliage")
     args = ap.parse_args()
 
     keys = args.key if args.key else FOLIAGE
     for k in keys:
-        print(bake(k, args.hole, args.band))
+        print(bake(k, args.hole, args.grid))
 
 
 if __name__ == "__main__":
