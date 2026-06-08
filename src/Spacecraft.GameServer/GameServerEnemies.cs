@@ -132,11 +132,26 @@ public sealed partial class GameServer
         Reject(session, "attack", "No such target.");
     }
 
+    private const double MeleeCooldown = 1.5;                       // melee weapons swing at most this often (B44)
+    private readonly Dictionary<string, double> _meleeReadyAt = new(); // playerId → uptime the next melee swing is allowed
+
     private void AttackCombatEntity(PlayerSession session, CombatEntity target, List<CombatEntity> list, bool isCreature)
     {
         var p = session.State;
         var tool = ActiveTool(p);
         bool isWeapon = tool.Kind == ToolKind.Weapon;
+
+        // A melee weapon (e.g. the machete: a weapon with no per-shot energy cost) swings on a cooldown, so it
+        // can't be spammed — one hit per MeleeCooldown seconds (B44). Ranged energy weapons gate on suit energy.
+        if (isWeapon && tool.EnergyPerUse <= 0f)
+        {
+            if (_meleeReadyAt.TryGetValue(p.PlayerId, out var readyAt) && _uptime < readyAt)
+            {
+                return; // still on cooldown — ignore the swing (no reject spam)
+            }
+
+            _meleeReadyAt[p.PlayerId] = _uptime + MeleeCooldown;
+        }
 
         // A ranged weapon's longer reach extends the default; a melee weapon never *reduces* it below the
         // default swing reach (the client targets any creature within EnemyAttackReach, so a short melee

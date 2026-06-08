@@ -179,7 +179,7 @@ public sealed class UniverseGenerator
     /// system units are scaled down ~0.16×): a planet needs the widest berth, a small asteroid the least.</summary>
     private static (float X, float Z) SeparateFromBodies(StarSystem system, float x, float z)
     {
-        for (int iter = 0; iter < 16; iter++)
+        for (int iter = 0; iter < 24; iter++)
         {
             bool moved = false;
             foreach (var b in system.Bodies)
@@ -225,10 +225,12 @@ public sealed class UniverseGenerator
     /// <summary>Minimum spawn distance (system-disc units) a free-floater must keep from a body of this kind.</summary>
     private static float BodyClearance(CelestialKind kind) => kind switch
     {
-        CelestialKind.Planet => 300f,
-        CelestialKind.Moon => 185f,
-        CelestialKind.AsteroidField => 150f,
-        _ => 110f,
+        // Generous berths so a station never visually clips a body in the flight view (B50: stations were still
+        // sticking in planets) — the rendered body radius can exceed the old margins, so give extra room.
+        CelestialKind.Planet => 470f,
+        CelestialKind.Moon => 290f,
+        CelestialKind.AsteroidField => 215f,
+        _ => 160f,
     };
 
     private string PickPlanetType(DeterministicRandom rng)

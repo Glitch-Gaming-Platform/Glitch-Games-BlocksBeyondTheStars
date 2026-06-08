@@ -363,11 +363,13 @@ public sealed partial class GameServer
         }
 
         var body = _galaxy?.FindBody(intent.DestinationBodyId);
-        if (body is null || (body.Kind != CelestialKind.Planet && body.Kind != CelestialKind.Moon) || string.IsNullOrEmpty(body.PlanetType))
+        if (body is null
+            || (body.Kind != CelestialKind.Planet && body.Kind != CelestialKind.Moon && body.Kind != CelestialKind.AsteroidField)
+            || string.IsNullOrEmpty(body.PlanetType))
         {
-            // Planets AND moons are landable surfaces (the space view offers both); stations/belts/wrecks
-            // are not "travel" destinations (you dock/visit those differently).
-            Reject(session, "travel", "You can only land on a planet or moon.");
+            // Planets, moons AND landable asteroids are surfaces you land on (B45); stations/belts/wrecks are
+            // not "travel" destinations (you dock/visit those differently).
+            Reject(session, "travel", "You can only land on a planet, moon or asteroid.");
             return;
         }
 
@@ -402,6 +404,11 @@ public sealed partial class GameServer
 
         // Stamp this player's own ship into the destination world before placing them.
         SetCurrent(session);
+        if (_ship is not null)
+        {
+            _ship.CurrentLocationId = body.Id; // keep the ship's body in sync so a later launch rises off THIS body (B48)
+        }
+
         if (_config.PlaceStarterShip)
         {
             StampShip();
@@ -635,7 +642,10 @@ public sealed partial class GameServer
 
             // On an EVA spacewalk there is no atmosphere and no ship/station life support: always drain,
             // regardless of the body you launched from being breathable. InEva overrides everything below.
-            bool lifeSupport = !p.InEva && (p.AboardShip || InStation(p.PlayerId) || !Rules.OxygenEnabled);
+            // Standing physically inside the landed ship's cabin counts as life support too — a sealed cabin
+            // gives air even on an airless planet, so you never suffocate inside your own ship (B41b).
+            bool insideShip = !p.InEva && ShipInteriorContains(p.Position);
+            bool lifeSupport = !p.InEva && (p.AboardShip || insideShip || InStation(p.PlayerId) || !Rules.OxygenEnabled);
             // Submerged underwater the suit runs on its own air, even on a breathable world — diving spends
             // the oxygen tank just like a toxic/airless atmosphere does (the extractor can't pull from water).
             bool submerged = !lifeSupport && !p.InEva && HeadUnderwater(p);

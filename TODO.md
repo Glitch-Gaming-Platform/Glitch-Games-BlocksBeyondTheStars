@@ -1715,6 +1715,75 @@ Client-only. *Playtest wanted.*
   "planet in front"). *Plan when tackled (with playtest):* at the start of `Phase.Landing`/`Launch`, reorient so
   the **actual target body** is directly beneath the ship and pitch the camera down to keep it framed; needs the
   landing-target body position threaded into `UpdateSequence`. Deferred so it can be tuned against the real view.
+
+### Reported-bug batch (2026-06-08, after item 38) — B41–B52
+- **B41 — Player-ship hatch sits *lengthwise* inside the ship (not parallel to / at the opening); + suffocated
+  inside the ship on an airless planet. [TODO]** Two issues on the player's own landed ship: **(a)** the hatch
+  door is oriented wrong — it should sit **at the doorway opening, parallel to it**, but renders **along the ship's
+  length** inside the cabin. **(b)** On a planet with **no atmosphere/oxygen**, the player **suffocated inside the
+  ship** — the sealed cabin should supply breathable air (oxygen refill / no drain) like a suit-safe space. Where:
+  `GameServerShipStructure` (hatch door placement/axis) + the oxygen/suffocation logic vs. "inside ship interior".
+- **B42 — Wood (tree trunk / `wood_log`) must not be hand-mineable. [TODO]** Currently `wood_log` can be mined by
+  hand; it should require a tool (axe/drill tier). Fix: set its `requiredTool`/`minToolTier` in `blocks.json` so
+  bare hands can't harvest it.
+- **B43 — Underwater, the deep↔shallow water boundary draws a water *surface* texture at the block edge. [TODO]**
+  Where deep (swimmable) water meets shallow (non-swimmable) water, the client mesher draws a **water-surface face
+  at the vertical block edge** that shouldn't be there when the player is **underwater**. Fix: in the client
+  `ChunkMesher` water-face logic, don't emit the surface face at a water↔water depth seam (only at the true
+  air/water top). Client rendering.
+- **B44 — Machete needs a 1.5 s cooldown. [TODO]** The melee machete can be swung with no rate limit. Add a
+  **1.5 s** attack cooldown (server-side melee cooldown, like the gadget cooldowns).
+- **B45 — Can't land on asteroids: "you can only land on a planet or moon." [TODO]** Landing on a (landable)
+  asteroid is refused by `HandleTravel`'s body-kind check (only Planet/Moon accepted). Asteroids ARE landable
+  (item 24/33) — allow `CelestialKind.Asteroid` (with a `PlanetType`) as a land destination.
+- **B46 — Bottomless world: removed a few blocks and fell forever. [TODO]** Worlds need a **depth limit** with an
+  **unmineable bottom layer**: **lava** at the very bottom on **planets**, **solid rock** on **asteroids/moons**.
+  The last layer must **not be mineable**. Where: `WorldGenerator` (emit a floor/bedrock at min-Y) + mining
+  (reject mining the bottom layer / bedrock). Relates to the void-fall self-heal (a real floor prevents the fall).
+- **B47 — How does the player open settlement wooden (hinge) doors? [TODO]** Settlement hinge doors should be
+  **player-openable**. Check the interact flow: `HandleDoorInteract` (E) toggles hinge doors within `HingeDoorReach`,
+  and the client `DoorView.NearestHinge` + the E handler — confirm settlement hinge doors are reachable + the prompt
+  shows, and fix if they can't be opened.
+- **B48 — Launching from a moon takes off over the *start planet*, not the moon. [TODO]** After landing on a moon
+  and launching again, the take-off / flight view shows the **home/start planet** below, not the moon you launched
+  from. The launch location (`EnterSpace` `locationId` / `_ship.CurrentLocationId`) isn't the current body. Fix the
+  per-player launch-from-current-body so you rise off the **moon** you're on.
+- **B49 — Flying the ship into a small (mineable) asteroid: instant destruction, no explosion VFX/sound. [TODO]**
+  Ramming a small mineable asteroid with the ship currently **destroys it instantly** and the player **respawns**
+  with no effect. **B56 (clarification):** the collision should NOT instantly destroy the ship — it should take
+  **shield damage**, or **hull damage** once the shield is gone/absent — only destroyed (with explosion VFX +
+  sound) when the hull actually reaches 0. Where: the space collision/damage path (`GameServerSpaceCombat`
+  `ApplyShipDamage` / `ShipCollisionMaxDamage`/`Factor` — too high, one-shots) + the ship-loss VFX/audio
+  (`DeathFx` flash + a missing explosion sound).
+- **B50 — Space stations can still stick inside planets. [TODO]** Despite B29's keep-out, orbital stations still
+  sometimes **overlap a planet/large body**. Re-audit station placement vs. body radius + keep-out margin in the
+  system layout (`GameServerSpaceStations` / the galaxy body positions).
+- **B51 — Some of the player's own ship blocks are still mineable when landed on a planet. [TODO]** `IsShipBlock`
+  should protect every stamped hull cell, but some ship blocks can still be mined on a planet. Audit the ship-stamp
+  bounds vs. `IsShipBlock` (footprint/height, the energy-door cells, multi-block parts) so no hull cell is mineable.
+- **B52 — Inconsistent mining: a material sometimes breaks instantly on one click, then the same material takes
+  longer. [TODO]** Mining progress is erratic — the first hit on a block sometimes one-shots it, then an identical
+  block needs several hits. Likely the `_miningProgress` accumulator keyed/seeded wrong (stale progress carried to a
+  new cell, or the first-hit applies full hardness). Investigate `HandleMine` progress accounting + fix so a block
+  of a given hardness always takes the same hits.
+- **B53 — Appearance/ship colour tabs show the WRONG preview (character ↔ ship swapped). [TODO]** In the in-game
+  menu: **Settings → character/colour** shows a character submenu but **no colour controls**, and the right detail
+  view shows the **ship** instead of the character. Conversely **Ship → paint** shows the **ship** in the detail
+  view but **also the character**. The avatar-preview rig and the ship-preview rig (`AvatarPreviewRig` /
+  `ShipPreviewRig` in `CraftingTechShipUI`) are mixed up / both active on the wrong tab. Fix: the colour/appearance
+  tab shows ONLY the avatar (+ colour controls); the ship paint tab shows ONLY the ship.
+- **B54 — A lava planet showed no visible lava. [TODO]** A planet typed as volcanic/lava rendered with **no lava**
+  visible on the surface. Relates to B19 (lava pools only in low basins below ~`BaseHeight − 0.25·Amplitude`), so a
+  high-terrain landing/view can show none. Re-check the lava-world sea-fill (`WorldGenerator.ResolveSeaFluid` +
+  the volcanic `lavaAb`/sea level) so a lava planet reliably shows lava (raise the lava sea level / abundance, or
+  guarantee a visible lava basin near a landing pad).
+- **B55 — Station vendors all sell the SAME goods / offer the same trade. [TODO]** Multiple traders on one station
+  offer identical stock. Each vendor should have its **own** (deterministic but varied) inventory/offers. Where:
+  vendor/market stock generation (`GameServerTrade` / vendor inventory seeding) — seed per-vendor, not per-station.
+- **B57 — "Einstellungen" + "Schließen" don't fit their button frames in the in-game player menu. [TODO]** Two
+  button labels overflow the button graphic in the in-game menu (German, longer words). Like B28 (tab overflow) but
+  for these menu buttons. Fix: size the button / shrink-to-fit the label so the text fits (`GameMenu`/`UiKit`
+  button sizing).
   scanned**, **no texture**. **User's read (2026-06-07): it's a creature, not lava** — lava wouldn't spawn as a
   lone two-block thing. So most likely a **hostile fauna creature** rendered **red** (hostile tint) with a
   **failed/missing hide texture** (`CreatureBuilder.PickHide` returned null → untextured red material) and a

@@ -212,7 +212,7 @@ public sealed partial class GameServer
                 var fp = new Vector3i(sx, y0 - dy, sz);
                 if (_world.GetBlock(fp).IsAir)
                 {
-                    _world.SetBlock(fp, stepFill);
+                    Ext(sx, y0 - dy, sz, stepFill); // protected like the hull (B51: was SetBlock → mineable)
                 }
             }
         }
