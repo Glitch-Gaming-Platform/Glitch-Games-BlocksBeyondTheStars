@@ -1908,6 +1908,13 @@ Features: B7/B11. Rendering: B6/B8/B17/B20. B15/B19 need an in-engine look; B21 
    existing settlement/station placement + the persisted per-player zones (migration); single-player behaviour
    (always a free pad?). Medium-large — worldgen planning + server allocation/capacity + UI for "full" + ship-size
    handling. *(Relates to the bigger-ships goal and to item 20 "build in space / player station".)*
+39. **Document where the ASP admin dashboard is reached.** *(Docs only — backlog, requested 2026-06-08.)* There is
+   an ASP.NET server admin component (`src/Spacecraft.Api`); **find out how/where its admin dashboard is opened**
+   (which executable/host serves it, the **URL/port**, any route/auth, and how to launch it) and **make sure that's
+   written in the README** (and/or the project docs) so it's discoverable — currently it doesn't appear to be
+   documented. *Steps when tackled:* check `Spacecraft.Api` (Program/Startup, launch settings, any dashboard
+   page/Razor/Blazor), confirm the real access path by running it, then add a short "Admin dashboard" section to
+   `README.md` (URL, how to start, what it's for). Small — investigation + a docs edit.
 
 ---
 
