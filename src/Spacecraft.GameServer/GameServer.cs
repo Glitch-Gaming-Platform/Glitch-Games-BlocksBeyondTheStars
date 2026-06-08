@@ -287,7 +287,7 @@ public sealed partial class GameServer
             InitFire();
             InitFlora();
             InitCreatures();
-            LoadLandingZones();
+            BuildLandingPads();
             LoadContainers();
 
             if (_config.PlaceSettlements)
@@ -386,6 +386,13 @@ public sealed partial class GameServer
             return;
         }
 
+        // Fixed landing pads (item 38): claim the player's chosen (or first free) pad before tearing down the
+        // flight state. A full body (every pad occupied) refuses the landing here, leaving the player in flight.
+        if (!ClaimPadOrReject(session, body.Id, intent.PadIndex))
+        {
+            return;
+        }
+
         // Per-player travel: only THIS player moves. Other players stay on their own worlds.
         string oldLoc = session.CurrentLocationId;
         LeaveSpace(session.State.PlayerId);
@@ -402,13 +409,14 @@ public sealed partial class GameServer
 
         var (systemName, planetName) = ActiveLocationNames();
         OnPlayerTravelled(session, body.Id, body.Name); // complete any "travel to a place" mission objective (item 31)
-        var zone = EnsureLandingZone(session.State.PlayerId);
-        int surfaceY = _generator.SurfaceHeight(_world.Planet, zone.CenterX, zone.CenterZ);
-        var spawn = _shipStamped ? _healTank : new Vector3f(zone.CenterX + 0.5f, surfaceY + 2f, zone.CenterZ + 0.5f);
+        var pad = PlayerPad(session); // the pad claimed above (item 38)
+        int surfaceY = _generator.SurfaceHeight(_world.Planet, pad.CenterX, pad.CenterZ);
+        var spawn = _shipStamped ? _healTank : new Vector3f(pad.CenterX + 0.5f, surfaceY + 2f, pad.CenterZ + 0.5f);
         session.State.Position = spawn;
         session.State.RespawnPoint = _shipStamped ? _healTank : spawn;
         session.State.AboardShip = true;
         session.SentChunks.Clear();
+        BroadcastShipTransit(session, body.Id, pad.CenterX + 0.5f, surfaceY, pad.CenterZ + 0.5f, landing: true); // others see the descent (item 38)
 
         Send(session, new WorldReset { PlanetType = body.PlanetType, PlanetName = planetName, SystemName = systemName, Hyperjump = hyperjump });
         SendPlayerState(session);
@@ -421,6 +429,7 @@ public sealed partial class GameServer
         SendCreatures(session);
         SendDoors(session);
         SendBeacons(session);
+        SendLandingPads(session);
         SendContainers(session);
         SendStarMap(session);
         Send(session, new ServerMessage { Text = hyperjump ? $"Hyperjumped to {systemName} — {planetName}." : $"Arrived at {planetName}." });
@@ -1127,6 +1136,7 @@ public sealed partial class GameServer
             case ConsumeItemIntent consume: HandleConsume(session, consume); break;
             case UseGadgetIntent gadget: HandleUseGadget(session, gadget); break;
             case SetBeaconLabelIntent beacon: HandleSetBeaconLabel(session, beacon); break;
+            case RequestLandingPadsIntent reqPads: HandleRequestLandingPads(session, reqPads); break;
             case LootContainerIntent loot: HandleLootContainer(session, loot); break;
             case DepositContainerIntent dep: HandleDepositContainer(session, dep); break;
             case ShipMoveIntent shipMove: HandleShipMove(session, shipMove); break;
@@ -1236,6 +1246,7 @@ public sealed partial class GameServer
         SendCreatures(session);
         SendDoors(session);
         SendBeacons(session);
+        SendLandingPads(session);
         SendContainers(session);
         SendExistingPresences(session); // show already-online players to the newcomer
 
@@ -1245,11 +1256,13 @@ public sealed partial class GameServer
     private PlayerState CreateNewPlayer(string name)
     {
         int spawnX = 0, spawnZ = 0;
-        if (Rules.PersonalLandingZones)
+        if (Rules.PersonalLandingZones && _landingPads.Count > 0)
         {
-            var zone = EnsureLandingZone(name);
-            spawnX = zone.CenterX;
-            spawnZ = zone.CenterZ;
+            // First spawn: drop the new player on the first free landing pad of the home body (item 38).
+            int idx = FirstFreePadIndex(_world.LocationId, _landingPads.Count, name);
+            var pad = _landingPads[idx >= 0 ? idx : 0];
+            spawnX = pad.CenterX;
+            spawnZ = pad.CenterZ;
         }
 
         int surfaceY = _generator.SurfaceHeight(_world.Planet, spawnX, spawnZ);
@@ -1481,12 +1494,6 @@ public sealed partial class GameServer
             return;
         }
 
-        if (!session.State.IsAdmin && IsLandingZoneBlockedForOther(session.State.PlayerId, pos))
-        {
-            Reject(session, "mine", "This is another player's protected landing zone.");
-            return;
-        }
-
         var tool = ActiveTool(session.State);
         if (!ToolCanMine(tool, def))
         {
@@ -1586,11 +1593,6 @@ public sealed partial class GameServer
                 continue;
             }
 
-            if (!session.State.IsAdmin && IsLandingZoneBlockedForOther(session.State.PlayerId, p))
-            {
-                continue;
-            }
-
             BreakBlockAt(session, p, d, pool);
         }
     }
@@ -1635,9 +1637,9 @@ public sealed partial class GameServer
             return;
         }
 
-        if (!session.State.IsAdmin && IsLandingZoneBlockedForOther(session.State.PlayerId, pos))
+        if (!session.State.IsAdmin && IsOnLandingPad(pos))
         {
-            Reject(session, "place", "This is another player's protected landing zone.");
+            Reject(session, "place", "Landing pads are reserved — you can't build on one.");
             return;
         }
 
@@ -2236,17 +2238,7 @@ public sealed partial class GameServer
             Name = sys.Name,
             MapX = sys.MapX,
             MapY = sys.MapY,
-            Bodies = sys.Bodies.Select(b => new NetBody
-            {
-                Id = b.Id,
-                Name = b.Name,
-                Kind = b.Kind.ToString(),
-                PlanetType = b.PlanetType,
-                Status = b.Status.ToString(),
-                SystemX = b.SystemX,
-                SystemY = b.SystemY,
-                SystemZ = b.SystemZ,
-            }).ToArray(),
+            Bodies = sys.Bodies.Select(ToNetBody).ToArray(),
         }).ToArray();
 
         var players = _sessions.Values
@@ -2255,6 +2247,26 @@ public sealed partial class GameServer
             .ToArray();
 
         Send(session, new StarMapData { Systems = systems, ActiveLocationId = session.CurrentLocationId, Players = players }); // own + party
+    }
+
+    /// <summary>Projects a galaxy body to its network form, including its fixed-landing-pad capacity + how many
+    /// pads are currently free (item 38) so the star map can flag a full body. Non-surface bodies have 0 pads.</summary>
+    private NetBody ToNetBody(Spacecraft.Shared.World.CelestialBody b)
+    {
+        int total = string.IsNullOrEmpty(b.PlanetType) ? 0 : PadCountFor(b.Id, b.PlanetType!, b.Kind);
+        return new NetBody
+        {
+            Id = b.Id,
+            Name = b.Name,
+            Kind = b.Kind.ToString(),
+            PlanetType = b.PlanetType,
+            Status = b.Status.ToString(),
+            SystemX = b.SystemX,
+            SystemY = b.SystemY,
+            SystemZ = b.SystemZ,
+            PadsTotal = total,
+            PadsFree = total > 0 ? FreePadCount(b.Id, total) : 0,
+        };
     }
 
     private void SendRules(PlayerSession session)

@@ -248,6 +248,16 @@ namespace Spacecraft.Client
                 }
             }
 
+            // Fixed landing pads (item 38): a pad glyph, green when free, red when another player is on it.
+            if (Game.LandingPads != null)
+            {
+                foreach (var pad in Game.LandingPads)
+                {
+                    var col = pad.Occupied ? new Color(1f, 0.45f, 0.4f) : new Color(0.5f, 0.9f, 0.6f);
+                    Marker(pad.X, pad.Z, 20f, col, "⊕");
+                }
+            }
+
             // Ship station tiles (workshop / lab / medbay / …) as small dots.
             if (Game.Stations != null)
             {

@@ -98,7 +98,7 @@ public sealed class ShipStructureTests : IDisposable
             server.Start();
             server.AddLocalPlayer("Host");
 
-            Assert.True(server.LandingPadIsDry("Host"),
+            Assert.True(server.LandingPadIsDry(0),
                 "the ship's landing pad must sit on dry land, never in a sea or upland pond (B36)");
         }
     }

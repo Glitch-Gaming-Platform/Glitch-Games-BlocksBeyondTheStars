@@ -23,6 +23,11 @@ public sealed class PlayerSession
         set => State.CurrentLocationId = value;
     }
 
+    /// <summary>The fixed landing pad this player currently holds on their body (item 38), or -1 if none. Pads
+    /// are communal + occupancy is live: a pad counts as taken only while its holder is on the body (not in
+    /// space). Set when landing; superseded on the next landing; ignored once the player is in space/elsewhere.</summary>
+    public int AssignedPadIndex { get; set; } = -1;
+
     /// <summary>Environment.TickCount of the last accepted chat line (rate limiting).</summary>
     public int LastChatTick { get; set; }
 

@@ -43,6 +43,8 @@ namespace Spacecraft.Client
         public event Action<ShipStations> ShipStationsReceived;
         public event Action<PlanetPoiList> PlanetPoisReceived;
         public event Action<BeaconList> BeaconsReceived;
+        public event Action<LandingPadList> LandingPadsReceived;
+        public event Action<ShipTransitFx> ShipTransitReceived;
         public event Action<ChatMessage> ChatReceived;
 
         // Navigation, missions & feedback (M23).
@@ -132,9 +134,13 @@ namespace Spacecraft.Client
 
         public void SendLeaveSpace() => Send(new LeaveSpaceIntent());
 
-        /// <summary>Leave space and land on a specific body (the one flown to in system-scale flight);
-        /// empty = land back on the current body.</summary>
-        public void SendLeaveSpace(string destinationBodyId) => Send(new LeaveSpaceIntent { DestinationBodyId = destinationBodyId });
+        /// <summary>Leave space and land on a body (empty = the current body), on a chosen landing pad (item 38;
+        /// padIndex -1 = auto-pick the first free pad).</summary>
+        public void SendLeaveSpace(string destinationBodyId, int padIndex = -1)
+            => Send(new LeaveSpaceIntent { DestinationBodyId = destinationBodyId, PadIndex = padIndex });
+
+        /// <summary>Asks the server for a body's fixed landing pads + their live occupancy (the pad chooser).</summary>
+        public void SendRequestLandingPads(string bodyId) => Send(new RequestLandingPadsIntent { BodyId = bodyId });
 
         public void SendFireWeapon(string weaponKey, string targetEntityId)
             => Send(new FireWeaponIntent { WeaponKey = weaponKey, TargetEntityId = targetEntityId });
@@ -257,6 +263,8 @@ namespace Spacecraft.Client
                 case ShipStations m: ShipStationsReceived?.Invoke(m); break;
                 case PlanetPoiList m: PlanetPoisReceived?.Invoke(m); break;
                 case BeaconList m: BeaconsReceived?.Invoke(m); break;
+                case LandingPadList m: LandingPadsReceived?.Invoke(m); break;
+                case ShipTransitFx m: ShipTransitReceived?.Invoke(m); break;
                 case ChatMessage m: ChatReceived?.Invoke(m); break;
                 case StarMapData m: StarMapReceived?.Invoke(m); break;
                 case MissionList m: MissionsReceived?.Invoke(m); break;

@@ -555,6 +555,14 @@ namespace Spacecraft.Client
                     }
                 }
 
+                // Fixed landing pads (item 38): show free/total, or a FULL warning when every pad is taken.
+                if (b.PadsTotal > 0)
+                {
+                    status += b.PadsFree == 0
+                        ? "   ⊕ " + L("ui.map.pads_full")
+                        : $"   ⊕ {b.PadsFree}/{b.PadsTotal}";
+                }
+
                 AddCard(y, b.Name, "cat_planet", status, here ? UiKit.Cyan : UiKit.CyanDim,
                     "body:" + b.Id, () => { _selected = "body:" + b.Id; RebuildDetail(); });
                 y += 88f;

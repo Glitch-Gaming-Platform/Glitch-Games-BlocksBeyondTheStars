@@ -173,11 +173,6 @@ public sealed partial class GameServer
                 continue; // leave bedrock / indestructible blocks intact
             }
 
-            if (!session.State.IsAdmin && IsLandingZoneBlockedForOther(session.State.PlayerId, p))
-            {
-                continue;
-            }
-
             _world.SetBlock(p, BlockId.Air);
             _miningProgress.Remove(p);
             BroadcastToWorld(new BlockChanged { X = p.X, Y = p.Y, Z = p.Z, Block = BlockId.AirValue });

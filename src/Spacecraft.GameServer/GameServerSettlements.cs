@@ -101,13 +101,12 @@ public sealed partial class GameServer
             structure = SettlementGenerator.Generate(tier, ruined, sSeed, surface, _content);
         }
 
-        // Anchor it a fixed offset from the spawn/landing zone so it doesn't overlap the ship.
+        // Anchor it a fixed offset from the first landing pad so it doesn't overlap a pad/ship (item 38).
         int ax = 64, az = 64;
-        foreach (var zone in _landingZones.Values)
+        if (_landingPads.Count > 0)
         {
-            ax = zone.CenterX + 48;
-            az = zone.CenterZ + 48;
-            break;
+            ax = _landingPads[0].CenterX + 48;
+            az = _landingPads[0].CenterZ + 48;
         }
 
         int groundY = _generator.SurfaceHeight(planet, ax, az);

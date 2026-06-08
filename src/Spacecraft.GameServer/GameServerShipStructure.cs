@@ -47,10 +47,10 @@ public sealed partial class GameServer
     /// <summary>Writes the ship hull into the world at the start landing zone (idempotent enough to self-heal).</summary>
     private void StampShip()
     {
-        // Anchor at the SERVED player's own landing zone, so two players on one planet each get their own
-        // ship at their own start point (never a shared one).
-        var zone = _current != null ? EnsureLandingZone(_current.State.PlayerId) : null;
-        int cx = zone?.CenterX ?? 0, cz = zone?.CenterZ ?? 0;
+        // Anchor at the SERVED player's own landing pad, so two players on one body each get their own ship at
+        // their own pad (never a shared one). The pad is whichever the player claimed when landing (item 38).
+        var pad = _current != null ? PlayerPad(_current) : null;
+        int cx = pad?.CenterX ?? 0, cz = pad?.CenterZ ?? 0;
 
         int y0 = _generator.SurfaceHeight(_world.Planet, cx, cz);
         _shipAnchor = new Vector3i(cx, y0, cz);

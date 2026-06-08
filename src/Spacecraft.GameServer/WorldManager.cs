@@ -34,7 +34,7 @@ internal sealed class LoadedWorld
     public HashSet<Vector3i> ActiveFluid { get; } = new();
     public Dictionary<Vector3i, float> FireTimer { get; } = new(); // burning cells → remaining burn time (item 30)
     public HashSet<Vector3i> ActiveFire { get; } = new();
-    public Dictionary<string, LandingZone> LandingZones { get; } = new();
+    public List<GameServer.LandingPad> LandingPads { get; } = new(); // fixed, map-planned landing pads (item 38)
     public List<StoredContainer> Containers { get; } = new();
 
     // Per-player ship structures stamped into THIS world (one per player present, each at their own

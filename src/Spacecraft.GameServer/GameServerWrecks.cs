@@ -83,14 +83,13 @@ public sealed partial class GameServer
         var design = designs[rng.Next(designs.Count)];
         var structure = WreckGenerator.Generate(design, wSeed, _content);
 
-        // Anchor offset from the landing zone — and offset differently from settlements so the two
-        // don't overlap on the same world.
+        // Anchor offset from the first landing pad — and offset differently from settlements so the two
+        // don't overlap on the same world (item 38).
         int ax = -56, az = 56;
-        foreach (var zone in _landingZones.Values)
+        if (_landingPads.Count > 0)
         {
-            ax = zone.CenterX - 56;
-            az = zone.CenterZ + 56;
-            break;
+            ax = _landingPads[0].CenterX - 56;
+            az = _landingPads[0].CenterZ + 56;
         }
 
         int groundY = _generator.SurfaceHeight(planet, ax, az);

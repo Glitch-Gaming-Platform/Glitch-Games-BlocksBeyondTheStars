@@ -66,9 +66,11 @@ public sealed partial class GameServer
             return _healTank;
         }
 
-        var zone = EnsureLandingZone(playerId);
-        int surfaceY = _generator.SurfaceHeight(_world.Planet, zone.CenterX, zone.CenterZ);
-        return new Vector3f(zone.CenterX + 0.5f, surfaceY + 2f, zone.CenterZ + 0.5f);
+        var pad = FindSessionByPlayerId(playerId) is { } s ? PlayerPad(s)
+            : (_landingPads.Count > 0 ? _landingPads[0] : null);
+        int px = pad?.CenterX ?? 0, pz = pad?.CenterZ ?? 0;
+        int surfaceY = _generator.SurfaceHeight(_world.Planet, px, pz);
+        return new Vector3f(px + 0.5f, surfaceY + 2f, pz + 0.5f);
     }
 
     /// <summary>Validates a joining player's position. If it's in the void — e.g. a position persisted

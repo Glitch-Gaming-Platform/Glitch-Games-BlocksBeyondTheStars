@@ -134,6 +134,13 @@ public static class NetCodec
 
         // Client -> Server (item 37: rename a beacon you own).
         Register(101, typeof(SetBeaconLabelIntent));
+
+        // item 38: fixed landing pads — client asks for a body's pads + occupancy, server replies with the list.
+        Register(102, typeof(RequestLandingPadsIntent));
+        Register(103, typeof(LandingPadList));
+
+        // item 38: another player's ship landing/launching at a pad (other players on the body see the animation).
+        Register(104, typeof(ShipTransitFx));
     }
 
     private static void Register(byte tag, Type type)

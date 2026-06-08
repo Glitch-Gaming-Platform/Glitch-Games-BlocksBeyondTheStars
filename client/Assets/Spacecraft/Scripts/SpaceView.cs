@@ -61,7 +61,8 @@ namespace Spacecraft.Client
         private float _shipSpeedMul = 1f; // cruise-speed factor from the active ship design
         private float _shipTurnMul = 1f;  // turn-rate factor from the active ship design
 
-        private bool _confirmLand;        // L asks "land here?" — Enter confirms, Esc cancels
+        private bool _confirmLand;        // a landing prompt is up — the pad chooser (item 38)
+        private string _choosePadBody;    // body whose pads the chooser is showing (null = no chooser)
         private string _boardTargetId;    // station being boarded during the dock-approach animation
         private Vector3 _boardTargetPos, _boardStartPos;
         private bool _boardSent;          // the board intent was sent (now waiting for the server)
@@ -252,27 +253,39 @@ namespace Spacecraft.Client
                 return;
             }
 
-            // Landing asks for confirmation first so you don't drop to the surface by accident. The target
-            // is the body you flew up to (if any) — otherwise you land back on the body you launched from.
+            // Landing opens a pad chooser (item 38): pick a free landing pad with a number key, Esc cancels.
+            // No accidental drop to the surface — you choose where you touch down.
             if (_confirmLand)
             {
-                if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+                if (Input.GetKeyDown(KeyCode.Escape))
                 {
                     _confirmLand = false;
-                    Game.Network?.SendLeaveSpace(string.Empty); // L always returns to the body you launched from
-                }
-                else if (Input.GetKeyDown(KeyCode.Escape))
-                {
-                    _confirmLand = false;
+                    _choosePadBody = null;
+                    return;
                 }
 
-                return; // hold position while the prompt is up
+                var pads = Game.LandingPadsBody == _choosePadBody ? Game.LandingPads : null;
+                if (pads != null)
+                {
+                    for (int i = 0; i < pads.Length && i < 9; i++)
+                    {
+                        if ((Input.GetKeyDown(KeyCode.Alpha1 + i) || Input.GetKeyDown(KeyCode.Keypad1 + i)) && !pads[i].Occupied)
+                        {
+                            Game.Network?.SendLeaveSpace(_choosePadBody, pads[i].Index); // land on the chosen pad
+                            _confirmLand = false;
+                            _choosePadBody = null;
+                            break;
+                        }
+                    }
+                }
+
+                return; // hold position while choosing
             }
 
-            // L opens the "return to the body you launched from" confirmation (landing on a nearby body is E).
+            // L opens the pad chooser for the body you launched from (landing on a nearby body is E).
             if (Input.GetKeyDown(KeyCode.L))
             {
-                _confirmLand = true;
+                OpenPadChooser(Game.StarMap != null ? Game.StarMap.ActiveLocationId : string.Empty);
                 return;
             }
 
@@ -407,7 +420,7 @@ namespace Spacecraft.Client
                 }
                 else if (_landTargetId != null)
                 {
-                    Game.Network?.SendLeaveSpace(_landTargetId); // land on the nearby body
+                    OpenPadChooser(_landTargetId); // pick a landing pad on the nearby body, then land (item 38)
                 }
             }
 
@@ -443,6 +456,15 @@ namespace Spacecraft.Client
                     ActivateTractor();
                 }
             }
+        }
+
+        /// <summary>Opens the landing-pad chooser for a body (item 38): asks the server for its pads + occupancy
+        /// and shows the keyboard chooser. An empty body id means the current body (land back where you launched).</summary>
+        private void OpenPadChooser(string bodyId)
+        {
+            _confirmLand = true;
+            _choosePadBody = bodyId ?? string.Empty;
+            Game.Network?.SendRequestLandingPads(_choosePadBody);
         }
 
         /// <summary>Rebuilds the quick-bar of ship systems from the active ship's fitted modules (a weapon
@@ -1832,10 +1854,42 @@ namespace Spacecraft.Client
             }
             else if (_confirmLand)
             {
-                // Return-to-launch-body confirmation (key-driven, no cursor): Enter confirms, Esc cancels.
+                // Landing-pad chooser (item 38; key-driven, no cursor): pick a free pad 1–N, Esc cancels.
                 _fade.color = new Color(0f, 0f, 0f, 0f);
                 var loc = Game.Localizer;
-                _hint.text = loc != null ? loc.Get("ui.space.land_confirm") : "Return to the surface?   Enter = yes · Esc = no";
+                var pads = Game.LandingPadsBody == _choosePadBody ? Game.LandingPads : null;
+                if (pads == null)
+                {
+                    _hint.text = loc != null ? loc.Get("ui.space.pad_loading") : "Reading landing pads…";
+                }
+                else
+                {
+                    var sb = new System.Text.StringBuilder();
+                    sb.Append(loc != null ? loc.Get("ui.space.pad_choose") : "Choose a landing pad");
+                    sb.Append(":   ");
+                    int free = 0;
+                    for (int i = 0; i < pads.Length && i < 9; i++)
+                    {
+                        if (pads[i].Occupied)
+                        {
+                            sb.Append($"<color=#ff6655>[{i + 1}] ✖ {pads[i].Occupant}</color>   ");
+                        }
+                        else
+                        {
+                            sb.Append($"<color=#66ddaa>[{i + 1}] ◉</color>   ");
+                            free++;
+                        }
+                    }
+
+                    if (free == 0)
+                    {
+                        sb.Append(loc != null ? loc.Get("ui.space.pad_full") : "— ALL FULL");
+                    }
+
+                    sb.Append("   ·   Esc");
+                    _hint.text = sb.ToString();
+                }
+
                 _hint.gameObject.SetActive(true);
                 _board.gameObject.SetActive(false);
                 _cargo.gameObject.SetActive(false);

@@ -148,12 +148,18 @@ public sealed class LeaveSpaceIntent
     /// different body in the same system = land there (you flew to it in system-scale flight). Cross-
     /// system landing is not offered — use a hyperspace jump (the star map) instead.</summary>
     public string DestinationBodyId { get; set; } = string.Empty;
+
+    /// <summary>Which fixed landing pad to touch down on (item 38); -1 = auto-pick the first free pad.</summary>
+    public int PadIndex { get; set; } = -1;
 }
 
 /// <summary>Client asks to travel to (and land on) another celestial body, picked from the star map.</summary>
 public sealed class TravelIntent
 {
     public string DestinationBodyId { get; set; } = string.Empty;
+
+    /// <summary>Which fixed landing pad to touch down on (item 38); -1 = auto-pick the first free pad.</summary>
+    public int PadIndex { get; set; } = -1;
 }
 
 /// <summary>Client fires a built ship weapon at a space entity. The server validates and resolves the hit.</summary>
@@ -588,6 +594,11 @@ public sealed class NetBody
     public float SystemX { get; set; }
     public float SystemY { get; set; }
     public float SystemZ { get; set; }
+
+    /// <summary>Fixed landing pads on this body (item 38): how many there are and how many are currently free
+    /// (live occupancy). PadsFree == 0 means the body is full — landing there is refused.</summary>
+    public int PadsTotal { get; set; }
+    public int PadsFree { get; set; }
 }
 
 public sealed class NetStarSystem

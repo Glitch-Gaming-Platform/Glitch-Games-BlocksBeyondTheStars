@@ -84,6 +84,11 @@ namespace Spacecraft.Client
 
         /// <summary>Placed radio beacons (labelled waypoints) for the world map + compass (item 37).</summary>
         public NetBeacon[] Beacons { get; private set; } = System.Array.Empty<NetBeacon>();
+
+        /// <summary>Fixed landing pads + occupancy for the most-recently-known body (item 38): the active body
+        /// (world map markers) or the body the pad chooser asked about. Keyed by <see cref="LandingPadsBody"/>.</summary>
+        public NetLandingPad[] LandingPads { get; private set; } = System.Array.Empty<NetLandingPad>();
+        public string LandingPadsBody { get; private set; } = string.Empty;
         public string NearbyStation;
 
         // Navigation, missions & rules (M23).
@@ -347,6 +352,7 @@ namespace Spacecraft.Client
             Network.ShipStationsReceived += m => Stations = m.Stations;
             Network.PlanetPoisReceived += m => PlanetPois = m.Pois;
             Network.BeaconsReceived += m => Beacons = m.Beacons ?? System.Array.Empty<NetBeacon>();
+            Network.LandingPadsReceived += m => { LandingPads = m.Pads ?? System.Array.Empty<NetLandingPad>(); LandingPadsBody = m.BodyId ?? string.Empty; };
             Network.StarMapReceived += m => StarMap = m;
             Network.MissionsReceived += m => Missions = m;
             Network.ShipCombatStatusChanged += m => ShipCombat = m;

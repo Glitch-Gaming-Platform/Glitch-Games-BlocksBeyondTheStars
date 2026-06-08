@@ -261,6 +261,13 @@ public sealed partial class GameServer
             _spaceInstances[instanceId] = instance;
         }
 
+        // Tell the players still on the body that this ship is launching — they see it rise off its pad (item 38).
+        if (session is not null && !skipLaunch)
+        {
+            var p = session.State.Position;
+            BroadcastShipTransit(session, locationId, p.X, p.Y - 1f, p.Z, landing: false);
+        }
+
         instance.Players.Add(playerId);
         _playerInstance[playerId] = instanceId;
 
@@ -1014,14 +1021,22 @@ public sealed partial class GameServer
 
         if (string.IsNullOrEmpty(dest) || dest == session.CurrentLocationId)
         {
-            LeaveSpace(session.State.PlayerId); // land back on the current world
+            // Land back on the current body — claim a free landing pad first (item 38); a full body refuses.
+            SetActiveWorld(session.CurrentLocationId);
+            if (!ClaimPadOrReject(session, session.CurrentLocationId, intent.PadIndex))
+            {
+                return;
+            }
+
+            LeaveSpace(session.State.PlayerId);
+            RelocateToAssignedPad(session); // set the player + their ship down on the claimed pad
             CheckpointSave("landed (returned to surface)"); // auto-save on landing
             return;
         }
 
-        // Landed on a different body picked while flying — travel there (reuses the per-player travel,
-        // which leaves space, loads the destination world and relocates only this player).
-        HandleTravel(session, new TravelIntent { DestinationBodyId = dest });
+        // Landed on a different body picked while flying — travel there (reuses the per-player travel, which
+        // leaves space, loads the destination world and relocates only this player; it claims the pad too).
+        HandleTravel(session, new TravelIntent { DestinationBodyId = dest, PadIndex = intent.PadIndex });
     }
 
     private void HandleFireWeapon(PlayerSession session, FireWeaponIntent intent)

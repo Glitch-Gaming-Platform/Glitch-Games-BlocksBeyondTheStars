@@ -1951,8 +1951,8 @@ Features: B7/B11. Rendering: B6/B8/B17/B20. B15/B19 need an in-engine look; B21 
    floating world-space name above the block (`BeaconView`). 4 `BeaconTests` (place/persist/reload/mine/owner-rename);
    **389 tests green** (locale parity included); client rebuilt. Playtest: unlock + craft at a workshop, place →
    name it → see it on M + compass + above the block; walk up + E to rename; mine to take it back.
-38. **Fixed, pre-planned landing zones (capacity-limited, no-build, ship-size aware).** *(ANALYSIS FIRST — ask
-   clarifying questions before any implementation. Backlog only — not started, requested 2026-06-08.)* Planets,
+38. **Fixed, pre-planned landing zones (capacity-limited, no-build, ship-size aware).** **[✅ DONE 2026-06-08 —
+   playtest]** *(ANALYSIS FIRST — ask clarifying questions before any implementation. Backlog only — not started, requested 2026-06-08.)* Planets,
    moons and **landable asteroids** should have a set of **fixed landing zones for ships**, **baked into the
    generated map** (deterministic positions, not the current dynamic march): a player always lands on one of these
    pre-planned pads. The **number of zones varies with map size** (a small asteroid has few, a big planet many).
@@ -1970,6 +1970,61 @@ Features: B7/B11. Rendering: B6/B8/B17/B20. B15/B19 need an in-engine look; B21 
    existing settlement/station placement + the persisted per-player zones (migration); single-player behaviour
    (always a free pad?). Medium-large — worldgen planning + server allocation/capacity + UI for "full" + ship-size
    handling. *(Relates to the bigger-ships goal and to item 20 "build in space / player station".)*
+
+   **[ANALYSIS DONE 2026-06-08 — plan below; asking 4 design questions before impl]**
+   - **As-is:** `EnsureLandingZone(playerId)` (`GameServerSpace.cs`) is **dynamic** — marches +X at `LandingZoneSpacing=24`
+     from `baseIndex = _landingZones.Count`, prefers dry land (B36 `LandingFootprintWet`), and persists **one zone per
+     `(player, body)` forever** (`landing_zone` table, key `player_id+location_id`). `LandingZone { PlayerId, LocationId,
+     CenterX, CenterZ, Radius=8, Protected }`. Protection (`IsLandingZoneBlockedForOther`) blocks only **other** players.
+     Landing: client `SpaceView` E → `SendLeaveSpace(bodyId)` → `HandleLeaveSpace`/`HandleTravel` → `StampShip` at the
+     zone centre + spawn. Star map `NetBody` has **no** occupancy. Settlement/wreck anchor at the **first** zone (+48,+48 /
+     −56,+56). Largest ship = `hauler` 7×9 (halfX3/halfZ4); the current radius-8 pad (17×17) already clears it.
+   - **Plan:** turn the dynamic march into a **deterministic, map-planned pad set per body**:
+     1. `LandingPads(body)` helper: from `seed ^ StableHash("landingpad:"+key)` + circumference, place **N pads** at
+        deterministic equator-band longitudes, each nudged deterministically to dry, settlement/wreck-clear ground.
+        **N by size class** (asteroid 1–2, moon 2–4, planet 4–8; scaled by circumference). **One generous pad size**
+        (radius 8 — already clears the hauler; no size tiers).
+     2. **Live occupancy** (proposed): a pad is held by whoever is on the body, released when they leave for space/another
+        world; `LoadedWorld` keeps `pad→playerId`. Replace `EnsureLandingZone` with `AssignPad(player)` (free-pad finder).
+     3. **Full signal:** no free pad on a land attempt → `Reject("land", "all landing zones taken")`; `NetBody` gains
+        `PadsTotal`/`PadsFree` so the star map + land prompt show occupancy / "FULL".
+     4. **No-build for everyone:** a pad-area check that blocks **all** players (not just others) from mining/placing on a
+        pad (reserve it); the assigned ship still stamps there.
+     5. **Re-anchor** settlement/wreck offsets to deterministic **pad[0]** (removes the player-dependency).
+     6. **Migration:** old per-player `landing_zone` rows are superseded by deterministic pads — ignore/clear them on load
+        for bodies using fixed pads.
+     7. **Client:** star map per-body occupancy + "FULL"; world-map/compass pad markers; optional visible pad platform.
+     8. **Tests:** deterministic pad set (same seed→same pads), capacity (N players fill N pads, N+1 refused), release on
+        leave, no-build-for-everyone, dry-land pads.
+   - **DECISIONS 2026-06-08:** (a) **live occupancy** — a pad is held while the player is on the body, released on
+     leave/disconnect (SP never full); (b) **player picks the pad** — landing opens a pad chooser (keyboard 1–N in the
+     flight view, no cursor) showing free/occupied; (c) **refuse + message** when full ("all landing zones taken") +
+     "FULL"/free-count on the star map; (d) **invisible pads** — no built platform, terrain stays natural, pad shown
+     only as a map/compass marker. One generous pad size (radius 8, clears the hauler). **N = a seeded-random count
+     per body within its size-class range** (so it varies body to body, deterministically): asteroid 1–2, moon 2–4,
+     planet 4–8 — asteroids fewest, moons more, planets most. Messages: `RequestLandingPadsIntent{BodyId}` →
+     `LandingPadList{BodyId, Pads[]{Index,X,Z,Occupied,Occupant}}`; `LeaveSpaceIntent`/`TravelIntent` gain `PadIndex`;
+     `NetBody` gains `PadsTotal`/`PadsFree`. No-build on a pad applies to **everyone**.
+   **[SHIPPED 2026-06-08]** Replaced the dynamic per-player landing zones with deterministic, seeded-random pad
+   sets. Server: rewrote `GameServerSpace.cs` — `LandingPad {Index,CenterX,CenterY,CenterZ}`, `PadCountFor`
+   (seeded-random per size class: asteroid 1–2, moon 2–4, planet 4–8), `BuildLandingPads` (pad 0 on the prime
+   meridian, the rest spread round the body, each nudged to dry land), live occupancy derived from sessions
+   (`AssignedPadIndex` + on-body + not-in-space), `TryClaimPad`/`ClaimPadOrReject` (refuse when taken/full),
+   `PlayerPad`, `IsOnLandingPad` (reserves only the **landing volume** above the pad — placing blocked for everyone,
+   mining + building high above are fine), star-map occupancy via `ToNetBody`. Hooked into `HandleTravel` /
+   `HandleLeaveSpace` (same-body relocate) / join / `StampShip` / settlement+wreck anchoring (now pad 0). **Cleanup:**
+   deleted the old `EnsureLandingZone` march, `LandingZone` struct, the `landing_zone` table + `Save/ListLandingZone`
+   repo methods, and `IsLandingZoneBlockedForOther`. Messages: `RequestLandingPadsIntent`/`LandingPadList`/
+   `NetLandingPad` (tags 102/103), `LeaveSpaceIntent`/`TravelIntent.PadIndex`, `NetBody.PadsTotal/Free`. Client: a
+   keyboard **pad chooser** in the flight view (E/L → request pads → pick a free pad 1–N, "ALL FULL" when none),
+   pad markers on the world map (green free / red taken), and the star-map cards show `⊕ free/total` or `VOLL`.
+   **Plus (requested mid-build):** in MP, others on the body now see the landing/launch **animation** of the moving
+   player's ship — `ShipTransitFx` (tag 104) broadcast on land (descend) + launch (ascend) to the others present,
+   played by a new `ShipTransitView` (procedural hull tinted to the mover's hull colour, eased descent/ascent,
+   engine glow + thruster roar). 3 new `LandingPadTests` replace the old zone tests; **392 tests green**; client
+   rebuilt. Playtest: fly to a body, press E → pick a pad; fill a small body's pads in MP to see FULL + the refuse;
+   watch another player's ship land/launch. *(Star-map "Travel" auto-picks the first free pad; the in-flight E/L is
+   the manual chooser.)*
 39. **Document where the ASP admin dashboard is reached.** *(Docs only — backlog, requested 2026-06-08.)* There is
    an ASP.NET server admin component (`src/Spacecraft.Api`); **find out how/where its admin dashboard is opened**
    (which executable/host serves it, the **URL/port**, any route/auth, and how to launch it) and **make sure that's
