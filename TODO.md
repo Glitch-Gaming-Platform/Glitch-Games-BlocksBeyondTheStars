@@ -1566,6 +1566,28 @@ Client-only. *Playtest wanted.*
   doesn't avoid pond/lake columns. *Fix idea:* on non-ocean worlds, the landing-site search should **prefer dry
   land** (reject columns that are water/pond at the surface, nudge to the nearest dry spot), reserving seabed-
   landing for genuine ocean worlds. Small-medium, pairs with B35 (both = pond placement not respected).
+- **B37 — Audit: is the (varying) sun colour used *consistently* everywhere? [AUDIT — reported 2026-06-08]** The
+  star colour is meant to **vary per system**. It *is* generated server-side (`GameServerWeather.StarColor(system)`
+  → `_sunColor`, networked as `Environment.SunColor`) and consumed in several places — `Sky.cs` (planet sky +
+  directional sun light + `SetGrade` colour grade), `SpaceView.cs` (the sun disc/corona in space), `Clouds.cs`
+  (cloud tint). **Audit goal:** confirm the variation is (a) actually *visible* (real spread between systems, not
+  all near-white), (b) used **consistently** — the **system's sun in the space/system view** matches the colour the
+  **planet** sees, and (c) the planet is **lit & tinted to match** (directional light colour, **ambient/skybox**,
+  and the terrain/world colour-grade all follow the star — not a fixed white ambient that washes the tint out).
+  *Check:* does `SpaceView` use *each planet's* star colour or one global sun? Is `RenderSettings.ambientLight`
+  derived from `SunColor` or constant? Does the colour-grade meaningfully shift block/terrain colours? Report
+  gaps; fix only after. Small audit, possibly small fixes.
+- **B38 — Audit: are creatures & flora generated with the intended *random* colours? [AUDIT — reported
+  2026-06-08]** Two parts. **(a) Flora:** a per-planet `FloraColor`/`Environment.FloraTint` re-tints flora via the
+  block shader global `_Sc_FloraTint` — but `ChunkMesher` only flags the **small `flora_*` plants** for the tint
+  (`IsFlora`, comment "small flora plants"). **Verify tree crowns (`tree_leaves`) are also flagged/tinted** — if
+  not, trees stay one fixed green while ground flora recolours (likely gap). **(b) Creatures:** creatures carry
+  `ColorRgb`/`BellyRgb` (client `CreatureBuilder` builds from them), but spawn defaults to `0xFFFFFF` when unset
+  (`GameServerCreatures` `ColorRgb = sp?.ColorRgb ?? 0xFFFFFF`). **Verify spawning actually assigns the intended
+  *randomized* colours** (per-individual variation, not all white/default) — a white/default fallback is also the
+  suspected root of **B15** (the untextured red/blank creature). *Check:* where creature `ColorRgb` is set at spawn
+  (species palette + per-spawn RNG), and whether `tree_leaves` gets the flora-tint vertex flag. Report gaps; fix
+  after. Small audit; pairs with B15.
 - **B15 update (red 2-block thing — now leaning "creature"):** it **damages you on touch** and **can't be
   scanned**, **no texture**. **User's read (2026-06-07): it's a creature, not lava** — lava wouldn't spawn as a
   lone two-block thing. So most likely a **hostile fauna creature** rendered **red** (hostile tint) with a
