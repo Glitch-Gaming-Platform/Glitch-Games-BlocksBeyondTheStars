@@ -278,12 +278,13 @@ public class WorldGenerationTests
     [Fact]
     public void SingleBiomePlanet_HasItsSurfaceBlock()
     {
+        // Use a genuinely single-biome, sea-free world (crystal) — desert is now a multi-biome dune world.
         var content = Content();
-        var planet = content.GetPlanet("desert")!;
+        var planet = content.GetPlanet("crystal")!;
         var gen = new WorldGenerator(2024, content);
-        ushort sand = content.GetBlock("sand")!.NumericId.Value;
+        ushort crystal = content.GetBlock("crystal")!.NumericId.Value;
 
-        Assert.Equal(sand, SurfaceBlockAt(gen, planet, 10, 10));
+        Assert.Equal(crystal, SurfaceBlockAt(gen, planet, 10, 10));
     }
 
     [Fact]

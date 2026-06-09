@@ -40,6 +40,12 @@ public sealed class PlanetType
     /// <summary>Horizontal feature scale; larger = smoother, broader terrain.</summary>
     public double TerrainScale { get; set; } = 48.0;
 
+    /// <summary>Overall terrain SHAPE for this world type, so worlds read structurally different — not just
+    /// recoloured. Empty = the default mixed archetype blend (flats→rolling→hills→mountains→canyons across
+    /// the surface). Other values reshape the heightmap: "flats", "hills", "mountains", "canyons",
+    /// "mesa" (terraced plateaus + cliffs), "dunes" (parallel sand ridges), "spires" (sparse tall spikes).</summary>
+    public string TerrainStyle { get; set; } = string.Empty;
+
     /// <summary>Airless barren bodies (landable asteroids, and — set per-world — airless moons): replace the
     /// rolling terrain with mostly flat regolith pocked with round impact craters (item 33).</summary>
     public bool Cratered { get; set; }

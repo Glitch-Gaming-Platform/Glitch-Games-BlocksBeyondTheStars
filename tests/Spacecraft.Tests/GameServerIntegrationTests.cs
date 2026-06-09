@@ -60,14 +60,19 @@ public sealed class GameServerIntegrationTests : IDisposable
             var session = server.Sessions[1];
             Assert.True(session.Joined);
 
-            // Find the topmost solid block in the spawn column.
-            int topY = (int)System.Math.Floor(session.State.Position.Y);
+            // Find the topmost minable block in the PLAYER'S OWN column (not a hardcoded (0,0) — terrain styles
+            // can put a tall mesa/cliff there, far out of reach), so the block is right under the player's feet
+            // and reachable. Skip non-dropping blocks (lights etc.) so the drop assertion below is meaningful.
+            int px = (int)System.Math.Floor(session.State.Position.X);
+            int pz = (int)System.Math.Floor(session.State.Position.Z);
+            int topY = (int)System.Math.Ceiling(session.State.Position.Y);
             target = default;
             bool found = false;
             for (int y = topY; y > topY - 12; y--)
             {
-                var pos = new Vector3i(0, y, 0);
-                if (!server.World.GetBlock(pos).IsAir)
+                var pos = new Vector3i(px, y, pz);
+                var b = server.World.GetBlock(pos);
+                if (!b.IsAir && server.World.Definition(b) is { } def && def.Drops.Count > 0)
                 {
                     target = pos;
                     found = true;
@@ -75,7 +80,7 @@ public sealed class GameServerIntegrationTests : IDisposable
                 }
             }
 
-            Assert.True(found, "Expected to find a solid block near spawn.");
+            Assert.True(found, "Expected to find a minable block near spawn.");
 
             var blockDef = server.World.Definition(server.World.GetBlock(target))!;
             dropItem = blockDef.Drops[0].Item;

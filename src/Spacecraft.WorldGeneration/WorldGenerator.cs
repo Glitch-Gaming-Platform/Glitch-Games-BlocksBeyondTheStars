@@ -91,6 +91,13 @@ public sealed class WorldGenerator
             return planet.BaseHeight + (int)System.Math.Round(flat + CraterCarve(seed, worldX, worldZ, planet));
         }
 
+        // A planet may dictate an overall terrain SHAPE (item 21 V2) so worlds read structurally different —
+        // mesas, dunes, spires, etc. — instead of every world using the same mixed blend.
+        if (!string.IsNullOrEmpty(planet.TerrainStyle))
+        {
+            return planet.BaseHeight + (int)System.Math.Round(StyledHeightOffset(planet, planet.TerrainStyle, seed, h, worldX, worldZ));
+        }
+
         // Regional terrain character: a large-scale field selects how rugged this area is (a blend across the
         // world's archetype subset), so the surface varies between flat plains, hills, mountains and canyons.
         var (amp, ridged) = TerrainProfile(planet, seed, worldX, worldZ);
@@ -101,6 +108,72 @@ public sealed class WorldGenerator
         }
 
         return planet.BaseHeight + (int)System.Math.Round(h * planet.Amplitude * amp);
+    }
+
+    /// <summary>Height offset (blocks, added to BaseHeight) for a planet with an explicit <see cref="PlanetType.TerrainStyle"/>
+    /// (item 21 V2). <paramref name="h"/> is the base FBM swell in [-1,1]. Each style reshapes it into a distinct
+    /// landform so worlds look structurally different. Deterministic + seam-safe (all noise wraps on X).</summary>
+    private double StyledHeightOffset(PlanetType planet, string style, long seed, double h, int worldX, int worldZ)
+    {
+        double amp = planet.Amplitude;
+        double Ridge(double v) => (1.0 - System.Math.Abs(v)) * 2.0 - 1.0; // smooth swell → sharp ridge/valley
+
+        switch (style.ToLowerInvariant())
+        {
+            case "flats":
+                return h * amp * 0.22; // near-flat plains (salt flats, ocean floor, low islands)
+
+            case "hills":
+                return h * amp * 0.75; // gentle rolling hills
+
+            case "mountains":
+            {
+                double r = h * 0.25 + Ridge(h) * 0.75; // sharp, rugged
+                return r * amp * 1.9;
+            }
+
+            case "canyons":
+            {
+                double r = h * 0.35 + Ridge(h) * 0.65;
+                return r * amp * 1.4; // deep ridged canyons + mesatops
+            }
+
+            case "mesa":
+            {
+                // Terraced plateaus: quantise the height into flat decks separated by sharp cliffs, with a little
+                // roll on each deck so the tops aren't dead flat.
+                double raw = h * amp * 1.15;
+                double step = System.Math.Max(3.0, amp * 0.30);
+                double deck = System.Math.Floor(raw / step) * step;
+                double roll = Noise.FbmCylX(seed + 0x3E5A, worldX, worldZ, _circumference, planet.TerrainScale * 0.5, octaves: 2);
+                return deck + (roll - 0.5) * 2.0; // ±2-block texture on each deck
+            }
+
+            case "dunes":
+            {
+                // Parallel wind-blown ridges: a ridged mid-frequency field laid over a gentle base.
+                double d = Noise.FbmCylX(seed + 0x0D0E, worldX, worldZ, _circumference, planet.TerrainScale * 0.45, octaves: 2);
+                double ridged = 1.0 - System.Math.Abs(d * 2.0 - 1.0); // 0..1 dune crests
+                return h * amp * 0.25 + ridged * amp * 0.85;
+            }
+
+            case "spires":
+            {
+                // Mostly flat ground studded with sparse tall thin spikes (crystal needles / alien towers).
+                double basep = h * amp * 0.22;
+                double mask = Noise.FbmCylX(seed + 0x591E, worldX, worldZ, _circumference, planet.TerrainScale * 0.4, octaves: 2);
+                if (mask > 0.72)
+                {
+                    double t = (mask - 0.72) / 0.28; // 0..1 toward the spike centre
+                    return basep + t * t * amp * 2.6;
+                }
+
+                return basep;
+            }
+
+            default:
+                return h * amp; // unknown style → plain base swell
+        }
     }
 
     // --- impact-crater field (item 33): seam-safe round basins via an FBM mask (the B7 pond-mask approach),
