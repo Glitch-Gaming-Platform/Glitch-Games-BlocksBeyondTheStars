@@ -36,11 +36,14 @@ namespace Spacecraft.Client
             _cam.targetTexture = Texture;
             _cam.clearFlags = CameraClearFlags.SolidColor;
             _cam.backgroundColor = new Color(0.04f, 0.07f, 0.12f, 1f);
-            _cam.fieldOfView = 26f;
+            _cam.fieldOfView = 30f;
             _cam.nearClipPlane = 0.1f;
             _cam.farClipPlane = 20f;
-            _cam.transform.position = Origin + new Vector3(-0.7f, 1.15f, 3.6f);
-            _cam.transform.rotation = Quaternion.Euler(4f, 192f, 0f); // look at the avatar's front
+            // Frame the whole figure from the front with a slight 3/4 angle. Aim with LookAt so the avatar is
+            // always centred (the old fixed position+yaw pointed ~23° off the figure, so it sat off-screen and
+            // the preview looked empty).
+            _cam.transform.position = Origin + new Vector3(0.55f, 1.3f, 3.9f);
+            _cam.transform.LookAt(Origin + new Vector3(0f, 1.15f, 0f));
 
             var lightGo = new GameObject("AvatarPreviewLight");
             lightGo.transform.SetParent(transform, false);

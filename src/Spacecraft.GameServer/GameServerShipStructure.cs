@@ -349,8 +349,8 @@ public sealed partial class GameServer
                 continue;
             }
 
-            // Hull (iron_wall) and anything unknown → solid hull.
-            _world.SetBlock(p, wall);
+            // Any block key (iron_wall, carbon cargo, …) → that block; unknown ids fall back to hull.
+            _world.SetBlock(p, _content.GetBlock(cell.Id)?.NumericId ?? wall);
             _shipExtra.Add(WorldConstants.CanonicalBlock(p));
         }
 

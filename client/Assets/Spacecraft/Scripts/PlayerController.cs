@@ -155,32 +155,35 @@ namespace Spacecraft.Client
                 _verticalVelocity = 0f;
                 _settleTimer += Time.deltaTime;
 
+                // Publish the spawn position NOW (before the settling return below) so the world's seam-aware
+                // chunk placement (GameBootstrap.SceneX uses PlayerPosition) renders the chunks AROUND the spawn
+                // and the ground-check raycast lines up with their colliders. Without this, a spawn far from X=0
+                // (e.g. a landing pad near the longitude-wrap seam) left PlayerPosition stale at the origin, so
+                // chunks rendered far away ("only sky") and the raycast missed the ground → frozen at spawn.
+                Game.PlayerPosition = transform.position;
+
                 // Solid ground loaded somewhere below the spawn? (the chunk's MeshCollider exists)
                 bool groundBelow = Physics.Raycast(_spawnPos + Vector3.up * 0.5f, Vector3.down, out var gHit, 10f)
                                    && gHit.collider != _controller;
 
-                // Reveal the world (dismiss the loading overlay) as soon as the ground is under us, or after a
-                // short grace period even if the spawn chunk is still catching up — so the overlay never overstays
-                // and the player isn't left staring at a "Loading world" screen (B39).
-                if (!_worldRevealed && (groundBelow || _settleTimer > 8f))
+                // Reveal the world + release control TOGETHER — as soon as there is real ground under the spawn,
+                // or after a short grace (then the server's void-rescue recovers a still-streaming spawn chunk by
+                // teleporting onto the ship). Tying reveal to release means you never see a "loaded" world you
+                // can't move in; the short grace means the veil never lingers and feels stuck either.
+                if (groundBelow || _settleTimer > 8f)
                 {
-                    _worldRevealed = true;
-                    Game.NotifyWorldReady();
-                }
+                    if (!_worldRevealed)
+                    {
+                        _worldRevealed = true;
+                        Game.NotifyWorldReady();
+                    }
 
-                // Release on-foot control ONLY once there is real ground under the spawn — never drop the player
-                // into the bottomless void if the chunk is late (the B39 softlock was an unconditional release
-                // that let a slow spawn-chunk become an endless fall). As an absolute last resort after a long
-                // wait, release anyway and let the server's runtime void-rescue teleport us back to safe ground,
-                // so a never-arriving chunk can't freeze us at spawn forever either.
-                if (groundBelow || _settleTimer > 30f)
-                {
                     _settling = false;
                     _settleTimer = 0f;
                 }
                 else
                 {
-                    return; // stay frozen at spawn (no fall) until the ground chunk streams in
+                    return; // stay frozen behind the veil (no fall) until the ground chunk streams in
                 }
             }
 

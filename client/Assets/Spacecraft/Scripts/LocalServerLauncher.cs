@@ -84,7 +84,8 @@ namespace Spacecraft.Client
         /// <summary>Main-thread step: validate the bundled server EXE + build the launch info. Must run on the
         /// Unity main thread (it reads <c>Application.*</c> paths). Returns false only if the EXE is missing.
         /// Pair with <see cref="LaunchPrepared"/> (which can run off the main thread).</summary>
-        public bool Prepare(int port = DefaultPort, int viewDistanceChunks = 0, string worldName = "singleplayer", long seed = 0)
+        public bool Prepare(int port = DefaultPort, int viewDistanceChunks = 0, string worldName = "singleplayer", long seed = 0,
+            bool creativeUnlockAll = false, bool creativeAllShips = false, bool creativeKit = false)
         {
             if (IsRunning)
             {
@@ -117,11 +118,17 @@ namespace Spacecraft.Client
             string seedArg = seed != 0 ? $" --seed {seed}" : string.Empty;
             // Singleplayer enables free space flight + PvE space combat so it's reachable solo.
             const string spaceArgs = " --free-flight true --space-combat PvE --space-npcs Normal";
+            // "Creative" world options (only set when the player picked them at creation; the server bakes them
+            // into the save on first launch, so they persist regardless of later launches).
+            string creativeArgs =
+                (creativeUnlockAll ? " --unlock-all-blueprints true" : string.Empty) +
+                (creativeAllShips ? " --start-all-ships true" : string.Empty) +
+                (creativeKit ? " --creative-kit true" : string.Empty);
             _pendingPsi = new ProcessStartInfo
             {
                 FileName = exe,
                 Arguments = $"--port {Port} --name Singleplayer --world \"{worldName}\" " +
-                            $"--max-players 1 --saves \"{saves}\" --data \"{data}\"" + viewArg + seedArg + spaceArgs,
+                            $"--max-players 1 --saves \"{saves}\" --data \"{data}\"" + viewArg + seedArg + spaceArgs + creativeArgs,
                 WorkingDirectory = Path.GetDirectoryName(exe),
                 UseShellExecute = false,
                 CreateNoWindow = true,

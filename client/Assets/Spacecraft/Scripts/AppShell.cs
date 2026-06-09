@@ -159,8 +159,10 @@ namespace Spacecraft.Client
         /// <summary>Opens the singleplayer world picker (choose an existing save or start a new one).</summary>
         public void StartSingleplayer() => Phase = ShellPhase.SaveSelect;
 
-        /// <summary>Launches singleplayer on a specific world (creates it if new); seed 0 = derive from name.</summary>
-        public void StartSingleplayerWorld(string worldName, long seed = 0)
+        /// <summary>Launches singleplayer on a specific world (creates it if new); seed 0 = derive from name. The
+        /// creative flags are only honoured when the world is first created (the server bakes them into the save).</summary>
+        public void StartSingleplayerWorld(string worldName, long seed = 0,
+            bool creativeUnlockAll = false, bool creativeAllShips = false, bool creativeKit = false)
         {
             // Singleplayer hosts the bundled dedicated server as a child process bound to
             // loopback (Option A), then connects to it like any other server.
@@ -172,7 +174,8 @@ namespace Spacecraft.Client
             // show the loading screen first (below), then spawn it on a background thread. Otherwise the
             // blocking Process.Start (a Defender first-scan of the freshly-built EXE can stall it for seconds)
             // would freeze the menu so "nothing happens" before the loading screen appears.
-            if (_localServer.Prepare(LocalServerLauncher.DefaultPort, Settings.ViewDistanceChunks, worldName, seed))
+            if (_localServer.Prepare(LocalServerLauncher.DefaultPort, Settings.ViewDistanceChunks, worldName, seed,
+                    creativeUnlockAll, creativeAllShips, creativeKit))
             {
                 Host = _localServer.Host;
                 Port = _localServer.Port.ToString();

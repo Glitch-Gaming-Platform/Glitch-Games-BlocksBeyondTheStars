@@ -37,6 +37,25 @@ public sealed class StoredBeacon
     public string OwnerId { get; set; } = string.Empty;
 }
 
+/// <summary>A persisted player-built space station (item 20 S4): its voxel cells + registry row (owner, name,
+/// the body it orbits, flight-scene position). Reappears on the star map + boardable across sessions.</summary>
+public sealed class StoredSpaceStructure
+{
+    public string Id { get; set; } = string.Empty;
+    public string OwnerId { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>The body id whose space instance this station floats in (e.g. "sys0-p1").</summary>
+    public string Location { get; set; } = string.Empty;
+    public float PosX { get; set; }
+    public float PosY { get; set; }
+    public float PosZ { get; set; }
+    public bool Boardable { get; set; }
+
+    /// <summary>The voxel grid, serialized as "x:y:z:block" cells joined by ';'.</summary>
+    public string Blocks { get; set; } = string.Empty;
+}
+
 /// <summary>A single persisted player block edit (placement or removal) in world space.</summary>
 public readonly struct BlockEdit
 {
@@ -102,6 +121,14 @@ public interface IWorldRepository : IDisposable
     IReadOnlyList<StoredBeacon> ListBeacons(string planet);
 
     void DeleteBeacon(string planet, int x, int y, int z);
+
+    /// <summary>Stores (inserts or replaces) a player-built space station (item 20 S4).</summary>
+    void SaveSpaceStructure(StoredSpaceStructure structure);
+
+    /// <summary>Lists all persisted player-built space stations (restored at server start).</summary>
+    IReadOnlyList<StoredSpaceStructure> ListSpaceStructures();
+
+    void DeleteSpaceStructure(string id);
 
     /// <summary>Records the generation/discovery status of a location (system or body).</summary>
     void SetLocationStatus(string locationId, string status);

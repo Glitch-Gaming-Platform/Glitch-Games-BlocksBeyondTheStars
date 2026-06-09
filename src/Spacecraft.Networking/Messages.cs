@@ -723,6 +723,70 @@ public sealed class SpaceState
     public NetSpacePlayer[] Players { get; set; } = System.Array.Empty<NetSpacePlayer>();
 }
 
+/// <summary>The player's own ship as a voxel structure to render in the flight view (item 20, S1).
+/// Seeded server-side from the ship-editor design and sent on entering space (and on ship switch); the
+/// client meshes it 1:1 with the chunk mesher and uses it in place of the hand-built cube ship. The block
+/// grid is sparse — parallel arrays of cell coordinates + the block id at each (only non-air cells).</summary>
+public sealed class SpaceShipDesign
+{
+    /// <summary>Structure id (e.g. "ship:&lt;playerId&gt;" or an asteroid's entity id).</summary>
+    public string Id { get; set; } = string.Empty;
+
+    /// <summary>Structure kind: "ship" (the player's own ship — rides the live flight pose) or "asteroid" (a
+    /// static voxel body at <see cref="PosX"/>/<see cref="PosY"/>/<see cref="PosZ"/>) — item 20 S3.</summary>
+    public string Kind { get; set; } = "ship";
+
+    /// <summary>World position in the flight scene for a static structure (asteroid). Ignored for the own ship.</summary>
+    public float PosX { get; set; }
+    public float PosY { get; set; }
+    public float PosZ { get; set; }
+
+    /// <summary>Design bounding-box size in blocks (for centring the mesh on the structure pivot).</summary>
+    public int Width { get; set; }
+    public int Height { get; set; }
+    public int Length { get; set; }
+
+    /// <summary>Per-cell block coordinates (design-local) and the block id placed there. Same length.</summary>
+    public int[] X { get; set; } = System.Array.Empty<int>();
+    public int[] Y { get; set; } = System.Array.Empty<int>();
+    public int[] Z { get; set; } = System.Array.Empty<int>();
+    public ushort[] Block { get; set; } = System.Array.Empty<ushort>();
+}
+
+/// <summary>Client → server: place or mine one block on a voxel <see cref="SpaceShipDesign"/> structure while
+/// on an EVA spacewalk (item 20, S2). Coordinates are design-local cells (the same space the structure was sent
+/// in). The free-space analogue of <see cref="PlaceBlockIntent"/>/<see cref="MineBlockIntent"/>.</summary>
+public sealed class StructureEditIntent
+{
+    public string StructureId { get; set; } = string.Empty;
+    public int X { get; set; }
+    public int Y { get; set; }
+    public int Z { get; set; }
+
+    /// <summary>True = mine the cell; false = place <see cref="ItemKey"/>'s block at it.</summary>
+    public bool Mine { get; set; }
+
+    /// <summary>The hotbar item whose block to place (ignored when mining).</summary>
+    public string ItemKey { get; set; } = string.Empty;
+}
+
+/// <summary>Client → server: deploy a station core in front of the suit to start a player-built station (item
+/// 20, S4). No payload — the server places it from the suit's pose.</summary>
+public sealed class DeployStationCoreIntent
+{
+}
+
+/// <summary>Server → client: one cell of a voxel structure changed (item 20, S2) — the free-space analogue of
+/// <see cref="BlockChanged"/>. Broadcast to everyone in the space instance so they re-mesh the structure.</summary>
+public sealed class StructureBlockChanged
+{
+    public string StructureId { get; set; } = string.Empty;
+    public int X { get; set; }
+    public int Y { get; set; }
+    public int Z { get; set; }
+    public ushort Block { get; set; } // 0 = air
+}
+
 /// <summary>A remote player's presence in a space instance: their ship (or floating EVA suit) position +
 /// heading, for the flight view to render. Server → client, inside <see cref="SpaceState"/>.</summary>
 public sealed class NetSpacePlayer

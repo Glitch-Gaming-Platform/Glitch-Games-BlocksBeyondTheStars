@@ -152,6 +152,7 @@ public sealed partial class GameServer
         _generator = new WorldGenerator(_meta.Seed, _content);
         _worlds = new WorldManager(_content, _generator, _repo);
         BuildGalaxy(); // resolves _meta.ActiveLocationId to a concrete celestial body id
+        LoadPlayerStations(); // item 20 S4: restore persisted player stations onto the star map + registry
 
         // Ships are per-player now: each player loads/creates their own on join (no global ship at start).
         BuildMissions();
@@ -181,6 +182,10 @@ public sealed partial class GameServer
             DefaultPlanetType = _config.StartPlanet,
             ActiveLocationId = _config.StartPlanet,
             Description = _config.World,
+            // Bake the chosen singleplayer "Creative" world options into the save so they persist + reapply.
+            CreativeUnlockAllBlueprints = _config.CreativeUnlockAllBlueprints,
+            CreativeStartAllShips = _config.CreativeStartAllShips,
+            CreativeStarterKit = _config.CreativeStarterKit,
         };
     }
 
@@ -1164,6 +1169,8 @@ public sealed partial class GameServer
             case ToggleStealthIntent: HandleToggleStealth(session); break;
             case SetJetpackIntent sj: HandleSetJetpack(session, sj); break;
             case SetEvaIntent eva: HandleSetEva(session, eva); break;
+            case StructureEditIntent structureEdit: HandleStructureEdit(session, structureEdit); break;
+            case DeployStationCoreIntent: HandleDeployStationCore(session); break;
             case BoardStationIntent boardStation: HandleBoardStation(session, boardStation); break;
             case LeaveStationIntent: HandleLeaveStation(session); break;
             case RepairWreckIntent repairWreck: HandleRepairWreck(session, repairWreck); break;
@@ -1233,6 +1240,7 @@ public sealed partial class GameServer
         _sessions[connectionId] = session;
         SetupPlayerShip(session); // give the player their own ship, stamped into their world
         EnsureSafeSpawn(session); // self-heal a position persisted mid-fall (don't load them into the void)
+        ApplyCreativeGrants(session); // singleplayer "Creative" world: unlock-all / all-ships / starter kit
 
         var (systemName, planetName) = ActiveLocationNames();
         SendTo(connectionId, new JoinAccepted
@@ -1301,6 +1309,77 @@ public sealed partial class GameServer
         return state;
     }
 
+    /// <summary>A curated "Creative" starter set (singleplayer): a couple of better tools + generous stacks of
+    /// the key materials/ores/components so you can build right away. Survival mechanics still apply, so this is a
+    /// head start, not infinite resources. Unknown keys are skipped. (Inventory + ship cargo absorb the stacks.)</summary>
+    private static readonly (string Item, int Count)[] CreativeKit =
+    {
+        ("titanium_drill", 1), ("advanced_scanner", 1),
+        ("iron_ore", 99), ("copper_ore", 99), ("titanium_ore", 99), ("silicate", 99), ("carbon", 99),
+        ("iron_ingot", 99), ("iron_plate", 99), ("titanium_plate", 99), ("steel", 99), ("light_alloy", 99),
+        ("metal_panel", 99), ("copper_wire", 99), ("cable", 99), ("circuit_board", 99), ("carbon_composite", 99),
+        ("energy_cell_1", 99), ("glass", 99), ("data_fragment", 99),
+        ("iron_wall", 99), ("stone", 99), ("station_core", 8),
+    };
+
+    /// <summary>Applies the world's chosen singleplayer "Creative" options to a (re)joining player: unlock every
+    /// blueprint, own every ship type, and — once — grant the curated starter kit. Blueprints + ships are
+    /// idempotent so they reapply cleanly on every load (which also rebuilds the in-memory fleet). Survival rules
+    /// are untouched (the player chose "head start", not no-mechanics).</summary>
+    private void ApplyCreativeGrants(PlayerSession session)
+    {
+        if (!_meta.CreativeUnlockAllBlueprints && !_meta.CreativeStartAllShips && !_meta.CreativeStarterKit)
+        {
+            return; // an Explorer world — nothing to grant
+        }
+
+        Serve(session); // point the ship/world cursors at this player before granting
+        var p = session.State;
+
+        if (_meta.CreativeUnlockAllBlueprints)
+        {
+            bool changed = false;
+            foreach (var key in _content.Blueprints.Keys)
+            {
+                changed |= p.UnlockedBlueprints.Add(key);
+            }
+
+            if (changed)
+            {
+                _repo.SavePlayer(p);
+            }
+        }
+
+        if (_meta.CreativeStartAllShips)
+        {
+            var owned = new HashSet<string>(session.Ships.Values.Select(s => s.ShipType));
+            foreach (var def in _content.Ships.Values)
+            {
+                if (def.Key != "starter" && owned.Add(def.Key))
+                {
+                    AddOwnedShipFromDefinition(def, "creative");
+                }
+            }
+        }
+
+        if (_meta.CreativeStarterKit && !_meta.CreativeKitGranted)
+        {
+            var pool = new MaterialPool(_content, p, _ship);
+            foreach (var (item, count) in CreativeKit)
+            {
+                if (_content.GetItem(item) is not null)
+                {
+                    pool.Add(item, count);
+                }
+            }
+
+            _meta.CreativeKitGranted = true;
+            _repo.SaveMetadata(_meta);
+            _repo.SavePlayer(p); // persist the granted kit so a reload keeps it (and the one-time flag holds)
+            SendInventory(session);
+        }
+    }
+
     /// <summary>
     /// Adds a fully-joined player session without a network handshake, using a synthetic
     /// (negative) connection id. Used by singleplayer/local co-op and by multi-player server
@@ -1326,6 +1405,7 @@ public sealed partial class GameServer
         _sessions[connectionId] = session;
         SetupPlayerShip(session); // local/test players get their own ship too
         EnsureSafeSpawn(session); // self-heal a position persisted mid-fall (don't load them into the void)
+        ApplyCreativeGrants(session); // singleplayer "Creative" world: unlock-all / all-ships / starter kit
         return session;
     }
 

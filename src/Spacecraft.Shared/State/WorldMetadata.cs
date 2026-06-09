@@ -30,4 +30,14 @@ public sealed class WorldMetadata
     /// aren't re-spawned on reload — even after the container has been looted and removed.
     /// </summary>
     public System.Collections.Generic.List<string> GeneratedLoot { get; set; } = new();
+
+    // --- Singleplayer "Creative" world options (chosen at creation; persisted so they reapply on every load).
+    // A head-start sandbox: everything available + a starter set, while survival mechanics stay on. All false =
+    // the normal "Explorer" world. Blueprints + ships are re-applied per join (idempotent); the kit is one-time. ---
+    public bool CreativeUnlockAllBlueprints { get; set; }
+    public bool CreativeStartAllShips { get; set; }
+    public bool CreativeStarterKit { get; set; }
+
+    /// <summary>True once the one-time creative starter kit has been granted, so reloads don't refill it.</summary>
+    public bool CreativeKitGranted { get; set; }
 }

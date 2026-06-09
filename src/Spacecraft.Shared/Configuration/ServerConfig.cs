@@ -87,6 +87,19 @@ public sealed class ServerConfig
     /// </summary>
     public bool PlaceWrecks { get; set; } = true;
 
+    // --- Singleplayer "Creative" world options (the player picks these at world creation). They are a
+    // head-start sandbox: everything available + a starter set, while survival mechanics stay ON. Default
+    // false = the normal "Explorer" experience. Persisted per world in WorldMetadata so they reapply on load. ---
+
+    /// <summary>Start with every blueprint unlocked (re-applied each join; idempotent).</summary>
+    public bool CreativeUnlockAllBlueprints { get; set; }
+
+    /// <summary>Own every ship type from the start (re-applied each join; idempotent).</summary>
+    public bool CreativeStartAllShips { get; set; }
+
+    /// <summary>Grant a curated kit (all tools + generous stacks of key materials) once, at first spawn.</summary>
+    public bool CreativeStarterKit { get; set; }
+
     private static readonly JsonSerializerOptions Options = new()
     {
         WriteIndented = true,
@@ -194,6 +207,15 @@ public sealed class ServerConfig
                     break;
                 case "admin-bind":
                     AdminBindAddress = value; applied.Add("admin-bind");
+                    break;
+                case "unlock-all-blueprints":
+                    if (bool.TryParse(value, out var uab)) { CreativeUnlockAllBlueprints = uab; applied.Add("unlock-all-blueprints"); }
+                    break;
+                case "start-all-ships":
+                    if (bool.TryParse(value, out var sas)) { CreativeStartAllShips = sas; applied.Add("start-all-ships"); }
+                    break;
+                case "creative-kit":
+                    if (bool.TryParse(value, out var ck)) { CreativeStarterKit = ck; applied.Add("creative-kit"); }
                     break;
             }
         }

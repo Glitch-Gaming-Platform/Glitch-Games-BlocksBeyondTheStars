@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using Spacecraft.Shared.Geometry;
+using Spacecraft.Shared.Primitives;
 using Spacecraft.Shared.World;
 using UnityEngine;
 using UnityEngine.UI;
@@ -32,6 +34,36 @@ namespace Spacecraft.Client
 
         private GameObject _root;
         private GameObject _ship;
+        private Spacecraft.Networking.Messages.SpaceShipDesign _builtDesign; // the design the current _ship mesh was built from (item 20 S1)
+
+        // item 20 S2: the player's own ship voxel grid, kept client-side for EVA collision + build/mine aim.
+        private Dictionary<Vector3i, BlockId> _shipCells; // null when the cube fallback ship is shown
+        private Vector3 _shipCentre;        // design → ship-local offset used when meshing
+        private string _shipStructureId;    // structure id these cells belong to (matches server edits)
+        private Transform _shipVox;         // container holding the voxel chunk meshes (child of _ship)
+        private bool _structSubscribed;     // subscribed to structure block-change events
+        private Vector3Int _evaAimHit, _evaAimPlace; // aimed solid cell + the empty cell before it (design coords)
+        private bool _evaHasAim;
+        private string _evaAimStructId;      // id of the structure currently aimed at (ship or asteroid)
+        private GameObject _aimHighlight;    // marker on the aimed cell
+        private const float EvaReach = 6f;   // how far the suit can build/mine
+        private const float SuitRadius = 0.45f; // suit collision radius vs the voxel hull
+        private const float FarStructUnload = 95f; // S5: drop a voxel body's mesh beyond this (data kept)
+        private const float FlightShipScale = 0.5f; // voxel ship is shown half-size while piloting (1:1 on EVA)
+
+        // item 20 S3: voxel ore asteroids — static structures at world positions, separate from the own ship.
+        private sealed class VoxStruct
+        {
+            public Dictionary<Vector3i, BlockId> Cells;
+            public Vector3 Centre;
+            public Vector3 Pos;     // root-local position of the structure
+            public GameObject Root; // null until (re)built
+            public bool MeshDirty;
+        }
+
+        private readonly Dictionary<string, VoxStruct> _structs = new Dictionary<string, VoxStruct>();
+        private readonly List<string> _structRemove = new List<string>();
+
         private Transform _exhaust;
         private Material _hatchMat; // glowing entry-hatch marker on the ship's tail (pulses on an EVA)
         private Material _hullMat;  // the ship's hull material — re-tinted when the player picks a colour (item 32)
@@ -122,6 +154,16 @@ namespace Spacecraft.Client
                 return;
             }
 
+            // item 20 S2/S3: subscribe to voxel-structure edits/designs/removals as soon as the network exists
+            // (kept for the rig's lifetime) — early enough that the first asteroid batch on space-entry isn't missed.
+            if (Game.Network != null && !_structSubscribed)
+            {
+                Game.Network.StructureBlockChangedReceived += OnStructureBlockChanged;
+                Game.Network.SpaceShipDesignReceived += OnStructureDesign;
+                Game.Network.SpaceEntityDestroyed += OnStructEntityDestroyed;
+                _structSubscribed = true;
+            }
+
             // Drift the cloud cover slowly so planets look alive from space.
             for (int i = 0; i < _cloudShells.Count; i++)
             {
@@ -140,6 +182,16 @@ namespace Spacecraft.Client
             {
                 return;
             }
+
+            // item 20 S1: the voxel ship design arrives just after we enter space (separate message), so rebuild
+            // the ship mesh once it (or a switched ship's design) is available.
+            if (!ReferenceEquals(_builtDesign, Game.ShipDesign))
+            {
+                RebuildShipModel();
+            }
+
+            // item 20 S3: build/update/remove the voxel asteroid bodies as their designs arrive.
+            ReconcileStructs();
 
             // Live hull re-tint: the player can change their ship colour from the menu mid-flight (item 32).
             if (_hullMat != null && Game.HullRgb != _appliedHullRgb)
@@ -182,6 +234,13 @@ namespace Spacecraft.Client
             {
                 if (Game.InEva && !_eva) { BeginEvaMode(); }
                 else if (!Game.InEva && _eva) { _eva = false; }
+            }
+
+            // Render the voxel ship compact while flying (so a 1:1 hull doesn't dwarf the system), but at full
+            // 1:1 on an EVA — the normal "as on a world" scale for floating up to it + building (bug fix).
+            if (_ship != null && _shipCells != null && _shipCells.Count > 0)
+            {
+                _ship.transform.localScale = Vector3.one * (_eva ? 1f : FlightShipScale);
             }
 
             switch (_phase)
@@ -267,6 +326,22 @@ namespace Spacecraft.Client
                 var pads = Game.LandingPadsBody == _choosePadBody ? Game.LandingPads : null;
                 if (pads != null)
                 {
+                    // Pressing E again (or Enter) just lands on the first free pad — so "press E to land" works as
+                    // a single action without needing to know the per-pad number keys. Numbers still pick a pad.
+                    if (Input.GetKeyDown(KeyCode.E) || Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+                    {
+                        for (int i = 0; i < pads.Length; i++)
+                        {
+                            if (!pads[i].Occupied)
+                            {
+                                Game.Network?.SendLeaveSpace(_choosePadBody, pads[i].Index);
+                                _confirmLand = false;
+                                _choosePadBody = null;
+                                return;
+                            }
+                        }
+                    }
+
                     for (int i = 0; i < pads.Length && i < 9; i++)
                     {
                         if ((Input.GetKeyDown(KeyCode.Alpha1 + i) || Input.GetKeyDown(KeyCode.Keypad1 + i)) && !pads[i].Occupied)
@@ -587,7 +662,12 @@ namespace Spacecraft.Client
             var rot = _ship.transform.localRotation;
             _evaYaw = _yaw;
             _evaPitch = _pitch;
-            _evaPos = _ship.transform.localPosition + rot * new Vector3(0f, -1.4f, -3.4f); // just below & behind the hull
+
+            // Start the suit clearly OUTSIDE + behind the hull, facing it, so you actually see your ship. The
+            // voxel ship is full-size (1:1) on an EVA, so the offset scales with its length (the old fixed -3.4
+            // was tuned for the small cube model and left you spawning inside the big voxel hull → "no ship").
+            float backZ = _shipCells != null && _shipCells.Count > 0 ? _shipCentre.z + 6f : 3.4f;
+            _evaPos = _ship.transform.localPosition + rot * new Vector3(0f, -1f, -backZ);
             if (_evaPos.magnitude > _bounds)
             {
                 _evaPos = _evaPos.normalized * _bounds;
@@ -617,7 +697,24 @@ namespace Spacecraft.Client
             float lift = (Input.GetKey(KeyCode.Space) ? 1f : 0f)
                        - ((Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.C)) ? 1f : 0f);
             Vector3 dir = rot * (Vector3.forward * fwd + Vector3.right * strafe) + Vector3.up * lift;
-            _evaPos += dir * (EvaSpeed * Time.deltaTime);
+            Vector3 delta = dir * (EvaSpeed * Time.deltaTime);
+
+            // Don't float through the ship or an asteroid. With voxel structures present (S2/S3) collide against
+            // their block grids — so you can drift right up to a hull/rock — otherwise fall back to a sphere keep-out.
+            if (HasVoxelStructures())
+            {
+                _evaPos = ResolveEvaVoxelMove(_evaPos, delta);
+            }
+            else
+            {
+                _evaPos += delta;
+                Vector3 toShip = _evaPos - _ship.transform.localPosition;
+                float shipDist = toShip.magnitude;
+                if (shipDist < ShipKeepOut && shipDist > 0.0001f)
+                {
+                    _evaPos = _ship.transform.localPosition + toShip / shipDist * ShipKeepOut;
+                }
+            }
 
             // Stay inside the flight bounds and don't drift into a body — slide along its keep-out shell.
             if (_evaPos.magnitude > _bounds)
@@ -635,13 +732,13 @@ namespace Spacecraft.Client
                 }
             }
 
-            // Don't float through your own parked ship — bounce off / slide around the hull (like a station's
-            // keep-out). The board range is far larger, so you can still drift up to the hatch and press E.
-            Vector3 toShip = _evaPos - _ship.transform.localPosition;
-            float shipDist = toShip.magnitude;
-            if (shipDist < ShipKeepOut && shipDist > 0.0001f)
+            // Aim at the ship's voxel grid and build/mine on it (S2).
+            UpdateEvaBuild();
+
+            // item 20 S4: deploy a station core (B) to start a player-built station.
+            if (!Game.MenuOpen && Input.GetKeyDown(KeyCode.B))
             {
-                _evaPos = _ship.transform.localPosition + toShip / shipDist * ShipKeepOut;
+                Game.Network?.SendDeployStationCore();
             }
 
             // Report the suit's pose so the other players in this instance see us floating (the server tags it
@@ -694,6 +791,350 @@ namespace Spacecraft.Client
                     BoardShipFromEva();
                 }
             }
+        }
+
+        // ---------------- item 20 S2/S3: free-space build/mine + voxel collision (ship + asteroids) ----------------
+
+        /// <summary>Resolves a structure id to its transform + voxel grid (the own ship, or an asteroid body), or
+        /// returns null if it isn't present/built.</summary>
+        private Transform StructTransform(string id, out Dictionary<Vector3i, BlockId> cells, out Vector3 centre)
+        {
+            if (id == _shipStructureId && _shipCells != null && _ship != null)
+            {
+                cells = _shipCells; centre = _shipCentre; return _ship.transform;
+            }
+
+            if (_structs.TryGetValue(id, out var vs) && vs.Root != null)
+            {
+                cells = vs.Cells; centre = vs.Centre; return vs.Root.transform;
+            }
+
+            cells = null; centre = Vector3.zero; return null;
+        }
+
+        /// <summary>Root-local point → a structure's design-grid coords (axis-aligned with its voxels), and back.</summary>
+        private Vector3 ToDesign(Transform t, Vector3 centre, Vector3 rootPoint)
+            => t.InverseTransformPoint(_root.transform.TransformPoint(rootPoint)) + centre;
+
+        private Vector3 FromDesign(Transform t, Vector3 centre, Vector3 designPoint)
+            => _root.transform.InverseTransformPoint(t.TransformPoint(designPoint - centre));
+
+        private static bool CellsBlock(Dictionary<Vector3i, BlockId> cells, Vector3 designPos)
+        {
+            int x0 = Mathf.FloorToInt(designPos.x - SuitRadius), x1 = Mathf.FloorToInt(designPos.x + SuitRadius);
+            int y0 = Mathf.FloorToInt(designPos.y - SuitRadius), y1 = Mathf.FloorToInt(designPos.y + SuitRadius);
+            int z0 = Mathf.FloorToInt(designPos.z - SuitRadius), z1 = Mathf.FloorToInt(designPos.z + SuitRadius);
+            for (int x = x0; x <= x1; x++)
+            for (int y = y0; y <= y1; y++)
+            for (int z = z0; z <= z1; z++)
+            {
+                if (cells.ContainsKey(new Vector3i(x, y, z)))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>True if a suit-sized sphere at this root-local point overlaps a solid cell of ANY structure.</summary>
+        private bool SuitBlockedWorld(Vector3 rootPos)
+        {
+            if (_shipCells != null && _shipCells.Count > 0 && _ship != null
+                && CellsBlock(_shipCells, ToDesign(_ship.transform, _shipCentre, rootPos)))
+            {
+                return true;
+            }
+
+            foreach (var vs in _structs.Values)
+            {
+                if (vs.Root != null && vs.Cells != null && vs.Cells.Count > 0
+                    && CellsBlock(vs.Cells, ToDesign(vs.Root.transform, vs.Centre, rootPos)))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>True if any voxel structure (ship or asteroid) is present to collide/build against.</summary>
+        private bool HasVoxelStructures()
+            => (_shipCells != null && _shipCells.Count > 0) || _structs.Count > 0;
+
+        /// <summary>Moves the suit by <paramref name="delta"/> (root-local) but stops it passing through any
+        /// structure: resolves each world axis so it slides along the voxels instead of penetrating.</summary>
+        private Vector3 ResolveEvaVoxelMove(Vector3 evaPos, Vector3 delta)
+        {
+            Vector3 p = evaPos;
+            var tryX = new Vector3(p.x + delta.x, p.y, p.z);
+            if (!SuitBlockedWorld(tryX)) { p.x = tryX.x; }
+            var tryY = new Vector3(p.x, p.y + delta.y, p.z);
+            if (!SuitBlockedWorld(tryY)) { p.y = tryY.y; }
+            var tryZ = new Vector3(p.x, p.y, p.z + delta.z);
+            if (!SuitBlockedWorld(tryZ)) { p.z = tryZ.z; }
+            return p;
+        }
+
+        /// <summary>Ray-marches one structure's voxel grid from the suit's eye (a design-space DDA mirroring the
+        /// on-foot AimBlock). Returns the hit cell, the empty cell before it, and the hit distance.</summary>
+        private bool RayMarchCells(Transform t, Dictionary<Vector3i, BlockId> cells, Vector3 centre,
+            Vector3 rootOrigin, Vector3 rootDir, out Vector3Int hitCell, out Vector3Int placeCell, out float dist)
+        {
+            hitCell = default; placeCell = default; dist = 0f;
+            Vector3 o = ToDesign(t, centre, rootOrigin);
+            Vector3 dir = t.InverseTransformDirection(_root.transform.TransformDirection(rootDir)).normalized;
+
+            int x = Mathf.FloorToInt(o.x), y = Mathf.FloorToInt(o.y), z = Mathf.FloorToInt(o.z);
+            int px = x, py = y, pz = z;
+            int sx = dir.x >= 0 ? 1 : -1, sy = dir.y >= 0 ? 1 : -1, sz = dir.z >= 0 ? 1 : -1;
+            float invx = Mathf.Abs(dir.x) > 1e-6f ? 1f / Mathf.Abs(dir.x) : float.PositiveInfinity;
+            float invy = Mathf.Abs(dir.y) > 1e-6f ? 1f / Mathf.Abs(dir.y) : float.PositiveInfinity;
+            float invz = Mathf.Abs(dir.z) > 1e-6f ? 1f / Mathf.Abs(dir.z) : float.PositiveInfinity;
+            float tMaxX = float.IsInfinity(invx) ? float.PositiveInfinity : (dir.x > 0 ? (x + 1 - o.x) : (o.x - x)) * invx;
+            float tMaxY = float.IsInfinity(invy) ? float.PositiveInfinity : (dir.y > 0 ? (y + 1 - o.y) : (o.y - y)) * invy;
+            float tMaxZ = float.IsInfinity(invz) ? float.PositiveInfinity : (dir.z > 0 ? (z + 1 - o.z) : (o.z - z)) * invz;
+
+            float tt = 0f;
+            for (int i = 0; i < 80 && tt <= EvaReach; i++)
+            {
+                if (cells.ContainsKey(new Vector3i(x, y, z)))
+                {
+                    hitCell = new Vector3Int(x, y, z);
+                    placeCell = new Vector3Int(px, py, pz);
+                    dist = tt;
+                    return true;
+                }
+
+                px = x; py = y; pz = z;
+                if (tMaxX <= tMaxY && tMaxX <= tMaxZ) { x += sx; tt = tMaxX; tMaxX += invx; }
+                else if (tMaxY <= tMaxZ) { y += sy; tt = tMaxY; tMaxY += invy; }
+                else { z += sz; tt = tMaxZ; tMaxZ += invz; }
+            }
+
+            return false;
+        }
+
+        /// <summary>Aims at the nearest voxel structure (ship or asteroid) the suit is looking at.</summary>
+        private bool AimVoxel(out string structId, out Vector3Int hitCell, out Vector3Int placeCell)
+        {
+            structId = null; hitCell = default; placeCell = default;
+            if (_root == null)
+            {
+                return false;
+            }
+
+            Vector3 rootDir = Quaternion.Euler(_evaPitch, _evaYaw, 0f) * Vector3.forward;
+            float bestT = float.MaxValue;
+            string bestId = null;
+            Vector3Int bestHit = default, bestPlace = default;
+
+            if (_shipCells != null && _ship != null && _shipCells.Count > 0
+                && RayMarchCells(_ship.transform, _shipCells, _shipCentre, _evaPos, rootDir, out var sh, out var sp, out var sd)
+                && sd < bestT)
+            {
+                bestT = sd; bestId = _shipStructureId; bestHit = sh; bestPlace = sp;
+            }
+
+            foreach (var kv in _structs)
+            {
+                var vs = kv.Value;
+                if (vs.Root == null || vs.Cells == null || vs.Cells.Count == 0)
+                {
+                    continue;
+                }
+
+                if (RayMarchCells(vs.Root.transform, vs.Cells, vs.Centre, _evaPos, rootDir, out var hc, out var pc, out var d)
+                    && d < bestT)
+                {
+                    bestT = d; bestId = kv.Key; bestHit = hc; bestPlace = pc;
+                }
+            }
+
+            if (bestId == null)
+            {
+                return false;
+            }
+
+            structId = bestId; hitCell = bestHit; placeCell = bestPlace;
+            return true;
+        }
+
+        /// <summary>EVA aim + build/mine: highlights the targeted cell; LMB mines it (ship hull or asteroid ore),
+        /// RMB places the held block in the empty cell before it. Server-authoritative — it validates + broadcasts.</summary>
+        private void UpdateEvaBuild()
+        {
+            _evaHasAim = AimVoxel(out _evaAimStructId, out _evaAimHit, out _evaAimPlace);
+            UpdateAimHighlight();
+
+            if (Game.MenuOpen || !_evaHasAim || string.IsNullOrEmpty(_evaAimStructId))
+            {
+                return;
+            }
+
+            if (Input.GetMouseButtonDown(0))
+            {
+                Game.Network?.SendStructureEdit(_evaAimStructId, _evaAimHit.x, _evaAimHit.y, _evaAimHit.z, mine: true);
+            }
+            else if (Input.GetMouseButtonDown(1))
+            {
+                string item = Game.ItemInSlot(Game.SelectedHotbarSlot) ?? string.Empty;
+                var def = string.IsNullOrEmpty(item) ? null : Game.Content?.GetItem(item);
+                if (def != null && !string.IsNullOrEmpty(def.PlacesBlock))
+                {
+                    Game.Network?.SendStructureEdit(_evaAimStructId, _evaAimPlace.x, _evaAimPlace.y, _evaAimPlace.z, mine: false, item);
+                }
+            }
+        }
+
+        /// <summary>Shows a small glowing marker on the cell the suit is aiming at (build/mine feedback).</summary>
+        private void UpdateAimHighlight()
+        {
+            Transform t = null;
+            Vector3 centre = Vector3.zero;
+            if (_evaHasAim)
+            {
+                t = StructTransform(_evaAimStructId, out _, out centre);
+            }
+
+            if (!_evaHasAim || _root == null || t == null)
+            {
+                if (_aimHighlight != null) { _aimHighlight.SetActive(false); }
+                return;
+            }
+
+            if (_aimHighlight == null)
+            {
+                _aimHighlight = Cube("AimMarker", _root.transform, Vector3.zero, Vector3.one * 0.22f, Unlit(new Color(0.3f, 0.95f, 1f)));
+            }
+
+            _aimHighlight.SetActive(true);
+            var cellCentre = new Vector3(_evaAimHit.x + 0.5f, _evaAimHit.y + 0.5f, _evaAimHit.z + 0.5f);
+            _aimHighlight.transform.localPosition = FromDesign(t, centre, cellCentre);
+        }
+
+        /// <summary>Applies a server structure edit to the local voxel grid (ship or asteroid) + re-meshes.</summary>
+        private void OnStructureBlockChanged(Spacecraft.Networking.Messages.StructureBlockChanged m)
+        {
+            var key = new Vector3i(m.X, m.Y, m.Z);
+            if (m.StructureId == _shipStructureId && _shipCells != null)
+            {
+                if (m.Block == 0) { _shipCells.Remove(key); }
+                else { _shipCells[key] = new BlockId(m.Block); }
+
+                RebuildShipVoxels();
+                return;
+            }
+
+            if (_structs.TryGetValue(m.StructureId, out var vs) && vs.Cells != null)
+            {
+                if (m.Block == 0) { vs.Cells.Remove(key); }
+                else { vs.Cells[key] = new BlockId(m.Block); }
+
+                vs.MeshDirty = true;
+            }
+        }
+
+        /// <summary>A voxel structure design arrived (item 20 S3 — asteroids). The own ship (Kind "ship") is
+        /// handled via Game.ShipDesign; other kinds become static voxel bodies at their world position.</summary>
+        private void OnStructureDesign(Spacecraft.Networking.Messages.SpaceShipDesign m)
+        {
+            if (m.Kind == "ship" || string.IsNullOrEmpty(m.Kind))
+            {
+                return;
+            }
+
+            var cells = CellsFromDesign(m, out var centre);
+            if (_structs.TryGetValue(m.Id, out var existing) && existing.Root != null)
+            {
+                Destroy(existing.Root); // a fresh design replaces the old mesh
+            }
+
+            _structs[m.Id] = new VoxStruct
+            {
+                Cells = cells, Centre = centre, Pos = new Vector3(m.PosX, m.PosY, m.PosZ), Root = null, MeshDirty = true,
+            };
+        }
+
+        /// <summary>A space entity was destroyed — if it was a voxel asteroid body, drop its mesh (item 20 S3).</summary>
+        private void OnStructEntityDestroyed(Spacecraft.Networking.Messages.SpaceEntityDestroyed m)
+        {
+            if (_structs.ContainsKey(m.Id))
+            {
+                _structRemove.Add(m.Id);
+            }
+        }
+
+        /// <summary>Builds/updates/removes the asteroid voxel bodies' GameObjects (item 20 S3). Runs while the
+        /// flight view is active so designs that arrived before the scene existed get built once it does.</summary>
+        private void ReconcileStructs()
+        {
+            if (_root == null)
+            {
+                return;
+            }
+
+            if (_structRemove.Count > 0)
+            {
+                foreach (var id in _structRemove)
+                {
+                    if (_structs.TryGetValue(id, out var vs))
+                    {
+                        if (vs.Root != null) { Destroy(vs.Root); }
+                        _structs.Remove(id);
+                    }
+                }
+
+                _structRemove.Clear();
+            }
+
+            // S5: unload far voxel bodies (keep their data; rebuild when you come back near) so dozens of
+            // structures don't all carry live meshes. The reference is the suit on an EVA, else the ship.
+            Vector3 viewer = _eva ? _evaPos : (_ship != null ? _ship.transform.localPosition : Vector3.zero);
+            float farSq = FarStructUnload * FarStructUnload;
+            foreach (var vs in _structs.Values)
+            {
+                bool near = (vs.Pos - viewer).sqrMagnitude <= farSq;
+                if (near && vs.Root == null)
+                {
+                    vs.MeshDirty = true; // came back into range → rebuild below
+                }
+                else if (!near && vs.Root != null)
+                {
+                    Destroy(vs.Root);
+                    vs.Root = null; // out of range → drop the mesh, keep the data
+                }
+            }
+
+            foreach (var vs in _structs.Values)
+            {
+                if (!vs.MeshDirty)
+                {
+                    continue;
+                }
+
+                if (vs.Root == null)
+                {
+                    vs.Root = new GameObject("Asteroid");
+                    vs.Root.transform.SetParent(_root.transform, false);
+                    vs.Root.transform.localPosition = vs.Pos;
+                }
+
+                BuildVoxChunks(vs.Root.transform, vs.Cells, vs.Centre);
+                vs.MeshDirty = false;
+            }
+        }
+
+        /// <summary>Tears down all asteroid voxel bodies (on leaving the flight view).</summary>
+        private void ClearStructs()
+        {
+            foreach (var vs in _structs.Values)
+            {
+                if (vs.Root != null) { Destroy(vs.Root); }
+            }
+
+            _structs.Clear();
+            _structRemove.Clear();
         }
 
         /// <summary>Climbs back in through the airlock from an EVA — into the ship's walkable interior (on
@@ -900,6 +1341,10 @@ namespace Spacecraft.Client
             _dropIds.Clear();
             _beams.Clear(); // their GameObjects were children of _root (already destroyed)
             _asteroidMat = null; // material lived under the destroyed view; rebuild next launch
+            ClearStructs();      // item 20 S3: asteroid bodies lived under _root (destroyed) — drop the refs
+            _shipCells = null;   // ship voxel grid was under the destroyed _ship
+            _shipVox = null;
+            _aimHighlight = null; // marker lived under _root (destroyed)
             _ship = null;
             _exhaust = null;
             _sun = null; // sun billboard lived under _root (destroyed); flare sprites persist on _ui
@@ -1194,6 +1639,20 @@ namespace Spacecraft.Client
 
         private GameObject BuildShip(Transform parent)
         {
+            // item 20 S1: if the server sent the ship's voxel design, render it as a real 1:1 voxel mesh of the
+            // player's editor design instead of the hand-built cube silhouette below.
+            var design = Game?.ShipDesign;
+            _builtDesign = design;
+            if (design != null && design.Block != null && design.Block.Length > 0)
+            {
+                return BuildVoxelShip(parent, design);
+            }
+
+            // Cube fallback (no design yet): no voxel grid to collide/build against.
+            _shipCells = null;
+            _shipVox = null;
+            _shipStructureId = null;
+
             var ship = new GameObject("Ship");
             ship.transform.SetParent(parent, false);
 
@@ -1225,6 +1684,163 @@ namespace Spacecraft.Client
             var ex = Cube("Exhaust", ship.transform, new Vector3(0f, 0f, -2.4f), new Vector3(0.6f, 0.6f, 1f), Unlit(new Color(0.6f, 0.85f, 1f)));
             _exhaust = ex.transform;
             return ship;
+        }
+
+        /// <summary>Builds the player's ship as a 1:1 voxel mesh from the server's design (item 20 S1): meshes the
+        /// sparse block grid with the same <see cref="ChunkMesher"/> + block atlas the planet world uses, centred on
+        /// the ship pivot so it flies + rotates like the old cube model. Keeps the glowing tail hatch marker +
+        /// thruster exhaust so the EVA/throttle FX still work. The atlas hull can't be runtime-tinted, so the hull
+        /// colour (item 32) doesn't apply here — _hullMat stays null (its use sites are null-guarded).</summary>
+        private GameObject BuildVoxelShip(Transform parent, Spacecraft.Networking.Messages.SpaceShipDesign d)
+        {
+            var ship = new GameObject("Ship");
+            ship.transform.SetParent(parent, false);
+
+            // Index the cells (kept client-side for EVA collision + build/mine aim, S2) and find the bounds.
+            var cells = new Dictionary<Vector3i, BlockId>(d.Block.Length);
+            int minX = int.MaxValue, minY = int.MaxValue, minZ = int.MaxValue;
+            int maxX = int.MinValue, maxY = int.MinValue, maxZ = int.MinValue;
+            for (int i = 0; i < d.Block.Length; i++)
+            {
+                int bx = d.X[i], by = d.Y[i], bz = d.Z[i];
+                cells[new Vector3i(bx, by, bz)] = new BlockId(d.Block[i]);
+                if (bx < minX) minX = bx; if (by < minY) minY = by; if (bz < minZ) minZ = bz;
+                if (bx > maxX) maxX = bx; if (by > maxY) maxY = by; if (bz > maxZ) maxZ = bz;
+            }
+
+            // Centre the design on the ship pivot (so it rotates about its middle, like the old model). Front = +Z.
+            _shipCells = cells;
+            _shipCentre = new Vector3((minX + maxX + 1) * 0.5f, (minY + maxY + 1) * 0.5f, (minZ + maxZ + 1) * 0.5f);
+            _shipStructureId = d.Id;
+
+            // A child container holds the voxel chunk meshes so an EVA block edit (S2) can rebuild just the voxels.
+            _shipVox = new GameObject("Vox").transform;
+            _shipVox.SetParent(ship.transform, false);
+            RebuildShipVoxels();
+
+            // Tail FX, placed just behind the hull's rear (-Z) face so the EVA hatch pulse + throttle exhaust
+            // still read on the voxel ship. Local Z of the rear face after centring:
+            float rearZ = minZ - _shipCentre.z;
+            float lowY = minY - _shipCentre.y + 0.5f;
+            _hatchMat = Unlit(new Color(0.2f, 0.85f, 1f));
+            Cube("Hatch", ship.transform, new Vector3(0f, lowY, rearZ + 0.1f), new Vector3(1.0f, 0.6f, 0.25f), _hatchMat);
+            var ex = Cube("Exhaust", ship.transform, new Vector3(0f, 0f, rearZ - 0.6f), new Vector3(0.6f, 0.6f, 1f), Unlit(new Color(0.6f, 0.85f, 1f)));
+            _exhaust = ex.transform;
+            return ship;
+        }
+
+        /// <summary>(Re)builds the ship's voxel chunk meshes + colliders from <see cref="_shipCells"/> (item 20
+        /// S1/S2). Called on first build and after each EVA block edit. The pivot centre stays fixed so the ship
+        /// never jumps when you add/remove a block.</summary>
+        private void RebuildShipVoxels()
+        {
+            if (_shipVox != null)
+            {
+                BuildVoxChunks(_shipVox, _shipCells, _shipCentre);
+            }
+        }
+
+        /// <summary>Clears <paramref name="parent"/> and (re)builds voxel chunk meshes + colliders from a sparse
+        /// block grid, centred on <paramref name="centre"/> — shared by the ship (S1/S2) and asteroids (S3).</summary>
+        private void BuildVoxChunks(Transform parent, Dictionary<Vector3i, BlockId> cells, Vector3 centre)
+        {
+            for (int i = parent.childCount - 1; i >= 0; i--)
+            {
+                Destroy(parent.GetChild(i).gameObject);
+            }
+
+            if (cells == null || cells.Count == 0)
+            {
+                return;
+            }
+
+            int minX = int.MaxValue, minY = int.MaxValue, minZ = int.MaxValue;
+            int maxX = int.MinValue, maxY = int.MinValue, maxZ = int.MinValue;
+            foreach (var c in cells.Keys)
+            {
+                if (c.X < minX) minX = c.X; if (c.Y < minY) minY = c.Y; if (c.Z < minZ) minZ = c.Z;
+                if (c.X > maxX) maxX = c.X; if (c.Y > maxY) maxY = c.Y; if (c.Z > maxZ) maxZ = c.Z;
+            }
+
+            BlockId WorldBlock(int x, int y, int z) => cells.TryGetValue(new Vector3i(x, y, z), out var b) ? b : BlockId.Air;
+
+            int cs = WorldConstants.ChunkSize;
+            int FloorDiv(int a, int b) => (a >= 0 ? a : a - (b - 1)) / b;
+            var mats = Game.ChunkMaterialTransparent != null
+                ? new[] { Game.ChunkMaterial, Game.ChunkMaterialTransparent }
+                : new[] { Game.ChunkMaterial };
+
+            for (int cx = FloorDiv(minX, cs); cx <= FloorDiv(maxX, cs); cx++)
+            for (int cy = FloorDiv(minY, cs); cy <= FloorDiv(maxY, cs); cy++)
+            for (int cz = FloorDiv(minZ, cs); cz <= FloorDiv(maxZ, cs); cz++)
+            {
+                var coord = new ChunkCoord(cx, cy, cz);
+                var origin = WorldConstants.ChunkOrigin(coord);
+                var chunk = new ChunkData(coord);
+                for (int lx = 0; lx < cs; lx++)
+                for (int ly = 0; ly < cs; ly++)
+                for (int lz = 0; lz < cs; lz++)
+                {
+                    var b = WorldBlock(origin.X + lx, origin.Y + ly, origin.Z + lz);
+                    if (!b.IsAir)
+                    {
+                        chunk.Set(lx, ly, lz, b);
+                    }
+                }
+
+                var (mesh, collider) = ChunkMesher.Build(chunk, Game.Content, WorldBlock, Game.Atlas);
+                if (mesh.vertexCount == 0)
+                {
+                    continue;
+                }
+
+                var go = new GameObject($"VoxChunk {cx},{cy},{cz}");
+                go.transform.SetParent(parent, false);
+                go.transform.localPosition = new Vector3(origin.X, origin.Y, origin.Z) - centre;
+                go.AddComponent<MeshFilter>().sharedMesh = mesh;
+                go.AddComponent<MeshRenderer>().sharedMaterials = mats;
+                go.AddComponent<MeshCollider>().sharedMesh = collider; // S2/S3: hull/ore collision (suit + future)
+            }
+        }
+
+        /// <summary>Builds a cell dict + its centre from a structure design message (shared by ship + asteroid).</summary>
+        private static Dictionary<Vector3i, BlockId> CellsFromDesign(Spacecraft.Networking.Messages.SpaceShipDesign d, out Vector3 centre)
+        {
+            var cells = new Dictionary<Vector3i, BlockId>(d.Block.Length);
+            int minX = int.MaxValue, minY = int.MaxValue, minZ = int.MaxValue;
+            int maxX = int.MinValue, maxY = int.MinValue, maxZ = int.MinValue;
+            for (int i = 0; i < d.Block.Length; i++)
+            {
+                int bx = d.X[i], by = d.Y[i], bz = d.Z[i];
+                cells[new Vector3i(bx, by, bz)] = new BlockId(d.Block[i]);
+                if (bx < minX) minX = bx; if (by < minY) minY = by; if (bz < minZ) minZ = bz;
+                if (bx > maxX) maxX = bx; if (by > maxY) maxY = by; if (bz > maxZ) maxZ = bz;
+            }
+
+            centre = cells.Count == 0 ? Vector3.zero
+                : new Vector3((minX + maxX + 1) * 0.5f, (minY + maxY + 1) * 0.5f, (minZ + maxZ + 1) * 0.5f);
+            return cells;
+        }
+
+        /// <summary>Rebuilds the ship GameObject from the latest design while preserving its current pose (item 20
+        /// S1 — the design message lands a frame or two after entering space).</summary>
+        private void RebuildShipModel()
+        {
+            var pos = _ship != null ? _ship.transform.localPosition : Vector3.zero;
+            var rot = _ship != null ? _ship.transform.localRotation : Quaternion.identity;
+            if (_ship != null)
+            {
+                Destroy(_ship);
+            }
+
+            _exhaust = null;
+            _hatchMat = null;
+            _hullMat = null;
+            _appliedHullRgb = -1;
+            _shipVox = null;      // destroyed with the old ship; BuildShip makes a fresh one
+            _ship = BuildShip(_root.transform);
+            _ship.transform.localPosition = pos;
+            _ship.transform.localRotation = rot;
         }
 
         /// <summary>Lit material textured with a bundled block texture (white-ish tint so the texture reads).</summary>
@@ -1480,33 +2096,25 @@ namespace Spacecraft.Client
                 foreach (var e in space.Entities)
                 {
                     seen.Add(e.Id);
+
+                    // item 20 S3: asteroids render as voxel ore structures (see ReconcileStructs), not cube
+                    // entities — but they stay in Space.Entities so the ship's weapons can still target them.
+                    if (e.Kind == "Asteroid")
+                    {
+                        continue;
+                    }
+
                     if (!_entities.TryGetValue(e.Id, out var go))
                     {
-                        if (e.Kind == "Asteroid")
+                        // Real textured multi-cube models (mirrors the ship) instead of a flat colour cube.
+                        go = e.Kind switch
                         {
-                            // A rocky, slowly-tumbling chunk: stone-textured + an irregular shape so it
-                            // reads as an asteroid rather than a flat cube.
-                            go = Cube("Asteroid", _root.transform, Vector3.zero, EntityScale(e.Kind), AsteroidMat());
-                            int h = e.Id.GetHashCode();
-                            var sc = go.transform.localScale;
-                            go.transform.localScale = Vector3.Scale(sc, new Vector3(
-                                0.85f + ((h >> 2) & 7) * 0.04f,
-                                0.80f + ((h >> 5) & 7) * 0.05f,
-                                0.90f + ((h >> 8) & 7) * 0.04f));
-                            go.AddComponent<Spin>();
-                        }
-                        else
-                        {
-                            // Real textured multi-cube models (mirrors the ship) instead of a flat colour cube.
-                            go = e.Kind switch
-                            {
-                                "SpaceStation" => BuildStationModel(_root.transform),
-                                "Drone" => BuildDroneModel(_root.transform),
-                                "Ufo" => BuildUfoModel(_root.transform),
-                                "Cruiser" => BuildCruiserModel(_root.transform),
-                                _ => Cube("Entity", _root.transform, Vector3.zero, EntityScale(e.Kind), Unlit(EntityColor(e.Kind))), // ResourceDrop etc.
-                            };
-                        }
+                            "SpaceStation" => BuildStationModel(_root.transform),
+                            "Drone" => BuildDroneModel(_root.transform),
+                            "Ufo" => BuildUfoModel(_root.transform),
+                            "Cruiser" => BuildCruiserModel(_root.transform),
+                            _ => Cube("Entity", _root.transform, Vector3.zero, EntityScale(e.Kind), Unlit(EntityColor(e.Kind))), // ResourceDrop etc.
+                        };
 
                         _entities[e.Id] = go;
                     }
@@ -1886,7 +2494,7 @@ namespace Spacecraft.Client
                         sb.Append(loc != null ? loc.Get("ui.space.pad_full") : "— ALL FULL");
                     }
 
-                    sb.Append("   ·   Esc");
+                    sb.Append("   ·   E land · Esc");
                     _hint.text = sb.ToString();
                 }
 

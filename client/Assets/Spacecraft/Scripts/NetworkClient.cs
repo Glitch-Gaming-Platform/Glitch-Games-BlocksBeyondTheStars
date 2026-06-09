@@ -32,6 +32,8 @@ namespace Spacecraft.Client
         public event Action<DockStatus> DockStatusChanged;
         public event Action<ShipCombatStatus> ShipCombatStatusChanged;
         public event Action<SpaceState> SpaceStateReceived;
+        public event Action<SpaceShipDesign> SpaceShipDesignReceived; // item 20 S1: own ship as a voxel structure
+        public event Action<StructureBlockChanged> StructureBlockChangedReceived; // item 20 S2: a structure cell changed
         public event Action<SpaceEntityDestroyed> SpaceEntityDestroyed;
         public event Action<SpaceClosed> SpaceClosed;
         public event Action<StationBoarded> StationBoardedReceived;
@@ -200,6 +202,13 @@ namespace Spacecraft.Client
         // Reports the ship's position while flying in space (for server-side collision).
         public void SendShipMove(Vector3 pos, float yaw = 0f) => Send(new ShipMoveIntent { X = pos.x, Y = pos.y, Z = pos.z, Yaw = yaw });
 
+        /// <summary>EVA build/mine on a voxel structure (item 20 S2). Design-local cell coords.</summary>
+        public void SendStructureEdit(string structureId, int x, int y, int z, bool mine, string itemKey = "")
+            => Send(new StructureEditIntent { StructureId = structureId, X = x, Y = y, Z = z, Mine = mine, ItemKey = itemKey });
+
+        /// <summary>Deploy a station core in front of the suit to start a player-built station (item 20 S4).</summary>
+        public void SendDeployStationCore() => Send(new DeployStationCoreIntent());
+
         public void SendBoardStation(string stationId) => Send(new BoardStationIntent { StationId = stationId });
 
         public void SendLeaveStation() => Send(new LeaveStationIntent());
@@ -252,6 +261,8 @@ namespace Spacecraft.Client
                 case DockStatus m: DockStatusChanged?.Invoke(m); break;
                 case ShipCombatStatus m: ShipCombatStatusChanged?.Invoke(m); break;
                 case SpaceState m: SpaceStateReceived?.Invoke(m); break;
+                case SpaceShipDesign m: SpaceShipDesignReceived?.Invoke(m); break;
+                case StructureBlockChanged m: StructureBlockChangedReceived?.Invoke(m); break;
                 case SpaceEntityDestroyed m: SpaceEntityDestroyed?.Invoke(m); break;
                 case SpaceClosed m: SpaceClosed?.Invoke(m); break;
                 case StationBoarded m: StationBoardedReceived?.Invoke(m); break;

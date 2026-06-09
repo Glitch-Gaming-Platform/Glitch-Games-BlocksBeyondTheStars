@@ -1317,6 +1317,14 @@ namespace Spacecraft.Client
                 y += 28f;
             }
 
+            // The mission's flavour/instructions. System missions send a locale key (resolved via L);
+            // player-posted missions send their raw typed text (L returns it unchanged).
+            if (!string.IsNullOrEmpty(m2.Description))
+            {
+                UiKit.AddText(_detail, 8, y, 620, 60, L(m2.Description), 17, UiKit.CyanDim, TextAnchor.UpperLeft);
+                y += 64f;
+            }
+
             foreach (var o in m2.Objectives)
             {
                 UiKit.AddText(_detail, 8, y, 620, 28, $"{o.Progress}/{o.Required}", 20, UiKit.CyanDim, TextAnchor.UpperLeft);

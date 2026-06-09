@@ -85,6 +85,211 @@ public sealed class SpaceCombatTests : IDisposable
         }
     }
 
+    [Fact]
+    public void EvaStructureEdit_MinesAndPlacesOnTheShipVoxelGrid()
+    {
+        // item 20 S2: on an EVA you can mine + place blocks on your own ship's voxel structure.
+        var server = NewServer("structedit", r => r.FreeSpaceFlight = true, out var repo);
+        using (repo)
+        {
+            var pilot = server.AddLocalPlayer("Pilot");
+            server.EnterSpace("Pilot");
+            Assert.True(server.InSpace("Pilot"));
+
+            pilot.State.InEva = true;        // editing is gated to a spacewalk
+            pilot.State.InstantBuild = true; // free placement → no inventory needed for the test
+
+            // Find a solid hull cell in the player's ship structure.
+            int sx = -1, sy = -1, sz = -1;
+            for (int x = 0; x < 24 && sx < 0; x++)
+            for (int y = 0; y < 24 && sx < 0; y++)
+            for (int z = 0; z < 24 && sx < 0; z++)
+            {
+                if (server.StructureBlockForTest("Pilot", x, y, z) != 0) { sx = x; sy = y; sz = z; }
+            }
+
+            Assert.True(sx >= 0, "the ship structure should have at least one solid cell");
+
+            // Mine it → the cell becomes air.
+            server.HandleStructureEditForTest("Pilot",
+                new StructureEditIntent { StructureId = "ship:Pilot", X = sx, Y = sy, Z = sz, Mine = true });
+            Assert.Equal(0, server.StructureBlockForTest("Pilot", sx, sy, sz));
+
+            // Place iron_wall back into the now-empty cell → the cell is solid again.
+            server.HandleStructureEditForTest("Pilot",
+                new StructureEditIntent { StructureId = "ship:Pilot", X = sx, Y = sy, Z = sz, Mine = false, ItemKey = "iron_wall" });
+            Assert.NotEqual(0, server.StructureBlockForTest("Pilot", sx, sy, sz));
+        }
+    }
+
+    [Fact]
+    public void StructureEdit_RejectedWhenNotOnEva()
+    {
+        var server = NewServer("structnoteva", r => r.FreeSpaceFlight = true, out var repo);
+        using (repo)
+        {
+            var pilot = server.AddLocalPlayer("Pilot");
+            server.EnterSpace("Pilot");
+            pilot.State.InEva = false; // piloting, not floating → can't edit the hull
+
+            int sx = -1, sy = -1, sz = -1;
+            for (int x = 0; x < 24 && sx < 0; x++)
+            for (int y = 0; y < 24 && sx < 0; y++)
+            for (int z = 0; z < 24 && sx < 0; z++)
+            {
+                if (server.StructureBlockForTest("Pilot", x, y, z) != 0) { sx = x; sy = y; sz = z; }
+            }
+
+            server.HandleStructureEditForTest("Pilot",
+                new StructureEditIntent { StructureId = "ship:Pilot", X = sx, Y = sy, Z = sz, Mine = true });
+            Assert.NotEqual(0, server.StructureBlockForTest("Pilot", sx, sy, sz)); // unchanged
+        }
+    }
+
+    [Fact]
+    public void EvaMine_TakesOreFromAVoxelAsteroid()
+    {
+        // item 20 S3: on an EVA you can mine ore blocks off an asteroid (the other half of the hybrid).
+        var server = NewServer("astmine", r => r.FreeSpaceFlight = true, out var repo);
+        using (repo)
+        {
+            var pilot = server.AddLocalPlayer("Pilot");
+            server.EnterSpace("Pilot");
+            pilot.State.InEva = true;
+
+            var ast = server.SpaceEntitiesFor("Pilot").First(e => e.Kind == CombatEntityKind.Asteroid);
+            int before = server.StructureBlockCountForTest(ast.Id);
+
+            // Mine the ore core (0,0,0 is solid in the generated rock).
+            server.HandleStructureEditForTest("Pilot",
+                new StructureEditIntent { StructureId = ast.Id, X = 0, Y = 0, Z = 0, Mine = true });
+
+            Assert.True(server.StructureBlockCountForTest(ast.Id) < before, "mining removes an ore block");
+            Assert.True(pilot.State.Inventory.CountOf("titanium_ore") >= 1, "mining the core yields titanium ore");
+        }
+    }
+
+    [Fact]
+    public void PlayerStation_Deploys_BuildsOut_AndCommissions()
+    {
+        // item 20 S4: deploy a station core, build a hull + airlock around it → it commissions (boardable + map).
+        var server = NewServer("pstation", r => r.FreeSpaceFlight = true, out var repo);
+        using (repo)
+        {
+            var pilot = server.AddLocalPlayer("Pilot");
+            server.EnterSpace("Pilot");
+            pilot.State.InEva = true;
+            pilot.State.InstantBuild = true; // free build for the test
+
+            server.DeployStationCoreForTest("Pilot");
+            var id = server.OwnedStationIdForTest("Pilot");
+            Assert.NotNull(id);
+            Assert.False(server.StationIsBoardableForTest(id!)); // just a core so far
+
+            // Build a small hull (the core + 11 walls = 12 blocks).
+            for (int i = 1; i <= 11; i++)
+            {
+                server.HandleStructureEditForTest("Pilot",
+                    new StructureEditIntent { StructureId = id!, X = i, Y = 0, Z = 0, Mine = false, ItemKey = "iron_wall" });
+            }
+
+            Assert.False(server.StationIsBoardableForTest(id!)); // size met, but no airlock yet
+
+            // Add an airlock door → commissioned.
+            server.HandleStructureEditForTest("Pilot",
+                new StructureEditIntent { StructureId = id!, X = 0, Y = 1, Z = 0, Mine = false, ItemKey = "door_slide" });
+            Assert.True(server.StationIsBoardableForTest(id!));
+        }
+    }
+
+    [Fact]
+    public void PlayerStation_Persists_AcrossServerRestart()
+    {
+        // item 20 S4: a commissioned player station survives a server restart (same save).
+        string id;
+        {
+            var s1 = NewServer("pstation_persist", r => r.FreeSpaceFlight = true, out var repo1);
+            using (repo1)
+            {
+                var pilot = s1.AddLocalPlayer("Pilot");
+                s1.EnterSpace("Pilot");
+                pilot.State.InEva = true;
+                pilot.State.InstantBuild = true;
+
+                s1.DeployStationCoreForTest("Pilot");
+                id = s1.OwnedStationIdForTest("Pilot")!;
+                for (int i = 1; i <= 11; i++)
+                {
+                    s1.HandleStructureEditForTest("Pilot",
+                        new StructureEditIntent { StructureId = id, X = i, Y = 0, Z = 0, Mine = false, ItemKey = "iron_wall" });
+                }
+
+                s1.HandleStructureEditForTest("Pilot",
+                    new StructureEditIntent { StructureId = id, X = 0, Y = 1, Z = 0, Mine = false, ItemKey = "door_slide" });
+                Assert.True(s1.StationIsBoardableForTest(id));
+                repo1.Flush();
+            }
+        }
+
+        // Reopen the same world in a fresh server — the station is restored as a boardable body.
+        var s2 = NewServer("pstation_persist", r => r.FreeSpaceFlight = true, out var repo2);
+        using (repo2)
+        {
+            Assert.True(s2.StationIsBoardableForTest(id));
+        }
+    }
+
+    [Fact]
+    public void StructureEdit_RejectedWhenTooFarFromAsteroid()
+    {
+        // item 20 S5: a static structure can only be edited from close range (anti-grief).
+        var server = NewServer("reach", r => r.FreeSpaceFlight = true, out var repo);
+        using (repo)
+        {
+            var pilot = server.AddLocalPlayer("Pilot");
+            server.EnterSpace("Pilot");
+            pilot.State.InEva = true;
+
+            var ast = server.SpaceEntitiesFor("Pilot").First(e => e.Kind == CombatEntityKind.Asteroid);
+            int before = server.StructureBlockCountForTest(ast.Id);
+
+            server.ShipMove("Pilot", 300f, 0f, 0f); // float far away from the field
+            server.HandleStructureEditForTest("Pilot",
+                new StructureEditIntent { StructureId = ast.Id, X = 0, Y = 0, Z = 0, Mine = true });
+
+            Assert.Equal(before, server.StructureBlockCountForTest(ast.Id)); // out of range → unchanged
+        }
+    }
+
+    [Fact]
+    public void StructureEdit_CannotEditAnotherPlayersShip()
+    {
+        // item 20 S5: you can't mine/build on another player's ship.
+        var server = NewServer("protect", r => r.FreeSpaceFlight = true, out var repo);
+        using (repo)
+        {
+            server.AddLocalPlayer("Alice");
+            var bob = server.AddLocalPlayer("Bob");
+            server.EnterSpace("Alice");
+            server.EnterSpace("Bob");
+            bob.State.InEva = true;
+
+            int sx = -1, sy = -1, sz = -1;
+            for (int x = 0; x < 24 && sx < 0; x++)
+            for (int y = 0; y < 24 && sx < 0; y++)
+            for (int z = 0; z < 24 && sx < 0; z++)
+            {
+                if (server.StructureBlockForTest("Alice", x, y, z) != 0) { sx = x; sy = y; sz = z; }
+            }
+
+            Assert.True(sx >= 0);
+            server.HandleStructureEditForTest("Bob",
+                new StructureEditIntent { StructureId = "ship:Alice", X = sx, Y = sy, Z = sz, Mine = true });
+
+            Assert.NotEqual(0, server.StructureBlockForTest("Alice", sx, sy, sz)); // Alice's hull is protected
+        }
+    }
+
     // ---------------- Weapons + rule gating ----------------
 
     [Fact]
@@ -115,9 +320,10 @@ public sealed class SpaceCombatTests : IDisposable
     }
 
     [Fact]
-    public void LargeAsteroid_SplitsIntoSmallerChunks_WithoutLoot()
+    public void Shoot_CarvesVoxelAsteroid_ThenDestroysIt()
     {
-        var server = NewServer("split", r =>
+        // item 20 S3: voxel ore asteroids carve down as you shoot them (no splitting), then yield loot + vanish.
+        var server = NewServer("carve", r =>
         {
             r.FreeSpaceFlight = true;
             r.AsteroidDestruction = AsteroidDestructionMode.MiningOnly;
@@ -126,20 +332,27 @@ public sealed class SpaceCombatTests : IDisposable
         {
             var pilot = server.AddLocalPlayer("Pilot");
             server.Ship.Modules.Add("asteroid_breaker");
+            server.Ship.Modules.Remove("tractor_beam"); // direct-to-inventory loot
             server.EnterSpace("Pilot");
 
-            var large = server.SpaceEntitiesFor("Pilot").First(e => e.Kind == CombatEntityKind.Asteroid && e.AsteroidTier == 2);
-            int asteroidsBefore = server.SpaceEntitiesFor("Pilot").Count(e => e.Kind == CombatEntityKind.Asteroid);
+            var ast = server.SpaceEntitiesFor("Pilot").First(e => e.Kind == CombatEntityKind.Asteroid);
+            int blocksBefore = server.StructureBlockCountForTest(ast.Id);
+            Assert.True(blocksBefore > 0, "a voxel asteroid should start with ore blocks");
 
-            // asteroid_breaker = 25 dmg; a large asteroid has 40 hull → two hits.
-            server.FireWeapon("Pilot", "asteroid_breaker", large.Id);
-            server.FireWeapon("Pilot", "asteroid_breaker", large.Id);
+            // First hit carves the rock down (fewer blocks) but doesn't destroy it.
+            server.FireWeapon("Pilot", "asteroid_breaker", ast.Id);
+            int blocksAfter = server.StructureBlockCountForTest(ast.Id);
+            Assert.True(blocksAfter < blocksBefore, "shooting should carve voxel blocks off the asteroid");
 
-            var asteroids = server.SpaceEntitiesFor("Pilot").Where(e => e.Kind == CombatEntityKind.Asteroid).ToList();
-            Assert.DoesNotContain(asteroids, e => e.Id == large.Id);                 // the large one is gone
-            Assert.True(asteroids.Count > asteroidsBefore - 1, "Destroying a large asteroid should spawn smaller chunks.");
-            Assert.Contains(asteroids, e => e.AsteroidTier == 1);                    // medium chunks appeared
-            Assert.Equal(0, pilot.State.Inventory.CountOf("iron_ore"));              // no loot from a large one
+            // Keep firing until it's destroyed → its structure is gone and ore was banked.
+            for (int i = 0; i < 16 && server.SpaceEntitiesFor("Pilot").Any(e => e.Id == ast.Id); i++)
+            {
+                server.FireWeapon("Pilot", "asteroid_breaker", ast.Id);
+            }
+
+            Assert.DoesNotContain(server.SpaceEntitiesFor("Pilot"), e => e.Id == ast.Id); // entity gone
+            Assert.Equal(0, server.StructureBlockCountForTest(ast.Id));                   // structure gone
+            Assert.True(pilot.State.Inventory.CountOf("iron_ore") >= 5, "a destroyed asteroid yields ore");
         }
     }
 

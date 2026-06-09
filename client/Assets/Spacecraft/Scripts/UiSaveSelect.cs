@@ -50,16 +50,57 @@ namespace Spacecraft.Client
             }
 
             // ── New world (right) ─────────────────────────────────────────────────────────────
-            var right = UiKit.AddPanel(root, 850f, 250f, 700f, 360f, UiKit.PanelFill).transform;
+            var right = UiKit.AddPanel(root, 850f, 250f, 700f, 540f, UiKit.PanelFill).transform;
             UiKit.AddText(right, 20f, 16f, 660f, 26f, shell.L("ui.save.new"), 18, UiKit.Cyan, TextAnchor.MiddleLeft, FontStyle.Bold);
-            UiKit.AddText(right, 20f, 60f, 660f, 24f, shell.L("ui.save.name"), 15, UiKit.TextCol, TextAnchor.MiddleLeft);
+            UiKit.AddText(right, 20f, 54f, 660f, 24f, shell.L("ui.save.name"), 15, UiKit.TextCol, TextAnchor.MiddleLeft);
 
             string[] name = { "new_world" };
-            UiKit.AddInput(right, 20f, 88f, 660f, 34f, name[0], v => name[0] = v);
+            UiKit.AddInput(right, 20f, 82f, 660f, 34f, name[0], v => name[0] = v);
 
-            UiKit.AddButton(right, 20f, 140f, 320f, 50f, shell.L("ui.save.create"), () => shell.StartSingleplayerWorld(name[0]), "btn_singleplayer");
-            UiKit.AddButton(right, 360f, 140f, 320f, 50f, shell.L("ui.save.random"), () => shell.StartSingleplayerWorld("world_" + Random.Range(1000, 999999)), "btn_join");
-            UiKit.AddText(right, 20f, 210f, 660f, 120f, shell.L("ui.save.hint"), 15, UiKit.CyanDim, TextAnchor.UpperLeft).horizontalOverflow = HorizontalWrapMode.Wrap;
+            // Mode: Explorer (normal) vs Creative (everything unlocked + a starter set; survival mechanics stay on).
+            bool[] creative = { false };
+            bool[] optBlueprints = { true };
+            bool[] optShips = { true };
+            bool[] optKit = { true };
+
+            UiKit.AddText(right, 20f, 124f, 660f, 24f, shell.L("ui.save.mode"), 15, UiKit.TextCol, TextAnchor.MiddleLeft);
+            Button explorerBtn = null, creativeBtn = null;
+            GameObject creativePanel = null;
+            void RefreshMode()
+            {
+                if (explorerBtn != null) explorerBtn.image.color = creative[0] ? UiKit.PanelFill : UiKit.Cyan;
+                if (creativeBtn != null) creativeBtn.image.color = creative[0] ? UiKit.Cyan : UiKit.PanelFill;
+                if (creativePanel != null) creativePanel.SetActive(creative[0]);
+            }
+
+            explorerBtn = UiKit.AddButton(right, 20f, 152f, 320f, 46f, shell.L("ui.save.mode_explorer"), () => { creative[0] = false; RefreshMode(); });
+            creativeBtn = UiKit.AddButton(right, 360f, 152f, 320f, 46f, shell.L("ui.save.mode_creative"), () => { creative[0] = true; RefreshMode(); });
+
+            // Creative sub-options (a checklist; shown only when Creative is selected).
+            var cp = UiKit.AddPanel(right, 20f, 206f, 660f, 150f, new Color(0.05f, 0.10f, 0.16f, 0.55f));
+            creativePanel = cp.gameObject;
+            void Toggle(float y, string label, bool[] state)
+            {
+                Button b = null;
+                string Fmt() => (state[0] ? "[X]  " : "[  ]  ") + label;
+                b = UiKit.AddButton(cp.transform, 12f, y, 636f, 38f, Fmt(), () =>
+                {
+                    state[0] = !state[0];
+                    var t = b.GetComponentInChildren<Text>();
+                    if (t != null) t.text = Fmt();
+                });
+            }
+
+            Toggle(8f, shell.L("ui.save.opt_blueprints"), optBlueprints);
+            Toggle(52f, shell.L("ui.save.opt_ships"), optShips);
+            Toggle(96f, shell.L("ui.save.opt_kit"), optKit);
+            RefreshMode(); // start on Explorer (sub-options hidden)
+
+            UiKit.AddButton(right, 20f, 372f, 320f, 50f, shell.L("ui.save.create"),
+                () => shell.StartSingleplayerWorld(name[0], 0, creative[0] && optBlueprints[0], creative[0] && optShips[0], creative[0] && optKit[0]), "btn_singleplayer");
+            UiKit.AddButton(right, 360f, 372f, 320f, 50f, shell.L("ui.save.random"),
+                () => shell.StartSingleplayerWorld("world_" + Random.Range(1000, 999999), 0, creative[0] && optBlueprints[0], creative[0] && optShips[0], creative[0] && optKit[0]), "btn_join");
+            UiKit.AddText(right, 20f, 436f, 660f, 90f, shell.L("ui.save.hint"), 14, UiKit.CyanDim, TextAnchor.UpperLeft).horizontalOverflow = HorizontalWrapMode.Wrap;
 
             UiKit.AddButton(root, 90f, 920f, 240f, 50f, shell.L("ui.menu.back"), () => shell.GoTo(ShellPhase.MainMenu), "btn_exit");
 

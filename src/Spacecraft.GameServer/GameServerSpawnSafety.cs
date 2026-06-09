@@ -84,17 +84,34 @@ public sealed partial class GameServer
             return; // floating in a space instance / aboard a station — "ground below" doesn't apply
         }
 
-        if (IsInVoid(p.Position))
+        if (IsUnsafeSurfaceSpawn(p.Position))
         {
             var safe = SafeSpawnPoint(p.PlayerId);
-            _log.Warn($"Player '{p.Name}' loaded in the void at {p.Position}; respawning at {safe}.");
+            _log.Warn($"Player '{p.Name}' loaded at an unsafe position {p.Position}; respawning at {safe}.");
             p.Position = safe;
         }
 
-        if (IsInVoid(p.RespawnPoint))
+        if (IsUnsafeSurfaceSpawn(p.RespawnPoint))
         {
             p.RespawnPoint = SafeSpawnPoint(p.PlayerId);
         }
+    }
+
+    /// <summary>Unsafe to load a SURFACE player at: in the bottomless void below the terrain, OR far ABOVE it.
+    /// A position persisted from a space / EVA / ship-interior session can sit well above the planet surface
+    /// (the flight scene is thousands of units up); restoring it drops the player out of the sky onto an empty
+    /// planet (it reads as "falling through space, then stuck above the ground with no ship"). A normal surface
+    /// join is just above the surface, so a wildly high position is rescued to the ship/pad too.</summary>
+    private bool IsUnsafeSurfaceSpawn(Vector3f pos)
+    {
+        if (IsInVoid(pos))
+        {
+            return true;
+        }
+
+        int surface = _generator.SurfaceHeight(_world.Planet,
+            (int)System.Math.Floor(pos.X), (int)System.Math.Floor(pos.Z));
+        return float.IsFinite(pos.Y) && pos.Y > surface + 40; // far above the terrain → a stale space/flight pose
     }
 
     /// <summary>Belt-and-braces for <see cref="EnsureSafeSpawn"/>: rescues any surface player who is

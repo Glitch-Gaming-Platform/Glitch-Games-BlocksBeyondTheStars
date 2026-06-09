@@ -141,6 +141,16 @@ public static class NetCodec
 
         // item 38: another player's ship landing/launching at a pad (other players on the body see the animation).
         Register(104, typeof(ShipTransitFx));
+
+        // item 20 S1: the player's own ship as a voxel structure for the flight view (replaces the cube model).
+        Register(105, typeof(SpaceShipDesign));
+
+        // item 20 S2: free-space EVA build/mine on a voxel structure (client intent + server broadcast).
+        Register(106, typeof(StructureEditIntent));
+        Register(107, typeof(StructureBlockChanged));
+
+        // item 20 S4: deploy a station core to start a player-built station.
+        Register(108, typeof(DeployStationCoreIntent));
     }
 
     private static void Register(byte tag, Type type)

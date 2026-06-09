@@ -60,6 +60,8 @@ namespace Spacecraft.Client
 
         public GameBootstrap Game; // to hide the hand viewmodel while the space view owns the camera
         private bool _hiddenForSpace;
+        private bool _eva;             // on an EVA the suit's hands DO show (the tool you build/mine with)
+        private string _evaKey = "\0"; // last held item shown on EVA (self-refreshed from the hotbar)
 
         public void SetVisible(bool visible)
         {
@@ -69,19 +71,45 @@ namespace Spacecraft.Client
 
         private void Update()
         {
-            if (Game == null || _holder == null)
+            if (Game == null)
             {
                 return;
             }
 
-            // No held tool in space — the camera is the ship's, not the player's hands.
-            bool space = Game.SpaceViewActive;
-            if (space && !_hiddenForSpace)
+            _eva = Game.SpaceViewActive && Game.InEva;
+
+            // Piloting the ship: the camera is the ship's, not the player's hands — hide the viewmodel.
+            if (Game.SpaceViewActive && !_eva)
             {
-                _hiddenForSpace = true;
-                _holder.gameObject.SetActive(false);
+                if (_holder != null)
+                {
+                    _hiddenForSpace = true;
+                    _holder.gameObject.SetActive(false);
+                }
+
+                return;
             }
-            else if (!space && _hiddenForSpace)
+
+            // On an EVA the suit shows the held tool (so you can see what you build/mine with). The on-foot
+            // controller is frozen out here, so self-refresh the held item from the selected hotbar slot.
+            if (_eva)
+            {
+                _hiddenForSpace = false;
+                string key = Game.ItemInSlot(Game.SelectedHotbarSlot) ?? string.Empty;
+                if (key != _evaKey)
+                {
+                    _evaKey = key;
+                    var (k, t) = HeldItem.For(Game.Content, key);
+                    SetHeldItem(k, t); // builds the holder if needed + rebuilds the mesh
+                }
+
+                ApplyVisible();
+                return;
+            }
+
+            // Back on foot: re-show what the controller last set.
+            _evaKey = "\0";
+            if (_hiddenForSpace)
             {
                 _hiddenForSpace = false;
                 ApplyVisible();
@@ -92,7 +120,7 @@ namespace Spacecraft.Client
         {
             if (_holder != null)
             {
-                _holder.gameObject.SetActive(_visible && _kind != HeldItem.Kind.None);
+                _holder.gameObject.SetActive((_visible || _eva) && _kind != HeldItem.Kind.None);
             }
         }
 

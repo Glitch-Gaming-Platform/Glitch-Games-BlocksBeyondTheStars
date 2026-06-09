@@ -109,6 +109,26 @@ public sealed class SpawnSafetyTests : IDisposable
         }
     }
 
+    [Fact]
+    public void JoinGuard_HealsAPositionPersistedHighAboveTheSurface()
+    {
+        // A save written during a space / EVA session can hold a position far above the planet surface;
+        // restoring it dropped the player out of the sky onto an empty world. The join guard snaps it down.
+        var server = Start(out var repo);
+        using (repo)
+        {
+            var p = server.AddLocalPlayer("Astronaut");
+            var spawn = p.State.Position;
+            var highPos = new Vector3f(spawn.X, spawn.Y + 4000f, spawn.Z);
+            p.State.Position = highPos;
+
+            server.EnsureSafeSpawnForTest(p);
+
+            Assert.True(p.State.Position.Y < highPos.Y - 1000f, "a wildly high spawn must be pulled back down");
+            Assert.False(server.IsInVoidForTest(p.State.Position));
+        }
+    }
+
     public void Dispose()
     {
         try

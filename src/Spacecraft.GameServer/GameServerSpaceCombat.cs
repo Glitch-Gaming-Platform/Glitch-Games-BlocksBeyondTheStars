@@ -81,6 +81,10 @@ public sealed class SpaceInstance
 
     /// <summary>Spreads successive respawned asteroids so they don't stack on one spot.</summary>
     public int AsteroidSpawnRotor { get; set; }
+
+    /// <summary>Voxel structures floating in this instance (item 20). S1: each present player's own ship,
+    /// keyed by player id, seeded from its ship-editor design. Later stages add stations + voxel asteroids.</summary>
+    public Dictionary<string, SpaceStructure> Structures { get; } = new();
 }
 
 /// <summary>A player's pose in a space instance — where their ship (or EVA suit) is + which way it faces.</summary>
@@ -280,6 +284,27 @@ public sealed partial class GameServer
             SendSpaceState(session, instance, skipLaunch);
             SendShipCombatStatus(session);
             SendStarMap(session); // the space view needs the system's bodies to render + land on them
+
+            // item 20 S1: carry the player's ship as a voxel structure in the instance + send it so the flight
+            // view renders the real designed ship (1:1) instead of the hand-built cube model. Reuse an already-
+            // built structure for this instance so EVA edits (S2) survive while you stay out here.
+            var structureId = "ship:" + playerId;
+            if (!instance.Structures.TryGetValue(structureId, out var structure))
+            {
+                structure = BuildShipStructure(playerId);
+                instance.Structures[structure.Id] = structure; // keyed by structure id ("ship:<playerId>")
+            }
+
+            SendShipDesign(session, structure);
+
+            // item 20 S3: also send every voxel asteroid body so the flight view renders + can mine them.
+            foreach (var st in instance.Structures.Values)
+            {
+                if (st.Kind == "asteroid")
+                {
+                    SendShipDesign(session, st);
+                }
+            }
         }
     }
 
@@ -343,11 +368,14 @@ public sealed partial class GameServer
             // tight line — but inside weapon range (asteroid_breaker reaches ~40) so they stay shootable.
             float ang = i * 2.39996f;
             float rad = 18f + i * 8f; // 18 / 26 / 34
-            instance.Entities.Add(MakeAsteroid(LargeAsteroidTier,
-                new Vector3f(rad * (float)System.Math.Cos(ang), (i - 1) * 9f, rad * (float)System.Math.Sin(ang))));
+            // item 20 S3: each asteroid is a voxel ore body (entity + structure) you can shoot AND EVA-mine.
+            SpawnAsteroid(instance,
+                new Vector3f(rad * (float)System.Math.Cos(ang), (i - 1) * 9f, rad * (float)System.Math.Sin(ang)),
+                broadcast: false);
         }
 
         AddStationContacts(instance);
+        AddPersistedStations(instance); // item 20 S4: re-create player-built stations floating in this instance
 
         // Hostile NPC drones only when space combat is enabled and NPC enemies are switched on.
         bool combatEnabled = Rules.SpaceCombat is SpaceCombatMode.PvE or SpaceCombatMode.Both;
@@ -431,6 +459,13 @@ public sealed partial class GameServer
         }
 
         target.Hull -= weapon.Damage;
+
+        // item 20 S3: a voxel ore asteroid carves down to match its hull as you shoot it (visible depletion).
+        if (target.Kind == CombatEntityKind.Asteroid && instance.Structures.ContainsKey(target.Id))
+        {
+            CarveAsteroidToHull(instance, target);
+        }
+
         if (target.Hull > 0f)
         {
             BroadcastSpaceState(instance);
@@ -440,6 +475,12 @@ public sealed partial class GameServer
         // Destroyed. A large/medium asteroid splits into smaller chunks instead of dropping loot;
         // only the smallest asteroids (and other entities) yield resources.
         instance.Entities.Remove(target);
+        if (target.Kind == CombatEntityKind.Asteroid && instance.Structures.ContainsKey(target.Id))
+        {
+            RemoveAsteroidStructure(instance, target.Id); // S3: drop the voxel body too (loot handled below)
+            // fall through to the loot branch (voxel asteroids are tier 0 → they yield ore)
+        }
+
         if (target.Kind == CombatEntityKind.Asteroid && target.AsteroidTier > 0)
         {
             SplitAsteroid(instance, target);
@@ -817,8 +858,7 @@ public sealed partial class GameServer
         float rang = r * 2.39996f;
         float rrad = 22f + (r % 3) * 6f; // 22 / 28 / 34
         var pos = new Vector3f(rrad * (float)System.Math.Cos(rang), ((r % 5) - 2) * 8f, rrad * (float)System.Math.Sin(rang));
-        instance.Entities.Add(MakeAsteroid(LargeAsteroidTier, pos));
-        BroadcastSpaceState(instance);
+        SpawnAsteroid(instance, pos, broadcast: true); // item 20 S3: voxel ore body (sends its mesh + state)
     }
 
     /// <summary>Damage hits the shield first, then the hull.</summary>

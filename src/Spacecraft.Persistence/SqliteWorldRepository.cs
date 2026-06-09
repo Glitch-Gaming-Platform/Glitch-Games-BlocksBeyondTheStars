@@ -65,7 +65,10 @@ public sealed class SqliteWorldRepository : IWorldRepository
                 planet TEXT NOT NULL, x INTEGER NOT NULL, y INTEGER NOT NULL, z INTEGER NOT NULL,
                 label TEXT NOT NULL, owner TEXT NOT NULL, PRIMARY KEY (planet, x, y, z));
             CREATE TABLE IF NOT EXISTS location_status (id TEXT PRIMARY KEY, status TEXT NOT NULL);
-            CREATE TABLE IF NOT EXISTS mission (id TEXT PRIMARY KEY, json TEXT NOT NULL);");
+            CREATE TABLE IF NOT EXISTS mission (id TEXT PRIMARY KEY, json TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS space_structure (
+                id TEXT PRIMARY KEY, owner TEXT NOT NULL, name TEXT NOT NULL, location TEXT NOT NULL,
+                px REAL NOT NULL, py REAL NOT NULL, pz REAL NOT NULL, boardable INTEGER NOT NULL, blocks TEXT NOT NULL);");
         // (Landing pads are deterministic + live-occupancy now — no per-player landing_zone table; item 38.)
     }
 
@@ -344,6 +347,69 @@ public sealed class SqliteWorldRepository : IWorldRepository
             cmd.Parameters.AddWithValue("$x", x);
             cmd.Parameters.AddWithValue("$y", y);
             cmd.Parameters.AddWithValue("$z", z);
+            cmd.ExecuteNonQuery();
+        }
+    }
+
+    // --- Player-built space stations (item 20 S4) ---
+
+    public void SaveSpaceStructure(StoredSpaceStructure s)
+    {
+        lock (_gate)
+        {
+            using var cmd = Connection.CreateCommand();
+            cmd.CommandText = "INSERT INTO space_structure (id, owner, name, location, px, py, pz, boardable, blocks) " +
+                              "VALUES ($id, $o, $n, $loc, $px, $py, $pz, $b, $blk) " +
+                              "ON CONFLICT(id) DO UPDATE SET owner=excluded.owner, name=excluded.name, location=excluded.location, " +
+                              "px=excluded.px, py=excluded.py, pz=excluded.pz, boardable=excluded.boardable, blocks=excluded.blocks;";
+            cmd.Parameters.AddWithValue("$id", s.Id);
+            cmd.Parameters.AddWithValue("$o", s.OwnerId);
+            cmd.Parameters.AddWithValue("$n", s.Name);
+            cmd.Parameters.AddWithValue("$loc", s.Location);
+            cmd.Parameters.AddWithValue("$px", s.PosX);
+            cmd.Parameters.AddWithValue("$py", s.PosY);
+            cmd.Parameters.AddWithValue("$pz", s.PosZ);
+            cmd.Parameters.AddWithValue("$b", s.Boardable ? 1 : 0);
+            cmd.Parameters.AddWithValue("$blk", s.Blocks);
+            cmd.ExecuteNonQuery();
+        }
+    }
+
+    public IReadOnlyList<StoredSpaceStructure> ListSpaceStructures()
+    {
+        var result = new List<StoredSpaceStructure>();
+        lock (_gate)
+        {
+            using var cmd = Connection.CreateCommand();
+            cmd.CommandText = "SELECT id, owner, name, location, px, py, pz, boardable, blocks FROM space_structure;";
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                result.Add(new StoredSpaceStructure
+                {
+                    Id = reader.GetString(0),
+                    OwnerId = reader.GetString(1),
+                    Name = reader.GetString(2),
+                    Location = reader.GetString(3),
+                    PosX = (float)reader.GetDouble(4),
+                    PosY = (float)reader.GetDouble(5),
+                    PosZ = (float)reader.GetDouble(6),
+                    Boardable = reader.GetInt32(7) != 0,
+                    Blocks = reader.GetString(8),
+                });
+            }
+        }
+
+        return result;
+    }
+
+    public void DeleteSpaceStructure(string id)
+    {
+        lock (_gate)
+        {
+            using var cmd = Connection.CreateCommand();
+            cmd.CommandText = "DELETE FROM space_structure WHERE id = $id;";
+            cmd.Parameters.AddWithValue("$id", id);
             cmd.ExecuteNonQuery();
         }
     }

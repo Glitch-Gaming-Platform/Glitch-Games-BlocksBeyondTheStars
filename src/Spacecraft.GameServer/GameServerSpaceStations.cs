@@ -189,7 +189,14 @@ public sealed partial class GameServer
         string stationLoc = "station:" + station.Id;
         LoadWorld(StationPlanetType, stationLoc); // loads/creates the void world + sets the Active cursor
         SetCurrent(session);
-        StampStation(station);                     // stamps the structure once (persisted); computes Spawn
+        if (_playerStationCells.TryGetValue(station.Id, out var playerCells))
+        {
+            StampPlayerStation(station, playerCells); // item 20 S4: the player's own build is the interior
+        }
+        else
+        {
+            StampStation(station);                 // procedural station: stamps the structure once; computes Spawn
+        }
         RegisterStationDoors(station.Markers);     // sliding doors fill the station's module doorways
         if (_npcs.Count == 0)
         {

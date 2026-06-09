@@ -1051,8 +1051,13 @@ only then implement. Items marked *(analysis only)* must NOT be implemented yet.
    - **Loading screens (item 21, bundled in this pass).** `WorldLoadingOverlay` **skips the veil when the world is
      already ready** (fast/cached load) and `MinShow=0.7`. → remove the skip + set `MinShow=3.0` so it **always**
      shows ~3s on planet-landing **and** station-board (shared overlay).
-20. **Feature — build in space + erect a player-built space station (requested 2026-06-07).** *(ANALYSIS FIRST —
-   do NOT implement yet; analyse the current state, then plan, then ask, then build.)* Players should be able to
+20. ✅ **Feature — build in space + erect a player-built space station (done 2026-06-09; needs in-engine test).**
+   **All five staged sub-features S1–S5 are implemented** (see the staged plan + per-stage ✅ notes below): voxel
+   ship in flight (S1), free-EVA collision + build/mine (S2), hybrid shoot+mine voxel ore asteroids (S3),
+   player-built boardable + persisted stations (S4), protection + reach + far-unload polish (S5). Follow-up bug
+   fixes after the first playtest: landing E-confirm, flight ship scale vs 1:1 on EVA, ship silhouette, EVA-held
+   tool, loading-veil-from-start, and the seam-spawn freeze (`PlayerPosition` stale during settling). *(Original
+   analysis + staged plan kept below.)* Players should be able to
    **build in space** by placing **individual blocks**, and once the structure is **closed and/or has an airlock**
    it should **become a space station**. Such stations must be **persisted in the star system** and **accessible**
    to the player (boardable later). **Required analysis before tackling it:** the **as-is** behaviour — how the
@@ -1122,22 +1127,108 @@ only then implement. Items marked *(analysis only)* must NOT be implemented yet.
    aiming. (d) **Boardable, capped stations** (~48³–64³), persisted + on the star map; no life-support/power rules
    yet (purely structural for now).
    **STAGED PLAN (each stage shippable + committed on its own):**
-   - **S1 — Voxel structures in the flight scene (foundation).** Server: a `SpaceStructure` = a small voxel grid
-     (its own `ServerWorld`/`LocationId`, no generation, no wrap) carried in the `SpaceInstance` with a world
-     position. Seed the FIRST one from the player's active ship DESIGN (the ship-editor voxel cells). Net: send a
-     structure's blocks + position to the client. Client: mesh it with `ChunkMesher` + place it in the flight scene
-     at 1:1 (stylised), REPLACING `BuildShip` for the player's own ship. *Proves meshing + position + scale.*
-   - **S2 — Free EVA collision + build/mine vs a structure.** EVA suit collides with the structure's `MeshCollider`
-     (no passing through); EVA aim ray-marches the structure's voxel grid → place/mine via the existing voxel
-     handlers (a free-space variant of `AimBlock`/`HandlePlace`/`HandleMine` scoped to the structure). *Proves the
-     core interaction.*
-   - **S3 — Voxel mineable asteroids.** Replace entity asteroids with small voxel ore grids; mining = `BlockChanged`
-     + re-mesh; depletion + respawn as today but block-based.
-   - **S4 — Player-built stations.** Build a fresh structure in space, and when it's closed / has an airlock,
-     register it as a boardable body (system registry row: position, owner, boardable) + persist its block edits;
-     show it on the star map; allow boarding (reuse the station-as-void-world entry, or walk its own voxel grid).
-   - **S5 — Protection + MP polish.** Other players' ships + game-spawned stations are unmineable (`IsShipBlock`-
-     style); far-structure unload; multiple structures co-rendered; networking + persistence hardening.
+   - ✅ **S1 — Voxel structures in the flight scene (foundation) (done 2026-06-08; needs in-engine test).**
+     Server: new `SpaceStructure` (`GameServerSpaceStructure.cs`) = a sparse voxel grid (`Dictionary<Vector3i,
+     BlockId>`, no generation, no wrap) + a flight-scene position + bounding-box dims, carried in
+     `SpaceInstance.Structures` keyed by player. `BuildShipStructure` seeds it from the player's active ship DESIGN
+     (`GetShipLayout`, mirroring `StampShipLayout`'s cell→block mapping; hatch/door cells become holes), with a
+     hollow-hull-box fallback for ships without a designed layout. `EnterSpace` builds + stores the structure and
+     sends it via a new `SpaceShipDesign` message (NetCodec tag 105; sparse parallel arrays X/Y/Z/Block + dims).
+     Client: `NetworkClient`/`GameBootstrap` decode + store it on `Game.ShipDesign`; `SpaceView.BuildVoxelShip`
+     meshes it with the same `ChunkMesher` + block atlas the planet world uses, centred on the ship pivot (front =
+     +Z), 1:1 (stylised) — REPLACING the cube `BuildShip` for the player's own ship (cube model kept as the
+     fallback). The design arrives just after entry, so the view rebuilds the ship mesh once it lands
+     (`RebuildShipModel`, pose preserved). Tail hatch marker + exhaust FX kept; the atlas hull isn't runtime-tinted
+     so the hull-colour pick (item 32) doesn't apply to the voxel ship (`_hullMat` stays null, its uses are
+     null-guarded). No voxel collider yet (flight is float-positioned — collision is S2). Test
+     `ShipStructure_IsSeededFromTheShipDesign` (393 green). *Known to eyeball in-engine: the stylised scale next to
+     the sphere planets, the +Z facing, and the block atlas shader's look in the space scene.* *Proves meshing +
+     position + scale.*
+   - ✅ **S2 — Free EVA collision + build/mine vs a structure (done 2026-06-08; needs in-engine test).** On an EVA,
+     the suit now collides with the ship's voxel hull and can mine/place blocks on it. Client
+     ([SpaceView.cs](client/Assets/Spacecraft/Scripts/SpaceView.cs)): `BuildVoxelShip` keeps the ship's block grid
+     (`_shipCells`) + adds a `MeshCollider` per voxel chunk (refactored into `RebuildShipVoxels`, reused after every
+     edit). `UpdateEva` resolves movement in **design space** per-axis (`ResolveEvaVoxelMove`/`SuitBlocked`) so the
+     suit slides along the hull instead of passing through (replaces the old `ShipKeepOut` sphere bounce; sphere
+     bounce kept as the cube-fallback path). `AimShipVoxel` ray-marches the grid (a design-space DDA mirroring the
+     on-foot `AimBlock`); a small marker shows the targeted cell; **LMB mines, RMB places** the held hotbar block.
+     Net: new `StructureEditIntent` (client→server, tag 106) + `StructureBlockChanged` (server→client, tag 107).
+     Server ([GameServerSpaceStructure.cs](src/Spacecraft.GameServer/GameServerSpaceStructure.cs)) `HandleStructureEdit`
+     — the free-space analogue of `HandlePlace`/`HandleMine`: edits the structure's sparse grid, banks mined drops /
+     consumes the placed item (`MaterialPool`), and broadcasts to the instance; gated to EVA + **your own ship**
+     (other ships/stations protected in S5). Edits live in the instance's structure (survive re-entry while you stay
+     in space). Coordinate transforms go root-local↔design via the ship transform, so it's correct at any heading.
+     Tests `EvaStructureEdit_MinesAndPlacesOnTheShipVoxelGrid` + `StructureEdit_RejectedWhenNotOnEva` (395 green).
+     **Deviations from the plan / known for in-engine eyeballing:** aim + collision are the analytic voxel grid (not
+     Unity `Physics` raycast) — the MeshCollider is added but used for future on-foot/raycast, not the suit; **no
+     server-side reach check** yet (trusts the client's capped ray-march — S5 hardening); edits are **session-only**
+     (durable per-structure save is S4). *Proves the core interaction.*
+   - ✅ **S3 — Voxel ore asteroids, hybrid shoot + mine (done 2026-06-09; needs in-engine test).** **Decision (user
+     2026-06-09): hybrid** — voxel asteroids you can BOTH shoot from the ship AND EVA-mine block-by-block. Each
+     asteroid is now a **paired CombatEntity + `SpaceStructure`** (same id): the entity keeps the existing
+     targeting/range/respawn/loot machinery; the structure is a small voxel ore body (rough sphere of
+     iron/copper/titanium ore + stone, `MakeAsteroidStructure`/`SpawnAsteroid` in
+     [GameServerSpaceStructure.cs](src/Spacecraft.GameServer/GameServerSpaceStructure.cs)). **Shoot:** `FireWeapon`
+     carves the rock to match its remaining hull (`CarveAsteroidToHull` removes outermost blocks + broadcasts
+     `StructureBlockChanged`); on destroy the structure is dropped (`RemoveAsteroidStructure`) and the existing
+     tier-0 loot path grants ore. **Mine:** `HandleStructureEdit` now allows mining any `Kind=="asteroid"` structure
+     (grants the block's ore drops); a fully mined-out asteroid removes its entity + structure. `RespawnAsteroids`
+     refills with voxel asteroids (sends the new design + state). **Networking:** `SpaceShipDesign` gained `Kind` +
+     world `Pos`; `EnterSpace`/respawn send each asteroid structure. **Client**
+     ([SpaceView.cs](client/Assets/Spacecraft/Scripts/SpaceView.cs)): generalized the S1/S2 voxel pipeline to
+     **multiple structures** — a `_structs` dict of static voxel bodies at world positions (`ReconcileStructs`,
+     built from `OnStructureDesign`, removed on `SpaceEntityDestroyed`), the mesher extracted to `BuildVoxChunks`,
+     and EVA aim/collision generalized across the ship + all asteroids (`AimVoxel`/`SuitBlockedWorld`, world-axis
+     sliding). `SyncEntities` no longer draws asteroid cubes (the entity stays only as a fire target). GameBootstrap
+     routes `Kind=="ship"` → `Game.ShipDesign`, asteroids → SpaceView. Tests `Shoot_CarvesVoxelAsteroid_ThenDestroysIt`
+     + `EvaMine_TakesOreFromAVoxelAsteroid` (396 green). **Deviations / in-engine eyeballing:** collision/aim are the
+     analytic voxel grid (not Unity physics); shoot-loot is bulk-on-destroy while EVA-mine is per-block (two
+     playstyles); shoot carving removes outermost blocks (not the exact impact point); edits are session-only (durable
+     save = S4). The old split-into-tiers model is replaced by carve-to-deplete.
+   - ✅ **S4 — Player-built stations (done 2026-06-09; needs in-engine test).** **Decisions (user 2026-06-09):**
+     (a) start via a **deployable station-core block**, (b) boardable once it **has an airlock + min size**, (c)
+     board by **stamping the build into a void-world** (reuse the station boarding infra). **Data:** new
+     `station_core` block + item + workshop recipe + DE/EN names. **Deploy:** new `DeployStationCoreIntent` (tag 108)
+     — on EVA, **B** spawns an owned `SpaceStructure{Kind="station"}` with a core block a few units ahead
+     ([GameServerPlayerStations.cs](src/Spacecraft.GameServer/GameServerPlayerStations.cs)); build it out with the
+     S2 EVA place flow (`HandleStructureEdit` now allows place/mine on your own station). **Commission:**
+     `TryCommissionStation` fires when the build reaches ≥12 blocks **and** contains a door (airlock) — registers a
+     `BoardableStation`, adds a `SpaceStation` dock contact (so EVA "press E to board" works), adds a runtime
+     `CelestialBody` to the star map, and persists it. **Board:** `BoardStation` branches to `StampPlayerStation`
+     which stamps the player's own cells into the `orbital_station` void world (spawn at the build's centre on a
+     guaranteed floor pad); leaving reuses `LeaveStation` unchanged. **Persistence:** new `space_structure` SQLite
+     table + `StoredSpaceStructure` (id, owner, name, location, pos, boardable, serialized cells); saved on commission
+     + on later edits, loaded at `Start` (`LoadPlayerStations` → re-adds star-map bodies + registry) and re-created
+     into the matching space instance on entry (`AddPersistedStations`). **Tests:**
+     `PlayerStation_Deploys_BuildsOut_AndCommissions` + `PlayerStation_Persists_AcrossServerRestart` (398 green).
+     **Deviations / in-engine eyeballing:** airlock detection = "contains a door block" (not a flood-fill sealed
+     volume); the boarded interior is the raw build (no auto-generated rooms/markers/crew beyond a spawn pad +
+     incidental civilians); station-core appearance uses the palette colour (no bespoke atlas texture yet); one
+     station core per deploy, no explicit decommission/claim-protection yet (S5).
+   - ✅ **S5 — Protection + MP polish (done 2026-06-09; needs in-engine test).** Most protection already fell out of
+     the S2–S4 owner-gating (`HandleStructureEdit` only lets you edit your OWN ship/station; asteroids are public;
+     game-spawned void-world stations aren't `SpaceStructure`s so can't be edited; ship weapons can't target
+     stations). S5 adds the remaining hardening: **server-side reach** — a static structure (asteroid/station) can
+     only be mined/built from within `StructureEditRange` (40 u) of the suit, closing the S2–S4 "trusts the client"
+     gap (the own ship rides the pilot, so it's exempt). **Far-structure unload** (client) — `ReconcileStructs` now
+     drops a voxel body's mesh beyond ~95 u (keeping its data) and rebuilds it when you return, so dozens of bodies
+     don't all carry live meshes. **Multiple structures co-rendered** was already delivered in S3's `_structs`
+     system. Tests `StructureEdit_RejectedWhenTooFarFromAsteroid` + `StructureEdit_CannotEditAnotherPlayersShip`
+     (400 green). **Deviations / in-engine eyeballing:** reach is a coarse sphere (not per-cell); unload distance is
+     a flat radius; no decommission/claim-transfer UI yet; persistence hardening kept to the S4 save/load round-trip.
+     **Item 20 (S1–S5) is now feature-complete; remaining polish (textures, sealed-volume airlock test, station
+     interiors) is optional follow-up.**
+   - ✅ **S6 follow-up — bespoke voxel ship layouts for the unlockable ships (done 2026-06-09; needs in-engine
+     test).** The starter already reads as a ship (its silhouette is added in the box fallback). The 3 unlockable
+     types now have hand-shaped, distinct voxel layouts in `data/ship_layouts/` (generated by
+     [tools/gen_ship_layouts.py](tools/gen_ship_layouts.py), referenced via `ships.json` `layout`): **scout** —
+     small, pointed glass nose, swept wings, single engine; **corvette** — twin stacked engines, side portholes,
+     forward weapon nubs, a raised glass bridge; **hauler** — big boxy freighter, four engines, roof cargo
+     containers. Each is a complete design (hull + hollow interior + floor + a rear airlock + front windows + the
+     7→3 station markers, with cockpit+medbay together at the FRONT so you spawn away from the airlock and can take
+     the helm). The space mesh skips station tiles (hollow interior) and renders any block key (carbon cargo etc.);
+     `StampShipLayout`/`BuildShipStructure` resolve real block ids. Starter stays the parametric box (keeps its
+     well-tested energy-hatch interior). 401 green. *Distinct silhouettes per unlockable ship — the original ask.*
    - **Biggest risks (de-risk early):** the free-space voxel collision + zero-g aim (S2) and the stylised-scale
      framing of voxel structures next to spheres (S1) — prototype + eyeball both before going wide.
 21. ✅ **Feature — loading screens always show + stay readable ≥3s (done 2026-06-07; needs in-engine test).**
@@ -2198,6 +2289,21 @@ Features: B7/B11. Rendering: B6/B8/B17/B20. B15/B19 need an in-engine look; B21 
    documented. *Steps when tackled:* check `Spacecraft.Api` (Program/Startup, launch settings, any dashboard
    page/Razor/Blazor), confirm the real access path by running it, then add a short "Admin dashboard" section to
    `README.md` (URL, how to start, what it's for). Small — investigation + a docs edit.
+40. ✅ **Feature — singleplayer world mode at creation: Explorer vs Creative (done 2026-06-09; needs in-engine
+   test).** **Decisions (user 2026-06-09):** Creative = a head-start sandbox — **survival mechanics stay ON**
+   (oxygen/hunger/material cost; `GameMode` untouched), it just changes what's available; "all-on" toggles (not
+   per-item); a curated kit (not a full picker). **UI** ([UiSaveSelect.cs](client/Assets/Spacecraft/Scripts/UiSaveSelect.cs)):
+   the new-world panel got a **Mode** selector (Explorer/Kreativ) + 3 Creative checkboxes — *Alle Blaupausen*,
+   *Alle Schiffe*, *Kreativ-Startset* (DE/EN locales). Passed via `AppShell.StartSingleplayerWorld` →
+   `LocalServerLauncher.Prepare` as `--unlock-all-blueprints/--start-all-ships/--creative-kit` →
+   `ServerConfig.ApplyCommandLine`. **Persistence:** the 3 options are baked into `WorldMetadata` on world
+   creation (so they survive reloads, sidestepping the fleet-not-persisted limitation). **Server**
+   ([GameServer.cs](src/Spacecraft.GameServer/GameServer.cs) `ApplyCreativeGrants`, called on every join): unlock
+   every blueprint + own every ship type (idempotent), and grant a curated starter kit (better tools + generous
+   stacks of key ores/materials/components/blocks) **once** (`CreativeKitGranted`). Explorer = all off (current
+   behaviour). Tests `CreativeWorld_…`, `ExplorerWorld_GrantsNothingExtra`, `CreativeOptions_PersistAcrossRestart…`
+   (404 green). *Follow-ups if wanted: a real Creative GameMode toggle (no-cost/no-oxygen), per-category or full
+   pickers, a bespoke item picker.*
 
 ---
 

@@ -252,6 +252,25 @@ public sealed class ShipStructureTests : IDisposable
     }
 
     [Fact]
+    public void ShipStructure_IsSeededFromTheShipDesign()
+    {
+        // item 20 S1: entering space carries the player's ship as a voxel structure (its own sparse block grid)
+        // seeded from the ship design, so the flight view can render it 1:1 instead of the cube model.
+        var server = Started(placeShip: true, out var repo);
+        using (repo)
+        {
+            var s = server.BuildShipStructureForTest("Host");
+
+            Assert.NotEmpty(s.Cells);                 // a real hull was produced
+            Assert.True(s.Width > 0 && s.Height > 0 && s.Length > 0);
+            Assert.Equal("ship", s.Kind);
+            Assert.Equal("ship:Host", s.Id);
+            // Every stored cell is a real (non-air) block id.
+            Assert.All(s.Cells.Values, b => Assert.False(b.IsAir));
+        }
+    }
+
+    [Fact]
     public void NoShip_WhenDisabled()
     {
         var server = Started(placeShip: false, out var repo);
