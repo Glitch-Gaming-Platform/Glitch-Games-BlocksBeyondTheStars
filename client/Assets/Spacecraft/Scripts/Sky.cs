@@ -38,7 +38,11 @@ namespace Spacecraft.Client
             go.transform.SetParent(transform, false);
             _sun = go.AddComponent<Light>();
             _sun.type = LightType.Directional;
-            _sun.shadows = LightShadows.None;
+            // Real-time sun shadows under URP (the headline of the migration); Built-in RP stays shadowless
+            // (its custom block shader doesn't receive shadow maps, so they'd cost without showing).
+            bool urp = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline != null;
+            _sun.shadows = urp ? LightShadows.Soft : LightShadows.None;
+            _sun.shadowStrength = 0.7f; // soft, not pitch-black shadows
 
             BuildSunDisc();
         }

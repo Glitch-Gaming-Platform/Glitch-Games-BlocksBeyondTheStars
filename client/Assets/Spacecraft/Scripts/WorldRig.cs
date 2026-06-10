@@ -72,6 +72,7 @@ namespace Spacecraft.Client
             // Created before the HUD components so UiKit.HudCamera is set when they build their canvases.
             var visor = root.AddComponent<VisorHud>();
             visor.MainCamera = cam;
+            visor.Settings = shell.Settings; // so the "visor effect" toggle reads live
             visor.ApplyPreset(shell.Settings.Preset, shell.Settings.ReducedEffects);
 
             // Blocky avatar (shown in third-person), coloured from the player's settings.
@@ -204,6 +205,13 @@ namespace Spacecraft.Client
             // Procedural creatures / fauna (World systems §12).
             var creatures = root.AddComponent<CreatureView>();
             creatures.Game = boot;
+
+            // Geyser / vent eruptions (item 21): rising plume + hiss at geyser_vent blocks.
+            var geysers = root.AddComponent<GeyserView>();
+            geysers.Game = boot;
+
+            // URP post-processing volume (bloom/tonemap/vignette/grade); no-op under Built-in RP (PostFx covers it).
+            root.AddComponent<UrpScenePost>();
 
             // Block selection outline + mining/placing particle feedback (M27 polish).
             var miningFx = root.AddComponent<MiningFx>();
