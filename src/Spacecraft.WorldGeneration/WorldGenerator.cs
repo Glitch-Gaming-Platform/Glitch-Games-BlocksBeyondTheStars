@@ -449,6 +449,17 @@ public sealed class WorldGenerator
 
         bool floatingIslands = planet.FloatingIslands; // item 21 V5: drifting sky-island slabs above the surface
 
+        // Geysers / vents (item 21 follow-up): sparse erupting spouts — water geysers on reasonably wet worlds,
+        // steam/lava vents on volcanic/ashen worlds. A marker block at the surface; the client attaches the
+        // eruption VFX + hiss when the player is near. Deterministic, very sparse (landmark-rare).
+        var geyserVentId = _content.GetBlock("geyser_vent")?.NumericId ?? BlockId.Air;
+        double geyserWater = planet.WaterAbundance
+            ?? (string.Equals(planet.Atmosphere, "none", System.StringComparison.OrdinalIgnoreCase) ? 0.0 : 0.55);
+        bool geyserVolcanic = (planet.LavaAbundance ?? 0.0) > 0.0
+            || string.Equals(planet.Key, "lava", System.StringComparison.OrdinalIgnoreCase)
+            || string.Equals(planet.Key, "ashen", System.StringComparison.OrdinalIgnoreCase);
+        bool geysers = !geyserVentId.IsAir && (geyserWater > 0.25 || geyserVolcanic);
+
         // Aquatic flora: kelp stalks rooted on the seabed + lily pads on the surface, only where the sea is
         // water (never lava). World gen places them directly in the submerged columns below.
         var kelpId = _content.GetBlock("flora_kelp")?.NumericId ?? BlockId.Air;
@@ -651,7 +662,43 @@ public sealed class WorldGenerator
             StampGiantMushrooms(planet, seed, chunk, coord, biomes, stemId, capId, myceliumId, fluidLevel);
         }
 
+        if (geysers)
+        {
+            StampGeysers(planet, seed, chunk, coord, geyserVentId, fluidLevel);
+        }
+
         return chunk;
+    }
+
+    /// <summary>Stamps sparse geyser/vent marker blocks on the surface (item 21 follow-up): the topmost ground
+    /// cell of a rare column becomes a <c>geyser_vent</c> with open air above, which the client detects to play
+    /// the eruption VFX + hiss. Never under water/ponds. Deterministic from the seed; very rare (a landmark).</summary>
+    private void StampGeysers(PlanetType planet, long seed, ChunkData chunk, ChunkCoord coord, BlockId ventId, int fluidLevel)
+    {
+        var origin = WorldConstants.ChunkOrigin(coord);
+        int cs = WorldConstants.ChunkSize;
+        const double density = 0.0015; // per-column chance (rare — geysers are scattered landmarks)
+
+        for (int wx = origin.X; wx < origin.X + cs; wx++)
+        for (int wz = origin.Z; wz < origin.Z + cs; wz++)
+        {
+            if (Noise.Value01(seed + 0x6E7A, WorldConstants.WrapX(wx, _circumference), 23, wz) >= density)
+            {
+                continue;
+            }
+
+            int sy = SurfaceHeight(planet, wx, wz);
+            if (sy + 1 <= fluidLevel || SurfacePondDepth(planet, wx, wz) > 0)
+            {
+                continue; // a vent needs open ground (not a sea/pond column)
+            }
+
+            int ly = sy - origin.Y;
+            if (ly >= 0 && ly < cs)
+            {
+                chunk.Set(wx - origin.X, ly, wz - origin.Z, ventId); // the surface cell becomes a vent
+            }
+        }
     }
 
     /// <summary>Stamps towering giant mushrooms (a fibrous stem + a domed cap) on a fungal world's mycelium

@@ -29,6 +29,7 @@
   { "key": "alien_grass",  "nameKey": "block.alien_grass.name",  "hardness": 0.6, "requiredTool": "none",  "minToolTier": 0, "drops": [ { "item": "alien_grass", "count": 1 } ] },
   { "key": "deepslate",    "nameKey": "block.deepslate.name",    "hardness": 7.0, "requiredTool": "drill", "minToolTier": 1, "drops": [ { "item": "deepslate", "count": 1 } ] },
   { "key": "granite",      "nameKey": "block.granite.name",      "hardness": 6.8, "requiredTool": "drill", "minToolTier": 1, "drops": [ { "item": "granite", "count": 1 } ] },
+  { "key": "geyser_vent",  "nameKey": "block.geyser_vent.name",   "hardness": 4.0, "requiredTool": "drill", "minToolTier": 1, "drops": [ { "item": "basalt", "count": 1 } ] },
   { "key": "flora_tendril",   "nameKey": "block.flora_tendril.name",   "hardness": 0.3, "requiredTool": "none", "minToolTier": 0, "drops": [ { "item": "plant_fiber", "count": 2 } ] },
   { "key": "flora_bulb",      "nameKey": "block.flora_bulb.name",      "hardness": 0.3, "requiredTool": "none", "minToolTier": 0, "drops": [ { "item": "plant_fiber", "count": 1 }, { "item": "berries", "count": 1 } ] },
   { "key": "flora_gasbloom",  "nameKey": "block.flora_gasbloom.name",  "hardness": 0.3, "requiredTool": "none", "minToolTier": 0, "drops": [ { "item": "plant_fiber", "count": 1 }, { "item": "toxic_gland", "count": 1 } ] },

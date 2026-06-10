@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace Spacecraft.Client
 {
@@ -32,6 +33,14 @@ namespace Spacecraft.Client
 
         private void OnEnable()
         {
+            // URP migration: this stack is OnRenderImage-based, which URP's render graph never calls. Under URP
+            // disable it (post moves to a URP Volume: bloom/tonemap/vignette + the built-in SSAO feature).
+            if (GraphicsSettings.currentRenderPipeline != null)
+            {
+                enabled = false;
+                return;
+            }
+
             _cam = GetComponent<Camera>();
             _cam.allowHDR = true;
 

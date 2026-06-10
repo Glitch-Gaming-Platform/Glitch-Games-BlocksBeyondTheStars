@@ -41,8 +41,10 @@ namespace Spacecraft.Client
         private float _lastHull = -1f, _lastShield = -1f;
         private float _lastHealth = -1f;
         private string _ambienceId = string.Empty;
+        private string _envBedId = "wind_light"; // last weather/biome bed; cave bed overrides it underground
         private string _fluidId = string.Empty;
         private float _fluidScanTimer;
+        private float _caveScanTimer;
         private float _drillRefresh = -10f;
         private float _jetRefresh = -10f;
         private float _thunderTimer;
@@ -209,6 +211,15 @@ namespace Spacecraft.Client
                 UpdateFluidAmbience();
             }
 
+            // Swap to the cave bed when the player ducks underground, back to the sky bed when they surface
+            // (item 21 — cave echo). Throttled; the underground test is cheap (a sky-exposure flag).
+            _caveScanTimer -= Time.deltaTime;
+            if (_caveScanTimer <= 0f)
+            {
+                _caveScanTimer = 0.5f;
+                RefreshAmbience();
+            }
+
             if (_fluid != null && _fluid.clip != null)
             {
                 _fluid.volume = Mathf.MoveTowards(_fluid.volume, _fluidId.Length == 0 ? 0f : sfx * 0.4f, Time.deltaTime * 0.8f);
@@ -314,8 +325,9 @@ namespace Spacecraft.Client
             }
         }
 
-        /// <summary>Plays a 3D positional one-shot by clip name, with an optional pitch (creatures).</summary>
-        public void At(string id, Vector3 pos, float pitch = 1f, float vol = 1f)
+        /// <summary>Plays a 3D positional one-shot by clip name, with an optional pitch (creatures). When
+        /// <paramref name="echo"/> is set the source gets a cave reverb tail (item 21 — cave dwellers).</summary>
+        public void At(string id, Vector3 pos, float pitch = 1f, float vol = 1f, bool echo = false)
         {
             if (!_clips.TryGetValue(id, out var clip) || clip == null)
             {
@@ -332,6 +344,12 @@ namespace Spacecraft.Client
             src.rolloffMode = AudioRolloffMode.Linear;   // B1: linear → truly silent past maxDistance
             src.pitch = pitch;
             src.volume = Mathf.Clamp01(vol * SfxVol());
+            if (echo)
+            {
+                var rev = go.AddComponent<AudioReverbFilter>();
+                rev.reverbPreset = AudioReverbPreset.Cave; // a dripping-cavern reverberant tail
+            }
+
             if (_submerged)
             {
                 go.AddComponent<AudioLowPassFilter>().cutoffFrequency = UnderwaterCutoff; // muffle 3D one-shots too
@@ -359,7 +377,7 @@ namespace Spacecraft.Client
         {
             // The bad-weather bed is driven by the precipitation type (snow/hail howl, sandstorm hisses,
             // ash roars); otherwise the planet's biome ambience plays.
-            string id = e.Precipitation switch
+            _envBedId = e.Precipitation switch
             {
                 "sandstorm" => "sandstorm_loop",
                 "ash" => "ash_loop",
@@ -367,16 +385,32 @@ namespace Spacecraft.Client
                 "rain" => e.Weather == "storm" ? "storm_loop" : "rain_loop",
                 _ => BiomeBed(e.Biome),
             };
-            SetAmbience(id);
+            RefreshAmbience();
         }
 
+        /// <summary>Chooses the active ambience bed: the cave bed when the player is underground/enclosed on a
+        /// planet (item 21 — cave echo), otherwise the weather/biome bed from the last environment update.</summary>
+        private void RefreshAmbience()
+        {
+            bool underground = Game != null && Game.Environment != null && !Game.ExposedToSky
+                && !Game.Aboard && !Game.InSpace;
+            SetAmbience(underground ? "amb_cave" : _envBedId);
+        }
+
+        // The planet's profession key (PlanetType.Key) doubles as the ambience key. New world types (item 21)
+        // get their own bed; close relatives reuse an existing one.
         private static string BiomeBed(string biome) => biome switch
         {
-            "jungle" or "forest" => "amb_forest",
-            "desert" => "amb_desert",
-            "ice" => "amb_ice",
+            "jungle" or "forest" or "savanna" => "amb_forest",
+            "desert" or "salt_flats" => "amb_desert",
+            "ice" or "tundra" => "amb_ice",
             "lava" => "amb_lava",
+            "ashen" => "amb_ashen",       // volcanic wasteland — heat shimmer + distant bubbling
             "swamp" => "amb_swamp",
+            "ocean" => "amb_ocean",        // surf
+            "fungal" => "amb_fungal",      // eerie spore-forest hum
+            "corrupted" => "amb_corrupted", // distorted murmur
+            "skylands" or "highland" => "amb_wind_high", // thin high-altitude wind
             _ => "wind_light", // rocky / crystal / varied / asteroid → light wind
         };
 

@@ -5,7 +5,11 @@
 //   _Sc_SunDir = world-space direction TO the sun
 //   _Sc_Sky    = current sky colour (sampled for environment reflections)
 // Per-block material comes from the vertex colour: r=gloss, g=metal, b=per-face AO.
-// Built-in render pipeline; no per-light passes (robust, no ForwardBase dependency).
+//
+// DUAL-PIPELINE (URP migration): SubShader 1 is the URP port (HLSL, UniversalForward), SubShader 2 is the
+// original Built-in RP pass (CG, unchanged). The active pipeline picks the matching SubShader, so the project
+// renders identically in Built-in today and gains URP when the pipeline asset is assigned. The fragment maths
+// is identical in both — both bypass the engine's light passes and read the same _Sc_* globals.
 Shader "Spacecraft/BlockAtlas"
 {
     Properties
@@ -14,6 +18,199 @@ Shader "Spacecraft/BlockAtlas"
         _NormalTex ("Normal", 2D) = "bump" {}
         _LeafCutoff ("Leaf alpha cutoff", Range(0,1)) = 0.5
     }
+
+    // ---------------- URP ----------------
+    SubShader
+    {
+        Tags { "RenderType" = "Opaque" "Queue" = "Geometry" "RenderPipeline" = "UniversalPipeline" }
+        Cull Back
+        ZWrite On
+
+        Pass
+        {
+            Tags { "LightMode" = "UniversalForward" }
+            HLSLPROGRAM
+            #pragma vertex vert
+            #pragma fragment frag
+            #pragma multi_compile_fog
+            // Receive the sun's real-time shadow map (URP main light).
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
+            #pragma multi_compile_fragment _ _SHADOWS_SOFT
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+
+            TEXTURE2D(_MainTex);   SAMPLER(sampler_MainTex);
+            TEXTURE2D(_NormalTex); SAMPLER(sampler_NormalTex);
+
+            // Globals fed by Sky/player via Shader.SetGlobal* — kept outside any per-material cbuffer.
+            float4 _Sc_Light;
+            float4 _Sc_SunDir;
+            float4 _Sc_Sky;
+            float4 _Sc_LampPos;
+            float4 _Sc_LampDir;
+            float4 _Sc_LampColor;
+            float  _Sc_Indoor;
+            float4 _Sc_FloraTint;
+            float  _LeafCutoff;
+
+            struct Attributes
+            {
+                float4 positionOS : POSITION;
+                float3 normal : NORMAL;
+                float4 tangent : TANGENT;
+                float2 uv : TEXCOORD0;
+                float2 sky : TEXCOORD1;  // x = skylight, y = flora flag
+                float2 leaf : TEXCOORD2; // x = foliage flag
+                float4 color : COLOR;    // r=gloss, g=metal, b=face AO, a=emission
+            };
+
+            struct Varyings
+            {
+                float4 positionCS : SV_POSITION;
+                float2 uv : TEXCOORD0;
+                float3 wn : TEXCOORD1;
+                float3 wp : TEXCOORD2;
+                float4 wt : TEXCOORD3;
+                float2 skyl : TEXCOORD4;
+                float2 leaf : TEXCOORD5;
+                float4 mat : TEXCOORD6;
+                float  fog : TEXCOORD7;
+            };
+
+            Varyings vert(Attributes v)
+            {
+                Varyings o = (Varyings)0;
+                float3 wp = TransformObjectToWorld(v.positionOS.xyz);
+                o.positionCS = TransformWorldToHClip(wp);
+                o.uv = v.uv;
+                o.wn = TransformObjectToWorldNormal(v.normal);
+                o.wt = float4(TransformObjectToWorldDir(v.tangent.xyz), v.tangent.w);
+                o.wp = wp;
+                o.skyl = v.sky;
+                o.leaf = v.leaf;
+                o.mat = v.color;
+                o.fog = ComputeFogFactor(o.positionCS.z);
+                return o;
+            }
+
+            half4 frag(Varyings i) : SV_Target
+            {
+                float4 texel = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv);
+                if (i.leaf.x > 0.5)
+                {
+                    clip(texel.a - _LeafCutoff);
+                }
+
+                float3 albedo = texel.rgb;
+                if (i.skyl.y > 0.5 && _Sc_FloraTint.a > 0.5)
+                {
+                    float lum = dot(albedo, float3(0.299, 0.587, 0.114));
+                    albedo = lerp(albedo, lum * _Sc_FloraTint.rgb * 1.6, 0.85);
+                }
+
+                float3 light = (_Sc_Light.a < 0.5) ? float3(1, 1, 1) : _Sc_Light.rgb;
+
+                float3 gN = normalize(i.wn);
+                float3 T = normalize(i.wt.xyz);
+                float3 B = normalize(cross(gN, T) * i.wt.w);
+                float3 tn = SAMPLE_TEXTURE2D(_NormalTex, sampler_NormalTex, i.uv).xyz * 2.0 - 1.0;
+                float3 N = normalize(tn.x * T + tn.y * B + tn.z * gN);
+
+                float3 L = normalize(_Sc_SunDir.xyz);
+                float3 V = normalize(_WorldSpaceCameraPos - i.wp);
+                float ndl = saturate(dot(N, L));
+                float sky = saturate(i.skyl.x);
+
+                // Sun shadow map (URP main light): 1 where lit, →0 in shadow. Only the direct-sun terms are
+                // shadowed (ambient/sky fill + emissive stay), so shadowed faces dim but never go black.
+                float shadow = MainLightRealtimeShadow(TransformWorldToShadowCoord(i.wp));
+
+                float faceAo = lerp(0.88, 1.0, i.mat.b);
+                float amb = lerp(0.24, 0.70, sky);
+                float3 col = albedo * (light * (amb + 0.5 * ndl * sky * shadow) + 0.05) * faceAo;
+                col += albedo * (_Sc_Indoor * 0.5 * (1.0 - sky)) * faceAo;
+
+                float gloss = i.mat.r;
+                float metal = i.mat.g;
+                float3 H = normalize(L + V);
+                float specPow = lerp(8.0, 200.0, gloss);
+                float spec = pow(saturate(dot(N, H)), specPow) * gloss * ndl * sky * shadow;
+                float3 specCol = lerp(float3(1, 1, 1), albedo, metal);
+                col += light * specCol * spec * 1.2;
+
+                float3 envCol = (_Sc_Sky.a < 0.5) ? light : _Sc_Sky.rgb;
+                float3 reflTint = lerp(envCol, envCol * albedo, metal);
+                float fres = pow(1.0 - saturate(dot(N, V)), 4.0);
+                float reflK = saturate(gloss * (0.25 + 0.6 * metal)) * fres * sky;
+                col = lerp(col, reflTint, reflK);
+
+                col += albedo * i.mat.a * 2.0;
+
+                if (_Sc_LampColor.a > 0.5)
+                {
+                    float3 toFrag = i.wp - _Sc_LampPos.xyz;
+                    float ld = length(toFrag);
+                    float3 dir = toFrag / max(ld, 1e-4);
+                    float cone = saturate((dot(dir, normalize(_Sc_LampDir.xyz)) - _Sc_LampDir.w) / max(1e-3, 1.0 - _Sc_LampDir.w));
+                    float atten = saturate(1.0 - ld / _Sc_LampPos.w);
+                    float ndl2 = saturate(dot(N, -dir));
+                    col += albedo * _Sc_LampColor.rgb * cone * atten * atten * ndl2;
+                }
+
+                half4 outc = half4(col, 1);
+                outc.rgb = MixFog(outc.rgb, i.fog);
+                return outc;
+            }
+            ENDHLSL
+        }
+
+        // Cast the sun's shadows into the main-light shadow map (URP). Foliage punches holes via alpha-clip.
+        Pass
+        {
+            Name "ShadowCaster"
+            Tags { "LightMode" = "ShadowCaster" }
+            ZWrite On ZTest LEqual ColorMask 0 Cull Back
+
+            HLSLPROGRAM
+            #pragma vertex shadowVert
+            #pragma fragment shadowFrag
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
+
+            TEXTURE2D(_MainTex); SAMPLER(sampler_MainTex);
+            float _LeafCutoff;
+            float3 _LightDirection; // set by URP while rendering the shadow map
+
+            struct SAttr { float4 positionOS : POSITION; float3 normal : NORMAL; float2 uv : TEXCOORD0; };
+            struct SVary { float4 positionCS : SV_POSITION; float2 uv : TEXCOORD0; };
+
+            SVary shadowVert(SAttr v)
+            {
+                SVary o;
+                float3 wp = TransformObjectToWorld(v.positionOS.xyz);
+                float3 wn = TransformObjectToWorldNormal(v.normal);
+                float4 cs = TransformWorldToHClip(ApplyShadowBias(wp, wn, _LightDirection));
+                #if UNITY_REVERSED_Z
+                    cs.z = min(cs.z, UNITY_NEAR_CLIP_VALUE);
+                #else
+                    cs.z = max(cs.z, UNITY_NEAR_CLIP_VALUE);
+                #endif
+                o.positionCS = cs;
+                o.uv = v.uv;
+                return o;
+            }
+
+            half4 shadowFrag(SVary i) : SV_Target
+            {
+                float a = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv).a;
+                clip(a - _LeafCutoff); // opaque tiles (a=1) always pass; foliage holes clip
+                return 0;
+            }
+            ENDHLSL
+        }
+    }
+
+    // ---------------- Built-in RP (original, unchanged) ----------------
     SubShader
     {
         Tags { "RenderType" = "Opaque" "Queue" = "Geometry" }

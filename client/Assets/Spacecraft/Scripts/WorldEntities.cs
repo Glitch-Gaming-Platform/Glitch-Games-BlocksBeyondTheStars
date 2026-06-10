@@ -39,7 +39,8 @@ namespace Spacecraft.Client
                     go.transform.localScale = new Vector3(0.9f, 1.6f, 0.9f);
                     if (_enemyMat == null)
                     {
-                        var shader = Shader.Find("Unlit/Color") ?? Shader.Find("Spacecraft/VertexColorOpaque");
+                        // LitColor (honours _Color) so enemies are shaded + cast the sun's shadow under URP.
+                        var shader = Shader.Find("Spacecraft/LitColor") ?? Shader.Find("Unlit/Color");
                         _enemyMat = new Material(shader) { color = new Color(0.8f, 0.15f, 0.15f) };
                     }
 

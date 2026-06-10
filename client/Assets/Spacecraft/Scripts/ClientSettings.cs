@@ -42,6 +42,10 @@ namespace Spacecraft.Client
         public bool ReducedEffects = false;
         public bool LargeUi = false;
 
+        /// <summary>Holographic visor HUD styling (curvature + chromatic fringe + scanlines + glow). On = the
+        /// stylised visor look; off = a clean, flat HUD overlay (better readability). Default on but subtle.</summary>
+        public bool VisorEffects = true;
+
         // Avatar appearance (M23b). Per-part colours; later armor overrides the matching part.
         public Color SkinColor = new Color(0.85f, 0.68f, 0.55f);
         public Color TorsoColor = new Color(0.20f, 0.45f, 0.80f);
@@ -96,6 +100,20 @@ namespace Spacecraft.Client
             if (levels > 0)
             {
                 QualitySettings.SetQualityLevel(Mathf.Clamp((int)Preset, 0, levels - 1), applyExpensiveChanges: true);
+            }
+
+            // URP: one pipeline asset serves every quality level, so scale the expensive part — shadow reach —
+            // by preset here (Potato/Pi: shadows off entirely; High: the full tuned distance).
+            if (UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline
+                is UnityEngine.Rendering.Universal.UniversalRenderPipelineAsset urp)
+            {
+                urp.shadowDistance = Preset switch
+                {
+                    QualityPreset.Potato => 0f,
+                    QualityPreset.Low => 40f,
+                    QualityPreset.Medium => 70f,
+                    _ => 90f,
+                };
             }
         }
     }
