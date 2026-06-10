@@ -93,6 +93,15 @@ public sealed class CreatureSpecies
     /// <summary>A row of dorsal-crest spines/frill along the back — extra silhouette variety (Task 6).</summary>
     public bool HasCrest { get; set; }
 
+    /// <summary>Dangling tentacles under the body (0 = none) — mostly water/cave fauna (item-21 morphology).</summary>
+    public int Tentacles { get; set; }
+
+    /// <summary>Eyes sit on stalks atop the head instead of in the face (snail-like) — item-21 morphology.</summary>
+    public bool EyeStalks { get; set; }
+
+    /// <summary>A translucent buoyancy gas-sac above the body (floating grazers) — item-21 morphology.</summary>
+    public bool HasGasSac { get; set; }
+
     /// <summary>Secondary/belly accent colour (packed RGB) for a two-tone body, for more visible variety.</summary>
     public int BellyRgb { get; set; } = 0xFFFFFF;
 

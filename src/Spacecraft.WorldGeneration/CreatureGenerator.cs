@@ -67,6 +67,18 @@ public static class CreatureGenerator
 
         var (dropKind, dropItem, dropCount) = PickDrop(rng);
 
+        // Per-biome palette (item-21 rest): species native to a biome share a recognisable colour family —
+        // their hue is pulled toward that biome's anchor hue, so region A's fauna reads green-ish while
+        // region B's reads violet-ish on the same world. Biome-agnostic species keep their free colour.
+        int biomeAffinity = biomeCount <= 1 ? -1 : rng.Next(biomeCount);
+        int colorRgb = PickColor(rng, habitat);
+        int bellyRgb = PickColor(rng, habitat);
+        if (biomeAffinity >= 0)
+        {
+            colorRgb = ShiftTowardBiomeHue(colorRgb, biomeAffinity);
+            bellyRgb = ShiftTowardBiomeHue(bellyRgb, biomeAffinity);
+        }
+
         return new CreatureSpecies
         {
             Id = "sp" + index,
@@ -86,16 +98,29 @@ public static class CreatureGenerator
                        || (habitat != CreatureHabitat.Cave && habitat != CreatureHabitat.Amphibian && rng.NextDouble() < 0.1),
             HasTail = rng.NextDouble() < (habitat == CreatureHabitat.Amphibian ? 0.85 : 0.5),
             BodySegments = 1 + rng.Next(4),                            // 1..4 — some long, segmented bodies
-            ColorRgb = PickColor(rng, habitat),
-            BellyRgb = PickColor(rng, habitat), // a second tone → two-tone bodies
+            ColorRgb = colorRgb,
+            BellyRgb = bellyRgb, // a second tone → two-tone bodies
             // Cave dwellers are mostly eyeless (they navigate in the dark); surface fauna keep the normal mix.
             Eyes = cave ? Weighted(rng, 0, 55, 1, 15, 2, 25, 4, 5)
                         : Weighted(rng, 0, 12, 1, 6, 2, 44, 3, 16, 4, 14, 6, 6, 8, 2),
             Horns = Weighted(rng, 0, 50, 1, 18, 2, 15, 3, 12, 4, 5),   // none / one / two / three / four
             HasCrest = rng.NextDouble() < 0.32,                        // a dorsal frill on roughly a third
+            // item-21 morphology rest: tentacles for the wet/dark fauna, snail-like eyestalks, and a
+            // translucent buoyancy gas-sac on the odd floating grazer — beyond just legs/eyes.
+            Tentacles = PickTentacles(rng, habitat),
+            EyeStalks = rng.NextDouble() < habitat switch
+            {
+                CreatureHabitat.Amphibian => 0.45,
+                CreatureHabitat.Cave => 0.35,
+                CreatureHabitat.Water => 0.25,
+                _ => 0.10,
+            },
+            HasGasSac = habitat == CreatureHabitat.Air
+                ? rng.NextDouble() < 0.35
+                : habitat == CreatureHabitat.Land && rng.NextDouble() < 0.06,
             // Lava + cave dwellers are bioluminescent (the only light down in the dark); others sometimes glow.
             Glows = habitat == CreatureHabitat.Lava || cave || rng.NextDouble() < (activity == CreatureActivity.Nocturnal ? 0.3 : 0.12),
-            BiomeAffinity = biomeCount <= 1 ? -1 : rng.Next(biomeCount), // native to one biome on multi-biome worlds
+            BiomeAffinity = biomeAffinity, // native to one biome on multi-biome worlds
 
             DropItem = dropItem,
             DropCount = dropCount,
@@ -137,6 +162,42 @@ public static class CreatureGenerator
     {
         string[] mats = { "carbon", "silicate", "copper_ore", "iron_ore" };
         return mats[rng.Next(mats.Length)];
+    }
+
+    /// <summary>Tentacle count by habitat (item-21 morphology): water dwellers often trail 4–6, cave +
+    /// amphibian fauna sometimes 2–4, the occasional land/air oddity 2–3, most species none.</summary>
+    private static int PickTentacles(System.Random rng, CreatureHabitat habitat) => habitat switch
+    {
+        CreatureHabitat.Water => rng.NextDouble() < 0.55 ? 4 + rng.Next(3) : 0,
+        CreatureHabitat.Cave => rng.NextDouble() < 0.35 ? 2 + rng.Next(3) : 0,
+        CreatureHabitat.Amphibian => rng.NextDouble() < 0.30 ? 2 + rng.Next(3) : 0,
+        _ => rng.NextDouble() < 0.08 ? 2 + rng.Next(2) : 0,
+    };
+
+    /// <summary>Pulls a colour's hue toward its biome's anchor hue (item-21 per-biome palettes): each biome
+    /// index owns a fixed anchor on the hue wheel (golden-ratio spaced so neighbours differ clearly), and a
+    /// native species blends ~45% toward it — a shared family tint per region, with individuality kept.</summary>
+    private static int ShiftTowardBiomeHue(int rgb, int biome)
+    {
+        float r = ((rgb >> 16) & 0xFF) / 255f, g = ((rgb >> 8) & 0xFF) / 255f, b = (rgb & 0xFF) / 255f;
+        float max = System.Math.Max(r, System.Math.Max(g, b)), min = System.Math.Min(r, System.Math.Min(g, b));
+        float v = max, d = max - min;
+        float s = max <= 0f ? 0f : d / max;
+        float h = 0f;
+        if (d > 0f)
+        {
+            if (max == r) h = ((g - b) / d % 6f + 6f) % 6f / 6f;
+            else if (max == g) h = ((b - r) / d + 2f) / 6f;
+            else h = ((r - g) / d + 4f) / 6f;
+        }
+
+        float anchor = (0.07f + biome * 0.382f) % 1f; // golden-ratio spacing across the wheel
+        float delta = anchor - h;
+        if (delta > 0.5f) delta -= 1f;
+        if (delta < -0.5f) delta += 1f;
+        h = (h + delta * 0.45f + 1f) % 1f;
+        s = System.Math.Max(s, 0.35f); // keep the family tint visible even on washed-out bases
+        return HsvToRgb(h, s, v);
     }
 
     private static int PickLegs(System.Random rng, CreatureHabitat habitat) => habitat switch

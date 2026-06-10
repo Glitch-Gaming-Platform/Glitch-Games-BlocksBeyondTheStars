@@ -86,14 +86,35 @@ namespace Spacecraft.Client
                 var pupilMat = Unlit(new Color(0.04f, 0.04f, 0.06f));
                 var glintMat = Unlit(Color.white);
                 float eyeSize = unit * 0.32f * headScale; // bigger (was 0.24)
-                float spread = unit * headScale * (0.30f + 0.05f * eyes); // wider span the more eyes there are
-                for (int e = 0; e < eyes; e++)
+
+                if (c.EyeStalks)
                 {
-                    float fx = eyes == 1 ? 0f : Mathf.Lerp(-spread, spread, e / (float)(eyes - 1));
-                    var pos = new Vector3(fx, unit * 0.16f * headScale, unit * 0.70f * headScale);
-                    AddPartTo(_headPivot, "Eye" + e, pos, Vector3.one * eyeSize, eyeMat, PrimitiveType.Sphere);
-                    AddPartTo(_headPivot, "Pupil" + e, pos + new Vector3(0f, 0f, eyeSize * 0.42f), Vector3.one * (eyeSize * 0.55f), pupilMat, PrimitiveType.Sphere);
-                    AddPartTo(_headPivot, "Glint" + e, pos + new Vector3(eyeSize * 0.16f, eyeSize * 0.18f, eyeSize * 0.5f), Vector3.one * (eyeSize * 0.16f), glintMat, PrimitiveType.Sphere);
+                    // item-21 morphology: snail-like eyestalks — each eye sits on a thin stalk atop the head,
+                    // staggered in height so multi-eyed stalked species read clearly.
+                    int stalks = Mathf.Min(eyes, 4); // more than 4 stalks turns to visual noise
+                    float spread2 = unit * headScale * 0.30f;
+                    for (int e = 0; e < stalks; e++)
+                    {
+                        float fx = stalks == 1 ? 0f : Mathf.Lerp(-spread2, spread2, e / (float)(stalks - 1));
+                        float stalkH = unit * headScale * (0.45f + 0.12f * (e % 2));
+                        var top = new Vector3(fx, unit * 0.45f * headScale + stalkH, unit * 0.15f * headScale);
+                        AddPartTo(_headPivot, "Stalk" + e, new Vector3(fx, unit * 0.45f * headScale + stalkH * 0.5f, unit * 0.15f * headScale),
+                            new Vector3(eyeSize * 0.28f, stalkH, eyeSize * 0.28f), _bodyMat);
+                        AddPartTo(_headPivot, "Eye" + e, top, Vector3.one * (eyeSize * 0.9f), eyeMat, PrimitiveType.Sphere);
+                        AddPartTo(_headPivot, "Pupil" + e, top + new Vector3(0f, 0f, eyeSize * 0.38f), Vector3.one * (eyeSize * 0.5f), pupilMat, PrimitiveType.Sphere);
+                    }
+                }
+                else
+                {
+                    float spread = unit * headScale * (0.30f + 0.05f * eyes); // wider span the more eyes there are
+                    for (int e = 0; e < eyes; e++)
+                    {
+                        float fx = eyes == 1 ? 0f : Mathf.Lerp(-spread, spread, e / (float)(eyes - 1));
+                        var pos = new Vector3(fx, unit * 0.16f * headScale, unit * 0.70f * headScale);
+                        AddPartTo(_headPivot, "Eye" + e, pos, Vector3.one * eyeSize, eyeMat, PrimitiveType.Sphere);
+                        AddPartTo(_headPivot, "Pupil" + e, pos + new Vector3(0f, 0f, eyeSize * 0.42f), Vector3.one * (eyeSize * 0.55f), pupilMat, PrimitiveType.Sphere);
+                        AddPartTo(_headPivot, "Glint" + e, pos + new Vector3(eyeSize * 0.16f, eyeSize * 0.18f, eyeSize * 0.5f), Vector3.one * (eyeSize * 0.16f), glintMat, PrimitiveType.Sphere);
+                    }
                 }
             }
 
@@ -156,6 +177,42 @@ namespace Spacecraft.Client
                     AddPart(body, "Crest" + f, new Vector3(0f, topY, Mathf.Lerp(z0, z1, t)),
                         new Vector3(unit * 0.10f, Mathf.Max(unit * 0.2f, finH), unit * 0.42f), crestMat);
                 }
+            }
+
+            // item-21 morphology: dangling tentacles — chains of shrinking segments hanging under the body
+            // (front-loaded like a squid's arms), in the belly accent colour so they read against the body.
+            int tentacles = Mathf.Clamp(c.Tentacles, 0, 8);
+            if (tentacles > 0)
+            {
+                float tentLen = unit * (c.Legs > 0 ? 0.8f : 1.1f); // longer on legless swimmers/floaters
+                for (int tn = 0; tn < tentacles; tn++)
+                {
+                    float fx = Mathf.Lerp(-unit * 0.42f * bodyWide, unit * 0.42f * bodyWide, tentacles == 1 ? 0.5f : tn / (float)(tentacles - 1));
+                    float fz = frontZ - unit * (0.5f + 0.45f * (tn % 2)); // two staggered rows up front
+                    float y = bodyY - unit * 0.45f;
+                    for (int seg = 0; seg < 3; seg++)
+                    {
+                        float w = unit * (0.16f - 0.04f * seg);
+                        float h = tentLen * (0.4f - 0.07f * seg);
+                        AddPart(body, $"Tent{tn}_{seg}", new Vector3(fx, y - h * 0.5f, fz + seg * unit * 0.06f),
+                            new Vector3(w, h, w), bellyMat);
+                        y -= h;
+                    }
+                }
+            }
+
+            // item-21 morphology: a translucent buoyancy gas-sac floating above the body (alpha-blended via the
+            // always-included Cloud shader), tinted to a pale wash of the body colour.
+            if (c.HasGasSac)
+            {
+                var sacShader = Shader.Find("Spacecraft/Cloud") ?? Shader.Find("Unlit/Color");
+                var sacMat = new Material(sacShader);
+                var sacTint = Color.Lerp(baseColor, Color.white, 0.55f);
+                sacTint.a = 0.45f;
+                sacMat.color = sacTint;
+                AddPartTo(body.transform, "GasSac",
+                    new Vector3(0f, bodyY + unit * (1.0f + 0.25f * bodyWide), -segLen * 0.1f),
+                    Vector3.one * unit * (1.15f * bodyWide), sacMat, PrimitiveType.Sphere);
             }
 
             if (c.Glows)

@@ -596,6 +596,9 @@ public sealed partial class GameServer
             Horns = sp?.Horns ?? 0,
             HasCrest = sp?.HasCrest ?? false,
             BellyRgb = sp?.BellyRgb ?? (sp?.ColorRgb ?? 0xFFFFFF),
+            Tentacles = sp?.Tentacles ?? 0,
+            EyeStalks = sp?.EyeStalks ?? false,
+            HasGasSac = sp?.HasGasSac ?? false,
         };
     }
 

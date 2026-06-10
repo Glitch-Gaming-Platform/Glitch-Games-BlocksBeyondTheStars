@@ -907,6 +907,11 @@ public sealed class NetCreature
     public int Horns { get; set; }
     public bool HasCrest { get; set; }
     public int BellyRgb { get; set; } = 0xFFFFFF;
+
+    // item-21 morphology rest: tentacles, snail-like eyestalks, a translucent buoyancy gas-sac.
+    public int Tentacles { get; set; }
+    public bool EyeStalks { get; set; }
+    public bool HasGasSac { get; set; }
 }
 
 /// <summary>Snapshot of live creatures (fauna) near the player on the planet surface.</summary>
