@@ -186,6 +186,17 @@ Baseline is better than it looks: lit block shader (normals/sun/spec/AO/sky-occl
   more landmarks/POIs (ruins/dungeons/rewarding cave systems), set-dressing props, ecosystem fauna behaviour,
   weather drama, a guiding progression/onboarding.
 
+### ★ Feature 40 — Terrain scanner — ✅ DONE 2026-06-10 (423 tests green, client built)
+New item-36-style right-click gadget **`terrain_scanner`** (workshop recipe + blueprint, tier 2, 10 suit
+energy, 10 s cooldown): a pulse that reveals **valuable blocks through the terrain** — every `*_ore`, `crystal`
+and `data_cache` within a 20-block sphere around the player. **Server-authoritative**: validates energy/
+cooldown, scans, sends the nearest ≤80 hits as a new `OreScanResult` (NetCodec 112). Client `OreScanView`
+renders **through-wall glow markers** (always-included `SunGlow` shader — additive, ZTest Always) for 8 s,
+gently pulsing, fading out, **tinted by ore type** (gold/copper/iron/titanium/crystal/data-cache distinct);
+amber pulse + new ElevenLabs `terrain_scan` sonar sweep on use; OpenAI icon `item_terrain_scanner`. Bilingual
+locale; test `TerrainScanner_FindsNearbyOre_CostsEnergy_AndCoolsDown`. This closes the last open item of the
+B41–B59 batch.
+
 ### ★ New batch — requested 2026-06-10 — ✅ DONE 2026-06-10 (1, 3, 4; 2 = code-verified, playtest open)
 1. ✅ **Planet enemies — real bodies + assets** (was: two-block-tall flat-red untextured cubes in
    `WorldEntities.cs`). Now a procedural blocky **alien fiend**: hunched chitin torso + pelvis, horned skull
@@ -2129,8 +2140,8 @@ Client-only. *Playtest wanted.*
 ### Reported-bug batch (2026-06-08, after item 38) — B41–B59
 **STATUS 2026-06-08:** ✅ FIXED + built + 392 tests green: **B41a/b, B42, B43, B44, B45, B46, B47, B48, B49/B56,
 B50, B51, B52, B53, B54, B57, B59** (commits f2a0cc4, b5c8a82, 2e7e691, 27afca8). ✅ **B55** (per-vendor trade
-themes) + **B58** (customisable quick-bar) DONE 2026-06-10 — see the B55+B58 block near the top. ⏳ STILL OPEN
-(in backlog): **Feature 40** (terrain-scanner gadget — new feature, analysis-first).
+themes) + **B58** (customisable quick-bar) DONE 2026-06-10 — see the B55+B58 block near the top. ✅ **Feature 40**
+(terrain-scanner gadget) DONE 2026-06-10 — see its block near the top. **The B41–B59 batch is fully closed.**
 - **B41 — Player-ship hatch sits *lengthwise* inside the ship (not parallel to / at the opening); + suffocated
   inside the ship on an airless planet. [TODO]** Two issues on the player's own landed ship: **(a)** the hatch
   door is oriented wrong — it should sit **at the doorway opening, parallel to it**, but renders **along the ship's

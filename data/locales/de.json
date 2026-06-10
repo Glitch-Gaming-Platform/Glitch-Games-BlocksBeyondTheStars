@@ -221,6 +221,8 @@
   "item.stasis_projector.desc": "Rechtsklick friert Kreaturen in der Nähe für ein paar Sekunden ein — lange genug, um sie gefahrlos zu scannen. Kostet Anzug-Energie.",
   "item.terrain_blaster.name": "Terrain-Blaster",
   "item.terrain_blaster.desc": "Rechtsklick sprengt eine Kugel Terrain weg — schnelles Freiräumen, liefert aber keine Materialien. Kostet Anzug-Energie.",
+  "item.terrain_scanner.name": "Terrain-Scanner",
+  "item.terrain_scanner.desc": "Rechtsklick sendet einen Scan-Impuls: wertvolle Erze in der Umgebung leuchten einige Sekunden durch das Terrain — auch unterirdisch. Kostet Anzug-Energie.",
 
   "blueprint.oxygen_tank_1.name": "Sauerstofftank I",
   "blueprint.oxygen_tank_1.desc": "Schaltet die Herstellung des ersten Sauerstofftank-Upgrades frei.",
@@ -232,6 +234,8 @@
   "blueprint.stasis_projector.desc": "Schaltet den Stasis-Strahler frei: friert Kreaturen kurz ein, damit du sie ohne Angriff scannen kannst.",
   "blueprint.terrain_blaster.name": "Terrain-Blaster",
   "blueprint.terrain_blaster.desc": "Schaltet den Terrain-Blaster frei: räumt eine große Kugel Terrain auf einmal weg (kein Loot).",
+  "blueprint.terrain_scanner.name": "Terrain-Scanner",
+  "blueprint.terrain_scanner.desc": "Schaltet den Terrain-Scanner frei: ein Impuls, der wertvolle Erze in der Umgebung sichtbar macht — auch unter der Erde.",
   "blueprint.radio_beacon.name": "Funkfeuer",
   "blueprint.radio_beacon.desc": "Schaltet das Funkfeuer frei: eine platzierbare Markierung, die mit eigenem Namen auf Karte und Kompass erscheint.",
   "blueprint.cargo_expansion_1.name": "Frachtraum-Erweiterung I",

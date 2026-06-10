@@ -109,6 +109,38 @@ public sealed class GadgetTests : IDisposable
         }
     }
 
+    [Fact]
+    public void TerrainScanner_FindsNearbyOre_CostsEnergy_AndCoolsDown()
+    {
+        var server = Started(out var repo);
+        using (repo)
+        {
+            var p = server.AddLocalPlayer("Prospector");
+            p.State.Inventory.Add("terrain_scanner", 1, 1);
+            p.State.Position = new Vector3f(0f, 64f, 0f);
+
+            // Bury valuables near the player (underground — the scanner sees through terrain) and one
+            // valuable well outside the pulse radius (20) that must NOT be reported.
+            var iron = _content.GetBlock("iron_ore")!.NumericId;
+            var crystal = _content.GetBlock("crystal")!.NumericId;
+            // Positive X only — block X is stored canonically (longitude wraps), so negative test
+            // coordinates would canonicalise to circumference−x and the assertions wouldn't match.
+            server.World.SetBlock(new Vector3i(3, 60, 2), iron);
+            server.World.SetBlock(new Vector3i(5, 58, -3), crystal);
+            server.World.SetBlock(new Vector3i(60, 64, 0), iron); // far beyond the 20-block pulse
+
+            var scan = server.OreScanForTest("Prospector");
+            Assert.Contains(System.Linq.Enumerable.Range(0, scan.X.Length), i => scan.X[i] == 3 && scan.Y[i] == 60 && scan.Z[i] == 2);
+            Assert.Contains(System.Linq.Enumerable.Range(0, scan.X.Length), i => scan.X[i] == 5 && scan.Y[i] == 58 && scan.Z[i] == -3);
+            Assert.DoesNotContain(System.Linq.Enumerable.Range(0, scan.X.Length), i => scan.X[i] == 60);
+
+            // The real use debits suit energy + starts the cooldown.
+            server.UseGadgetForTest("Prospector", "terrain_scanner", p.State.Position);
+            Assert.True(p.State.SuitEnergy < 100f);
+            Assert.True(server.GadgetCooldownForTest("Prospector", "terrain_scanner") > 0);
+        }
+    }
+
     public void Dispose()
     {
         try { Directory.Delete(_root, true); } catch { /* best effort */ }

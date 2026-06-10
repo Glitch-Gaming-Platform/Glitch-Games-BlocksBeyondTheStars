@@ -158,6 +158,9 @@ public static class NetCodec
 
         // B58: customisable quick-bar — client swaps two personal-inventory slots.
         Register(111, typeof(MoveItemIntent));      // Client -> Server
+
+        // Feature 40: terrain-scanner pulse result (ore positions for the through-wall glow markers).
+        Register(112, typeof(OreScanResult));       // Server -> Client
     }
 
     private static void Register(byte tag, Type type)

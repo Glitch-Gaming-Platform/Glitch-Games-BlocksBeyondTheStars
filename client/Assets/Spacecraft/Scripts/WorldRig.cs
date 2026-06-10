@@ -213,6 +213,10 @@ namespace Spacecraft.Client
             // URP post-processing volume (bloom/tonemap/vignette/grade); no-op under Built-in RP (PostFx covers it).
             root.AddComponent<UrpScenePost>();
 
+            // Terrain-scanner overlay (Feature 40): through-wall ore glow markers after a scan pulse.
+            var oreScan = root.AddComponent<OreScanView>();
+            oreScan.Game = boot;
+
             // Block selection outline + mining/placing particle feedback (M27 polish).
             var miningFx = root.AddComponent<MiningFx>();
             miningFx.Game = boot;

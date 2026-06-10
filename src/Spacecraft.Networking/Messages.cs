@@ -1096,6 +1096,24 @@ public sealed class NpcGreetIntent
 }
 
 /// <summary>
+/// Server → client: the result of a terrain-scanner pulse (Feature 40) — the positions + block ids of the
+/// valuable blocks (ores / crystal / data caches) found in a sphere around the player. The client renders
+/// them as through-wall glow markers for a few seconds. Server-authoritative (energy/cooldown validated).
+/// </summary>
+public sealed class OreScanResult
+{
+    public int[] X { get; set; } = System.Array.Empty<int>();
+    public int[] Y { get; set; } = System.Array.Empty<int>();
+    public int[] Z { get; set; } = System.Array.Empty<int>();
+
+    /// <summary>Numeric block id per hit (parallel to X/Y/Z) — lets the client tint markers by ore type.</summary>
+    public ushort[] Block { get; set; } = System.Array.Empty<ushort>();
+
+    /// <summary>How long the markers stay visible, in seconds.</summary>
+    public float Seconds { get; set; } = 8f;
+}
+
+/// <summary>
 /// Server → client: a contextual greeting line to show as a speech bubble over an NPC (item 15). When an LLM
 /// backend is enabled the <see cref="Text"/> is LLM-authored in the player's language; when AI is off/unreachable
 /// the server sends an empty <see cref="Text"/> and the client shows a localized static fallback by role.

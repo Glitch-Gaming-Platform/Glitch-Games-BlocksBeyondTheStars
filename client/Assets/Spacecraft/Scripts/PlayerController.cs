@@ -697,6 +697,10 @@ namespace Spacecraft.Client
                     Weapons?.Sparks(target, new Color(1f, 0.5f, 0.2f), 18);   // flying rubble/debris
                     ClientAudio.Instance?.At("terrain_blast", target);
                     break;
+                case "terrain_scanner":
+                    Weapons?.Pulse(self, new Color(1f, 0.8f, 0.25f)); // an amber prospecting pulse around you
+                    ClientAudio.Instance?.Cue("terrain_scan");        // the sonar sweep (Feature 40)
+                    break;
             }
         }
 

@@ -75,6 +75,9 @@ namespace Spacecraft.Client
         // Contextual NPC greetings (item 15): a speech-bubble line when interacting with a vendor/quartermaster.
         public event Action<NpcGreeting> NpcGreetingReceived;
 
+        // Terrain-scanner pulse result (Feature 40): ore positions for the through-wall glow markers.
+        public event Action<OreScanResult> OreScanReceived;
+
         public bool Connected { get; private set; }
 
         /// <summary>Uses the UDP transport by default; pass a loopback transport for singleplayer.</summary>
@@ -306,6 +309,7 @@ namespace Spacecraft.Client
                 case TradeUpdate m: TradeUpdated?.Invoke(m); break;
                 case TradeClosed m: TradeClosedReceived?.Invoke(m); break;
                 case NpcGreeting m: NpcGreetingReceived?.Invoke(m); break;
+                case OreScanResult m: OreScanReceived?.Invoke(m); break;
             }
         }
 

@@ -33,6 +33,12 @@ public sealed partial class GameServer
     private const int BlasterRadius = 3;         // sphere radius (blocks) — a sizeable crater (~120 blocks)
     private const double BlasterCooldown = 3.0;
 
+    // --- balance: terrain scanner (Feature 40) ---
+    private const int ScannerRadius = 20;        // pulse radius (blocks) around the player
+    private const int ScannerMaxHits = 80;       // nearest hits sent (bounds the message on ore-rich worlds)
+    private const float ScannerSeconds = 8f;     // how long the client shows the glow markers
+    private const double ScannerCooldown = 10.0;
+
     private void HandleUseGadget(PlayerSession session, UseGadgetIntent intent)
     {
         var p = session.State;
@@ -76,6 +82,10 @@ public sealed partial class GameServer
             case "terrain_blaster":
                 UseTerrainBlaster(session, target);
                 cooldown = BlasterCooldown;
+                break;
+            case "terrain_scanner":
+                UseTerrainScanner(session);
+                cooldown = ScannerCooldown;
                 break;
             default:
                 Reject(session, "gadget", "Unknown gadget.");
@@ -186,6 +196,70 @@ public sealed partial class GameServer
             }
         }
     }
+
+    /// <summary>Terrain scanner (Feature 40): scans a sphere around the player for valuable blocks (ores,
+    /// crystal, data caches) and sends their positions to that player as <see cref="OreScanResult"/> — the
+    /// client renders them as through-wall glow markers. Non-destructive; nearest hits win when the world is
+    /// richer than the message cap.</summary>
+    private void UseTerrainScanner(PlayerSession session) => Send(session, BuildOreScan(session.State));
+
+    /// <summary>Test seam: the scan result the terrain scanner would send for a player right now.</summary>
+    public OreScanResult OreScanForTest(string playerId)
+        => FindSessionByPlayerId(playerId) is { } s ? BuildOreScan(s.State) : new OreScanResult();
+
+    private OreScanResult BuildOreScan(Spacecraft.Shared.State.PlayerState state)
+    {
+        var p = state.Position;
+        var centre = WorldConstants.CanonicalBlock(new Vector3i(
+            (int)System.Math.Floor(p.X), (int)System.Math.Floor(p.Y), (int)System.Math.Floor(p.Z)));
+
+        var hits = new List<(Vector3i Pos, ushort Block, int DistSq)>();
+        for (int dx = -ScannerRadius; dx <= ScannerRadius; dx++)
+        for (int dy = -ScannerRadius; dy <= ScannerRadius; dy++)
+        for (int dz = -ScannerRadius; dz <= ScannerRadius; dz++)
+        {
+            int distSq = dx * dx + dy * dy + dz * dz;
+            if (distSq > ScannerRadius * ScannerRadius)
+            {
+                continue; // a pulse sphere, not a cube
+            }
+
+            var cell = WorldConstants.CanonicalBlock(new Vector3i(centre.X + dx, centre.Y + dy, centre.Z + dz));
+            var b = _world.GetBlock(cell);
+            if (b.IsAir)
+            {
+                continue;
+            }
+
+            if (IsValuableBlock(_world.Definition(b)?.Key))
+            {
+                hits.Add((cell, b.Value, distSq));
+            }
+        }
+
+        // Nearest finds first; cap so an ore-rich world doesn't flood the message.
+        hits.Sort((a, b2) => a.DistSq.CompareTo(b2.DistSq));
+        int n = System.Math.Min(hits.Count, ScannerMaxHits);
+        var result = new OreScanResult
+        {
+            X = new int[n], Y = new int[n], Z = new int[n], Block = new ushort[n],
+            Seconds = ScannerSeconds,
+        };
+        for (int i = 0; i < n; i++)
+        {
+            result.X[i] = hits[i].Pos.X;
+            result.Y[i] = hits[i].Pos.Y;
+            result.Z[i] = hits[i].Pos.Z;
+            result.Block[i] = hits[i].Block;
+        }
+
+        return result;
+    }
+
+    /// <summary>What the scanner counts as "valuable": every ore vein block, crystal, and data caches.</summary>
+    private static bool IsValuableBlock(string? key)
+        => key != null
+           && (key.EndsWith("_ore", System.StringComparison.Ordinal) || key is "crystal" or "data_cache");
 
     /// <summary>Test hook: how many seconds until the gadget is usable again for this player (0 = ready).</summary>
     public double GadgetCooldownForTest(string playerId, string gadgetKey)

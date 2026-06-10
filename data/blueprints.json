@@ -25,6 +25,11 @@
     "unlockCost": [ { "item": "data_fragment", "count": 4 }, { "item": "titanium_plate", "count": 6 }, { "item": "carbide", "count": 2 } ]
   },
   {
+    "key": "terrain_scanner", "nameKey": "blueprint.terrain_scanner.name", "descriptionKey": "blueprint.terrain_scanner.desc",
+    "category": "Tools", "prerequisites": [],
+    "unlockCost": [ { "item": "data_fragment", "count": 3 }, { "item": "titanium_plate", "count": 3 } ]
+  },
+  {
     "key": "radio_beacon", "nameKey": "blueprint.radio_beacon.name", "descriptionKey": "blueprint.radio_beacon.desc",
     "category": "Tools", "prerequisites": [],
     "unlockCost": [ { "item": "data_fragment", "count": 2 }, { "item": "iron_plate", "count": 5 }, { "item": "cable", "count": 2 } ]

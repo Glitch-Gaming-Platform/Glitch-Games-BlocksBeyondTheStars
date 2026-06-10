@@ -217,6 +217,8 @@
   "item.stasis_projector.desc": "Right-click to freeze nearby creatures in stasis for a few seconds — long enough to scan them safely. Costs suit energy.",
   "item.terrain_blaster.name": "Terrain Blaster",
   "item.terrain_blaster.desc": "Right-click to blast a sphere of terrain to rubble — fast clearing, but it yields no materials. Costs suit energy.",
+  "item.terrain_scanner.name": "Terrain Scanner",
+  "item.terrain_scanner.desc": "Right-click to emit a scan pulse: valuable ores around you glow through the terrain for a few seconds — including underground. Costs suit energy.",
 
   "blueprint.oxygen_tank_1.name": "Oxygen Tank I",
   "blueprint.oxygen_tank_1.desc": "Unlocks crafting of the first oxygen tank upgrade.",
@@ -228,6 +230,8 @@
   "blueprint.stasis_projector.desc": "Unlocks the stasis projector: briefly freezes creatures so you can scan them without being attacked.",
   "blueprint.terrain_blaster.name": "Terrain Blaster",
   "blueprint.terrain_blaster.desc": "Unlocks the terrain blaster: clears a large sphere of terrain at once (no drops).",
+  "blueprint.terrain_scanner.name": "Terrain Scanner",
+  "blueprint.terrain_scanner.desc": "Unlocks the terrain scanner: a pulse that reveals valuable ores around you, even underground.",
   "blueprint.radio_beacon.name": "Radio Beacon",
   "blueprint.radio_beacon.desc": "Unlocks the radio beacon: a placeable marker that shows up on the map and compass with your own label.",
   "blueprint.cargo_expansion_1.name": "Cargo Expansion I",
