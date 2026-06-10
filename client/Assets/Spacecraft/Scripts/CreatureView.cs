@@ -28,6 +28,7 @@ namespace Spacecraft.Client
             public Vector3 Settled;  // smoothed position (the lunge is added on top for display)
             public float AttackUntil; // a visible lunge window when attacking
             public GameObject Stasis; // icy-blue stasis shell shown while frozen (item 36)
+            public bool Echo;     // cave dwellers' calls get a reverberant echo (item 21)
         }
 
         private readonly Dictionary<string, Entry> _creatures = new Dictionary<string, Entry>();
@@ -59,8 +60,10 @@ namespace Spacecraft.Client
                         Target = pos,
                         Bank = Bank(c),
                         // The signature call gives each species a distinct voice; the size+species pitch keeps
-                        // it consistent across all individuals of that species (never random per individual).
-                        Call = Calls[idh % Calls.Length],
+                        // it consistent across all individuals of that species (never random per individual). The
+                        // call pool is habitat-flavoured (item 21): cave dwellers moan/drone, amphibians croak.
+                        Call = CallForHabitat(c.Habitat, idh),
+                        Echo = string.Equals(c.Habitat, "Cave", System.StringComparison.OrdinalIgnoreCase),
                         Pitch = Mathf.Clamp(sizePitch * speciesOffset, 0.6f, 1.85f),
                         NextCall = Time.time + Random.Range(2f, 6f),
                         Settled = pos,
@@ -94,7 +97,7 @@ namespace Spacecraft.Client
                 if (Time.time >= entry.NextCall)
                 {
                     entry.NextCall = Time.time + Random.Range(5f, 12f);
-                    ClientAudio.Instance?.At(entry.Call, entry.Root.transform.position, entry.Pitch, 0.8f);
+                    ClientAudio.Instance?.At(entry.Call, entry.Root.transform.position, entry.Pitch, 0.8f, entry.Echo);
                 }
 
                 // React to authoritative state: hurt on a hull drop, alert on turning hostile,
@@ -104,19 +107,19 @@ namespace Spacecraft.Client
                 {
                     if (c.Hull < entry.PrevHull - 0.5f)
                     {
-                        audio.At(entry.Bank + "_hurt", entry.Root.transform.position, entry.Pitch, 0.9f);
+                        audio.At(entry.Bank + "_hurt", entry.Root.transform.position, entry.Pitch, 0.9f, entry.Echo);
                     }
 
                     if (c.Hostile && !entry.PrevHostile)
                     {
-                        audio.At(entry.Bank + "_alert", entry.Root.transform.position, entry.Pitch, 0.9f);
+                        audio.At(entry.Bank + "_alert", entry.Root.transform.position, entry.Pitch, 0.9f, entry.Echo);
                     }
 
                     if (c.Hostile && Time.time >= entry.NextAttack
                         && (entry.Root.transform.position - Game.PlayerPosition).sqrMagnitude < 9f)
                     {
                         entry.NextAttack = Time.time + Random.Range(1.5f, 3.5f);
-                        audio.At(entry.Bank + "_attack", entry.Root.transform.position, entry.Pitch);
+                        audio.At(entry.Bank + "_attack", entry.Root.transform.position, entry.Pitch, 1f, entry.Echo);
                         entry.AttackUntil = Time.time + 0.22f;            // lunge
                         SpawnAttackFx(Vector3.Lerp(Game.PlayerPosition, entry.Settled, 0.35f) + Vector3.up * 0.9f);
                     }
@@ -206,6 +209,53 @@ namespace Spacecraft.Client
             "creature_call_gurgle", "creature_call_yelp", "creature_call_snarl", "creature_call_whistle",
             "creature_call_cluck", "creature_call_wail",
         };
+
+        // Habitat-flavoured idle-call pools (item 21): cave dwellers sound deep + echoey, amphibians wet +
+        // croaky, water creatures burble, lava critters hiss/rumble, fliers shriek/trill. Land uses the full
+        // pool. The per-species pick stays deterministic (by id), so each species keeps one consistent voice.
+        private static readonly string[] CaveCalls =
+        {
+            "creature_call_moan", "creature_call_drone", "creature_call_wail", "creature_call_hoot",
+            "creature_call_whistle", "creature_call_click",
+        };
+
+        private static readonly string[] AmphibianCalls =
+        {
+            "creature_call_croak", "creature_call_gurgle", "creature_call_warble", "creature_call_trill",
+            "creature_call_cluck",
+        };
+
+        private static readonly string[] WaterCalls =
+        {
+            "creature_call_gurgle", "creature_call_warble", "creature_call_click", "creature_call_whistle",
+        };
+
+        private static readonly string[] LavaCalls =
+        {
+            "creature_call_hiss", "creature_call_rumble", "creature_call_growl", "creature_call_snarl",
+        };
+
+        private static readonly string[] AirCalls =
+        {
+            "creature_call_screech", "creature_call_whistle", "creature_call_trill", "creature_call_chirp",
+            "creature_call_warble",
+        };
+
+        /// <summary>The species' signature idle call, chosen deterministically (by species id) from its
+        /// habitat's call pool (item 21).</summary>
+        private static string CallForHabitat(string habitat, int idh)
+        {
+            var pool = (habitat ?? "Land").ToLowerInvariant() switch
+            {
+                "cave" => CaveCalls,
+                "amphibian" => AmphibianCalls,
+                "water" => WaterCalls,
+                "lava" => LavaCalls,
+                "air" => AirCalls,
+                _ => Calls,
+            };
+            return pool[(idh & 0x7fffffff) % pool.Length];
+        }
 
         private static int SpeciesHash(string id)
         {
