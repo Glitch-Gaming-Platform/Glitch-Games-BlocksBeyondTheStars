@@ -22,8 +22,9 @@ namespace Spacecraft.Client
         public void SetCircumference(int circumference)
             => _circumference = circumference > 0 ? circumference : WorldConstants.Circumference;
 
-        // Longitude wraps: chunks are cached by canonical chunk-X (a chunk a lap away is the same chunk),
-        // and block lookups canonicalize X so an unbounded player coordinate still resolves after laps.
+        // Round worlds: chunks are cached by canonical chunk coordinate (a chunk a lap away — east OR
+        // north — is the same chunk), and block lookups canonicalize X AND Z so an unbounded player
+        // coordinate still resolves after laps in any direction.
         public void StoreChunk(ChunkCoord coord, ushort[] blocks)
         {
             coord = WorldConstants.CanonicalChunk(coord, _circumference);
@@ -38,28 +39,28 @@ namespace Spacecraft.Client
 
         public BlockId GetBlock(int wx, int wy, int wz)
         {
-            wx = WorldConstants.WrapX(wx, _circumference);
-            var coord = WorldConstants.WorldToChunk(new Vector3i(wx, wy, wz));
+            var pos = WorldConstants.CanonicalBlock(new Vector3i(wx, wy, wz), _circumference);
+            var coord = WorldConstants.WorldToChunk(pos);
             if (!_chunks.TryGetValue(coord, out var chunk))
             {
                 return BlockId.Air;
             }
 
-            var local = WorldConstants.WorldToLocal(new Vector3i(wx, wy, wz));
+            var local = WorldConstants.WorldToLocal(pos);
             return chunk.Get(local.X, local.Y, local.Z);
         }
 
         /// <summary>Applies a single authoritative block change from the server.</summary>
         public bool ApplyBlockChange(int wx, int wy, int wz, ushort block, out ChunkCoord affected)
         {
-            wx = WorldConstants.WrapX(wx, _circumference);
-            affected = WorldConstants.WorldToChunk(new Vector3i(wx, wy, wz));
+            var pos = WorldConstants.CanonicalBlock(new Vector3i(wx, wy, wz), _circumference);
+            affected = WorldConstants.WorldToChunk(pos);
             if (!_chunks.TryGetValue(affected, out var chunk))
             {
                 return false;
             }
 
-            var local = WorldConstants.WorldToLocal(new Vector3i(wx, wy, wz));
+            var local = WorldConstants.WorldToLocal(pos);
             chunk.Set(local.X, local.Y, local.Z, new BlockId(block));
             return true;
         }

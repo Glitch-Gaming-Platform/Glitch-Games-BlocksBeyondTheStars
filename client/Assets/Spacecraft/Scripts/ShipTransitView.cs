@@ -88,7 +88,7 @@ namespace Spacecraft.Client
 
             var hull = new Color(((fx.Hull >> 16) & 0xFF) / 255f, ((fx.Hull >> 8) & 0xFF) / 255f, (fx.Hull & 0xFF) / 255f);
             float startY = fx.Landing ? fx.Y + HighOffset : fx.Y + PadOffset;
-            var root = BuildShip(new Vector3(Game.SceneX(fx.X), startY, fx.Z), hull, out var engine);
+            var root = BuildShip(new Vector3(Game.SceneX(fx.X), startY, Game.SceneZ(fx.Z)), hull, out var engine);
             _active.Add(new Transit { Root = root.transform, Engine = engine, T = 0f, Landing = fx.Landing, GroundY = fx.Y });
             ClientAudio.Instance?.Cue("ship_launch"); // thruster roar (same cue your own launch uses)
         }

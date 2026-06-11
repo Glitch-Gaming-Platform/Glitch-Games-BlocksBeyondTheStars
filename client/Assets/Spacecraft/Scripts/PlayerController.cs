@@ -975,15 +975,9 @@ namespace Spacecraft.Client
             move.y = _verticalVelocity;
             _controller.Move(move * Time.deltaTime);
 
-            // Pole barrier: longitude wraps but latitude doesn't, so bound Z with an invisible wall at
-            // ±LatitudeLimit (you slide along it). Stations/space use tiny coords, so this never bites there.
-            float zl = WorldConstants.LatitudeLimit;
-            if (transform.position.z > zl || transform.position.z < -zl)
-            {
-                var pp = transform.position;
-                pp.z = Mathf.Clamp(pp.z, -zl, zl);
-                transform.position = pp;
-            }
+            // Round worlds: latitude (Z) wraps seamlessly like longitude now — the old invisible pole
+            // barrier is gone. The transform runs unbounded in both axes; the server canonicalises the
+            // authoritative position and chunks reposition to the nearest copy (SceneX/SceneZ).
 
             // Footsteps while walking on the ground; landing thud after a fall.
             if (grounded && Mathf.Abs(h) + Mathf.Abs(v) > 0.1f)

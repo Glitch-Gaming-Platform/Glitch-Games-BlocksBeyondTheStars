@@ -171,9 +171,14 @@ namespace Spacecraft.Client
         public float SceneX(double worldX)
             => (float)(PlayerPosition.x + WorldConstants.WrapDeltaX(worldX - PlayerPosition.x, Circumference));
 
-        /// <summary>Convenience: a full world position mapped to the nearest scene position (only X wraps).</summary>
+        /// <summary>Maps an authoritative world Z to the scene Z nearest the player — the latitude twin of
+        /// <see cref="SceneX"/> (round worlds: Z wraps at the latitude period like X at the circumference).</summary>
+        public float SceneZ(double worldZ)
+            => (float)(PlayerPosition.z + WorldConstants.WrapDeltaZ(worldZ - PlayerPosition.z, Circumference));
+
+        /// <summary>Convenience: a full world position mapped to the nearest scene position (X and Z wrap).</summary>
         public Vector3 ScenePos(float worldX, float worldY, float worldZ)
-            => new Vector3(SceneX(worldX), worldY, worldZ);
+            => new Vector3(SceneX(worldX), worldY, SceneZ(worldZ));
 
         /// <summary>Most recent handheld/ship scan readout for the HUD, and when it arrived (for auto-hide).</summary>
         public ScanResult LastScan { get; private set; }
@@ -199,7 +204,8 @@ namespace Spacecraft.Client
             float bestSq = range * range;
             foreach (var s in Stations)
             {
-                float dx = (float)WorldConstants.WrapDeltaX(s.X - pos.x, Circumference), dy = s.Y - pos.y, dz = s.Z - pos.z; // longitude wraps
+                float dx = (float)WorldConstants.WrapDeltaX(s.X - pos.x, Circumference), dy = s.Y - pos.y; // both ground axes wrap (torus)
+                float dz = (float)WorldConstants.WrapDeltaZ(s.Z - pos.z, Circumference);
                 float d = dx * dx + dy * dy + dz * dz;
                 if (d < bestSq)
                 {
@@ -226,7 +232,8 @@ namespace Spacecraft.Client
             float bestSq = 1.6f * 1.6f; // the hit must land on (or right next to) a station tile
             foreach (var s in Stations)
             {
-                float dx = (float)WorldConstants.WrapDeltaX(s.X - hit.point.x, Circumference), dy = s.Y - hit.point.y, dz = s.Z - hit.point.z;
+                float dx = (float)WorldConstants.WrapDeltaX(s.X - hit.point.x, Circumference), dy = s.Y - hit.point.y;
+                float dz = (float)WorldConstants.WrapDeltaZ(s.Z - hit.point.z, Circumference);
                 float d = dx * dx + dy * dy + dz * dz;
                 if (d < bestSq)
                 {
@@ -497,21 +504,25 @@ namespace Spacecraft.Client
                 _dirty.Clear();
             }
 
-            // Longitude wraps: keep every loaded chunk drawn at the copy nearest the player as it laps the
-            // world. Near chunks resolve to their canonical X (a no-op write); only chunks across the seam
-            // shift by ±Circumference. Throttled to once per block of X movement.
-            int chunkAnchor = Mathf.FloorToInt(PlayerPosition.x);
-            if (chunkAnchor != _lastReposX)
+            // Round worlds: keep every loaded chunk drawn at the copy nearest the player as it laps the world
+            // in EITHER direction. Near chunks resolve to their canonical position (a no-op write); only
+            // chunks across a seam shift by ±Circumference (X) / ±LatitudePeriod (Z). Throttled to once per
+            // block of movement on either axis.
+            int chunkAnchorX = Mathf.FloorToInt(PlayerPosition.x);
+            int chunkAnchorZ = Mathf.FloorToInt(PlayerPosition.z);
+            if (chunkAnchorX != _lastReposX || chunkAnchorZ != _lastReposZ)
             {
-                _lastReposX = chunkAnchor;
+                _lastReposX = chunkAnchorX;
+                _lastReposZ = chunkAnchorZ;
                 RepositionChunks();
             }
         }
 
         private int _lastReposX = int.MinValue;
+        private int _lastReposZ = int.MinValue;
 
         /// <summary>Re-places every loaded chunk GameObject at the seam-aware scene position for the player's
-        /// current longitude (see <see cref="SceneX"/>).</summary>
+        /// current longitude AND latitude (see <see cref="SceneX"/>/<see cref="SceneZ"/>).</summary>
         private void RepositionChunks()
         {
             foreach (var kv in _chunkObjects)
@@ -522,7 +533,7 @@ namespace Spacecraft.Client
                 }
 
                 var origin = WorldConstants.ChunkOrigin(kv.Key);
-                kv.Value.transform.position = new Vector3(SceneX(origin.X), origin.Y, origin.Z);
+                kv.Value.transform.position = new Vector3(SceneX(origin.X), origin.Y, SceneZ(origin.Z));
             }
         }
 
@@ -647,7 +658,7 @@ namespace Spacecraft.Client
                 var nc = new ChunkCoord(
                     WorldConstants.CanonicalChunkX(WorldConstants.WorldToChunk(m.X + d.X), Circumference),
                     WorldConstants.WorldToChunk(m.Y + d.Y),
-                    WorldConstants.WorldToChunk(m.Z + d.Z));
+                    WorldConstants.CanonicalChunkZ(WorldConstants.WorldToChunk(m.Z + d.Z), Circumference));
                 if (!nc.Equals(coord))
                 {
                     _dirty.Add(nc);
@@ -703,7 +714,7 @@ namespace Spacecraft.Client
                 go = new GameObject($"Chunk {coord.X},{coord.Y},{coord.Z}");
                 go.transform.SetParent(transform);
                 var origin = WorldConstants.ChunkOrigin(coord);
-                go.transform.position = new Vector3(SceneX(origin.X), origin.Y, origin.Z); // seam-aware (longitude wraps)
+                go.transform.position = new Vector3(SceneX(origin.X), origin.Y, SceneZ(origin.Z)); // seam-aware on both ground axes (torus)
                 go.AddComponent<MeshFilter>();
                 var mr = go.AddComponent<MeshRenderer>();
                 // Submesh 0 → opaque atlas, submesh 1 → see-through atlas (glass/fields). Fall back to a

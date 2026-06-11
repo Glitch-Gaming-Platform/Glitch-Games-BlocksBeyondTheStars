@@ -143,13 +143,14 @@ namespace Spacecraft.Client
             {
                 var o = WorldConstants.ChunkOrigin(kv.Key);
                 var c = kv.Value;
-                // Longitude wraps: place the chunk at its scene X nearest the player so the map has no seam.
+                // Round worlds: place the chunk at the scene X AND Z nearest the player so the map has no seam.
                 float sxo = Game.SceneX(o.X);
+                float szo = Game.SceneZ(o.Z);
                 for (int lx = 0; lx < n; lx++)
                 for (int lz = 0; lz < n; lz++)
                 {
                     float wx = sxo + lx;
-                    int wz = o.Z + lz;
+                    float wz = szo + lz;
                     int px = Mathf.FloorToInt((wx - _ox) / step), py = Mathf.FloorToInt((wz - _oz) / step);
                     if (px < 0 || px >= size || py < 0 || py >= size)
                     {
@@ -229,7 +230,7 @@ namespace Spacecraft.Client
                 {
                     var (glyph, col) = PoiLook(p.Type);
                     Marker(p.X, p.Z, 22f, col, glyph);
-                    float d = Vector3.Distance(new Vector3(Game.PlayerPosition.x, 0, Game.PlayerPosition.z), new Vector3(p.X, 0, p.Z));
+                    float d = GroundDistance(p.X, p.Z);
                     poiLines.Append($"\n{glyph} {p.Name}  —  {Mathf.RoundToInt(d)} m");
                 }
             }
@@ -243,7 +244,7 @@ namespace Spacecraft.Client
                     Marker(b.X, b.Z, 20f, beaconCol, "✦");
                     string name = string.IsNullOrEmpty(b.Label) ? L("ui.beacon.default") : b.Label;
                     MarkerLabel(b.X, b.Z, name, beaconCol);
-                    float bd = Vector3.Distance(new Vector3(Game.PlayerPosition.x, 0, Game.PlayerPosition.z), new Vector3(b.X, 0, b.Z));
+                    float bd = GroundDistance(b.X, b.Z);
                     poiLines.Append($"\n✦ {name}  —  {Mathf.RoundToInt(bd)} m");
                 }
             }
@@ -257,8 +258,7 @@ namespace Spacecraft.Client
                 {
                     var col = pad.Occupied ? new Color(1f, 0.45f, 0.4f) : new Color(0.5f, 0.9f, 0.6f);
                     PadMarker(pad.X, pad.Z, col);
-                    float dx = Game.SceneX(pad.X) - Game.PlayerPosition.x, dz = pad.Z - Game.PlayerPosition.z;
-                    int dist = Mathf.RoundToInt(Mathf.Sqrt(dx * dx + dz * dz));
+                    int dist = Mathf.RoundToInt(GroundDistance(pad.X, pad.Z));
                     string occ = pad.Occupied ? $" ({pad.Occupant})" : string.Empty;
                     poiLines.Append($"\n⊕ {L("ui.map.pad")} {pad.Index + 1}{occ}  —  {dist} m");
                 }
@@ -281,7 +281,7 @@ namespace Spacecraft.Client
             }
 
             string wp = Game.Waypoint.HasValue
-                ? $"\n{L("ui.map.waypoint")}: {Mathf.RoundToInt(Vector3.Distance(new Vector3(Game.PlayerPosition.x, 0, Game.PlayerPosition.z), new Vector3(Game.Waypoint.Value.x, 0, Game.Waypoint.Value.z)))} m"
+                ? $"\n{L("ui.map.waypoint")}: {Mathf.RoundToInt(GroundDistance(Game.Waypoint.Value.x, Game.Waypoint.Value.z))} m"
                 : string.Empty;
             if (_info != null)
             {
@@ -292,6 +292,14 @@ namespace Spacecraft.Client
                     $"▲ {L("ui.map.you")}    ▣ {L("ui.hud.ship")}    ✛ {L("ui.map.waypoint")}    ✦ {L("ui.beacon.default")}    ⊕ {L("ui.map.pad")}\n" +
                     $"{L("ui.map.click_hint")}{wp}{pois}";
             }
+        }
+
+        /// <summary>Ground (XZ) distance from the player, the short way round both wrap seams (torus).</summary>
+        private float GroundDistance(float wx, float wz)
+        {
+            float dx = Game.SceneX(wx) - Game.PlayerPosition.x;
+            float dz = Game.SceneZ(wz) - Game.PlayerPosition.z;
+            return Mathf.Sqrt(dx * dx + dz * dz);
         }
 
         private static (string glyph, Color col) PoiLook(string type) => type switch
@@ -305,8 +313,8 @@ namespace Spacecraft.Client
 
         private Text Marker(float wx, float wz, float size, Color color, string glyph)
         {
-            // Longitude wraps: map the marker's world X to the scene X nearest the player (no seam on the map).
-            float u = (Game.SceneX(wx) - _ox) / _side, v = (wz - _oz) / _side;
+            // Round worlds: map the marker's world X/Z to the scene spot nearest the player (no seam on the map).
+            float u = (Game.SceneX(wx) - _ox) / _side, v = (Game.SceneZ(wz) - _oz) / _side;
             if (u < 0f || u > 1f || v < 0f || v > 1f)
             {
                 return null;
@@ -333,7 +341,7 @@ namespace Spacecraft.Client
         /// <summary>Draws a small text label centred just below a marker's world position (beacon names).</summary>
         private void MarkerLabel(float wx, float wz, string text, Color color)
         {
-            float u = (Game.SceneX(wx) - _ox) / _side, v = (wz - _oz) / _side;
+            float u = (Game.SceneX(wx) - _ox) / _side, v = (Game.SceneZ(wz) - _oz) / _side;
             if (u < 0f || u > 1f || v < 0f || v > 1f)
             {
                 return;
@@ -360,7 +368,7 @@ namespace Spacecraft.Client
         /// map border in the pad's direction (smaller + dimmer), so a far pad is still findable on the local map.</summary>
         private void PadMarker(float wx, float wz, Color color)
         {
-            float u = (Game.SceneX(wx) - _ox) / _side, v = (wz - _oz) / _side;
+            float u = (Game.SceneX(wx) - _ox) / _side, v = (Game.SceneZ(wz) - _oz) / _side;
             bool clamped = u < 0f || u > 1f || v < 0f || v > 1f;
             if (clamped)
             {

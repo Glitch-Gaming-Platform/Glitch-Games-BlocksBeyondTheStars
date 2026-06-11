@@ -31,8 +31,8 @@ namespace Spacecraft.Client
                 string name = string.IsNullOrEmpty(b.Label)
                     ? (Game.Localizer?.Get("ui.beacon.default") ?? "Beacon")
                     : b.Label;
-                // SceneX maps the canonical X to the lap nearest the player, so the label sits over the rendered block.
-                var pos = new Vector3(Game.SceneX(b.X), b.Y + 1.7f, b.Z);
+                // SceneX/SceneZ map the canonical spot to the lap nearest the player, so the label sits over the rendered block.
+                var pos = new Vector3(Game.SceneX(b.X), b.Y + 1.7f, Game.SceneZ(b.Z));
                 labels.World(cam, pos, name, amber);
             }
         }
