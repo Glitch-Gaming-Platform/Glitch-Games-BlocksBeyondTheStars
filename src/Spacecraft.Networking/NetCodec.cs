@@ -165,6 +165,9 @@ public static class NetCodec
         // Ship AI companion "VEGA" (onboarding/advisor/story lines + objective chip).
         Register(113, typeof(ShipAiLine));          // Server -> Client
         Register(114, typeof(SkipOnboardingIntent)); // Client -> Server
+
+        // World options: live admin edit of the gameplay rules (creatures + enemy activities).
+        Register(115, typeof(SetWorldRulesIntent)); // Client -> Server
     }
 
     private static void Register(byte tag, Type type)

@@ -43,6 +43,19 @@ public sealed class WorldGenerator
     /// <summary>Marks the active world as cratered regardless of its planet type (used for airless moons).</summary>
     public void SetCratered(bool cratered) => _crateredWorld = cratered;
 
+    // World options (creation-time, from the save's WorldDescription): global factors on top of the
+    // seeded per-world variation. 1.0 = unchanged; deterministic because they come from persisted meta.
+    private double _floraFactor = 1.0;
+    private double _oreFactor = 1.0;
+
+    /// <summary>Sets the world-option generation factors (flora/tree density × ore richness). The server
+    /// calls this once at start from the save's metadata, before any chunk generates.</summary>
+    public void SetWorldOptionFactors(double floraFactor, double oreFactor)
+    {
+        _floraFactor = floraFactor;
+        _oreFactor = oreFactor;
+    }
+
     /// <summary>
     /// Stable string hash (FNV-1a) — unlike <c>string.GetHashCode</c> this is identical
     /// across platforms and runs, which determinism across client/server depends on.
@@ -451,7 +464,7 @@ public sealed class WorldGenerator
         // multiplier (0.8..1.6, biased upward) on the planet type's flora + tree density, so the same type
         // can be sparse scrubland on one world and lush growth on the next. Deterministic from the world
         // seed (server + client preview agree); barren types (density 0) stay barren.
-        double floraMul = 0.8 + 0.8 * Noise.Value01(seed + 0xF10A, 11, 23, 37);
+        double floraMul = (0.8 + 0.8 * Noise.Value01(seed + 0xF10A, 11, 23, 37)) * _floraFactor;
         double floraDensity = System.Math.Min(0.9, planet.FloraDensity * floraMul);
 
         // World floor (B46): an unmineable bedrock layer bounds the dig depth so a player can't fall forever.
@@ -466,7 +479,7 @@ public sealed class WorldGenerator
         // Per-world interior variety (item 21): cave frequency + ore richness + a deep basalt mantle all vary
         // per world, so two worlds of the same type differ underground, not just on the surface.
         double caveThreshold = PerWorldCaveThreshold(planet, seed);
-        double oreRichness = PerWorldOreRichness(seed);
+        double oreRichness = PerWorldOreRichness(seed) * _oreFactor;
         int mantleDepth = PerWorldMantle(seed, floorDepth, out var mantleId);
 
         // Surface seas: water fills terrain basins on worlds with an atmosphere; lava fills them on

@@ -38,7 +38,12 @@ public sealed partial class GameServer
 
         long vSeed = _meta.Seed ^ WorldGenerator.StableHash("vault:" + _world.LocationId);
         var rng = new System.Random(unchecked((int)(vSeed ^ (vSeed >> 32))));
-        int count = rng.NextDouble() < 0.75 ? (rng.NextDouble() < 0.35 ? 2 : 1) : 0;
+        // World options: the chosen vault frequency scales both rolls (Off ⇒ none; Frequent ⇒ most
+        // worlds carry one and a second becomes common).
+        double f = _meta.Description.Vaults.StructureFactor();
+        int count = rng.NextDouble() < System.Math.Min(0.95, 0.75 * f)
+            ? (rng.NextDouble() < System.Math.Min(0.8, 0.35 * f) ? 2 : 1)
+            : 0;
         for (int i = 0; i < count; i++)
         {
             // A deterministic spot away from the spawn/landing area, each vault in its own direction.

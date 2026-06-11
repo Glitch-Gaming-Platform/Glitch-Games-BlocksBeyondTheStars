@@ -147,9 +147,23 @@ public sealed partial class GameServer
         _repo.Initialize();
 
         _meta = _repo.LoadMetadata() ?? CreateInitialMetadata();
+
+        // World options: once created, the WORLD owns its rules — the save's override replaces the launch
+        // config's rules (singleplayer passes creation options only once; dedicated restarts keep the set).
+        // Saves from before world options existed have no override and keep using the config's rules.
+        if (_meta.RulesOverride is not null)
+        {
+            _config.Rules = _meta.RulesOverride;
+        }
+
         _repo.SaveMetadata(_meta);
 
         _generator = new WorldGenerator(_meta.Seed, _content);
+        // World options: flora/ore factors are part of the save's description — set BEFORE any chunk
+        // generates so worldgen stays deterministic across reloads.
+        _generator.SetWorldOptionFactors(
+            _meta.Description.FloraDensity.FloraFactor(),
+            _meta.Description.RareResources.OreFactor());
         _worlds = new WorldManager(_content, _generator, _repo);
         BuildGalaxy(); // resolves _meta.ActiveLocationId to a concrete celestial body id
         LoadPlayerStations(); // item 20 S4: restore persisted player stations onto the star map + registry
@@ -186,6 +200,8 @@ public sealed partial class GameServer
             CreativeUnlockAllBlueprints = _config.CreativeUnlockAllBlueprints,
             CreativeStartAllShips = _config.CreativeStartAllShips,
             CreativeStarterKit = _config.CreativeStarterKit,
+            // World options: the rules chosen at creation become the world's own (live admin edits update them).
+            RulesOverride = _config.Rules.Clone(),
         };
     }
 
@@ -1189,6 +1205,7 @@ public sealed partial class GameServer
             case TravelIntent travel: HandleTravel(session, travel); break;
             case NpcGreetIntent greet: HandleNpcGreet(session, greet); break;
             case SkipOnboardingIntent: HandleSkipOnboarding(session); break;
+            case SetWorldRulesIntent worldRules: HandleSetWorldRules(session, worldRules); break;
         }
     }
 
@@ -2424,7 +2441,50 @@ public sealed partial class GameServer
             KeepInventoryOnDeath = r.KeepInventoryOnDeath,
             OxygenEnabled = r.OxygenEnabled,
             AdminCheatsActive = r.CheatsAllowed,
+            CreatureAbundance = r.CreatureAbundance.ToString(),
+            PlanetEnemies = r.PlanetEnemies.ToString(),
+            SpaceNpcEnemies = r.SpaceNpcEnemies.ToString(),
+            AlienUfos = r.AlienUfos.ToString(),
         });
+    }
+
+    /// <summary>World options, live edit (world admin only): applies the sent gameplay activities to the
+    /// running rules, persists them into the save's rules override and re-broadcasts the rule set, so the
+    /// change survives reloads and every client's settings view updates.</summary>
+    private void HandleSetWorldRules(PlayerSession session, SetWorldRulesIntent intent)
+    {
+        if (!session.State.IsAdmin)
+        {
+            Reject(session, "world_rules", "Only the world admin may change world rules.");
+            return;
+        }
+
+        static void Apply(string value, System.Action<AlienActivity> set)
+        {
+            if (!string.IsNullOrEmpty(value) && System.Enum.TryParse<AlienActivity>(value, ignoreCase: true, out var v))
+            {
+                set(v);
+            }
+        }
+
+        Apply(intent.CreatureAbundance, v => Rules.CreatureAbundance = v);
+        Apply(intent.PlanetEnemies, v => Rules.PlanetEnemies = v);
+        Apply(intent.SpaceNpcEnemies, v => Rules.SpaceNpcEnemies = v);
+        Apply(intent.AlienUfos, v => Rules.AlienUfos = v);
+
+        _meta.RulesOverride = Rules.Clone(); // the world owns its rules — persist the edit
+        _repo.SaveMetadata(_meta);
+
+        foreach (var s in _sessions.Values)
+        {
+            if (s.Joined)
+            {
+                SendRules(s);
+            }
+        }
+
+        _log.Info($"World rules updated by '{session.State.Name}': creatures={Rules.CreatureAbundance}, " +
+                  $"planet={Rules.PlanetEnemies}, space={Rules.SpaceNpcEnemies}, ufos={Rules.AlienUfos}.");
     }
 
     /// <summary>Rearranges the player's personal inventory by swapping two slots (B58 — customising the quick-bar,

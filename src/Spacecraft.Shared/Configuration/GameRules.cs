@@ -102,6 +102,10 @@ public sealed class GameRules
     public AlienActivity AggressiveAliens { get; set; } = AlienActivity.Normal;
     public bool PassiveCreatures { get; set; } = true;
 
+    /// <summary>Passive-fauna abundance (world options): scales each world's live-creature cap —
+    /// Off = lifeless, Extreme ≈ double the normal population. Live-editable by the world admin.</summary>
+    public AlienActivity CreatureAbundance { get; set; } = AlienActivity.Normal;
+
     public WeaponMode WeaponMode { get; set; } = WeaponMode.ToolsOnly;
 
     public HazardLevel EnvironmentalHazards { get; set; } = HazardLevel.Normal;

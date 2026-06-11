@@ -55,12 +55,28 @@ public sealed class UniverseGenerator
         {
             // Default: every selectable planet type at its own SpawnWeight (special bodies such as landable
             // asteroids are Selectable=false so they never appear as ordinary system planets). The per-type
-            // weight lets common worlds dominate while exotic ones stay rare without a world-description override.
+            // weight lets common worlds dominate while exotic ones stay rare without a world-description
+            // override. World options: the "exotic worlds" frequency scales the exotic types' weights —
+            // Off removes them entirely, Frequent makes the strange the norm.
+            double exotic = desc.ExoticWorlds switch
+            {
+                Frequency.Off => 0.0,
+                Frequency.VeryRare => 0.34,
+                Frequency.Rare => 0.6,
+                Frequency.Frequent => 2.5,
+                _ => 1.0,
+            };
             foreach (var key in content.Planets.Keys)
             {
                 if (content.GetPlanet(key) is { Selectable: true } p)
                 {
-                    list.Add((key, System.Math.Max(1, p.SpawnWeight)));
+                    int weight = p.Exotic
+                        ? (int)System.Math.Round(System.Math.Max(1, p.SpawnWeight) * exotic)
+                        : System.Math.Max(1, p.SpawnWeight);
+                    if (weight > 0)
+                    {
+                        list.Add((key, weight));
+                    }
                 }
             }
         }

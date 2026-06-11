@@ -3,6 +3,7 @@ using System.Linq;
 using Spacecraft.Networking.Messages;
 using Spacecraft.Shared.Geometry;
 using Spacecraft.Shared.Primitives;
+using Spacecraft.Shared.World;
 using Spacecraft.WorldGeneration;
 
 namespace Spacecraft.GameServer;
@@ -79,7 +80,8 @@ public sealed partial class GameServer
         long sSeed = _meta.Seed ^ WorldGenerator.StableHash("settlement:" + planet.Key);
         var rng = new System.Random(unchecked((int)(sSeed ^ (sSeed >> 32))));
 
-        double chance = SettlementChance(planet);
+        // World options: the chosen settlement frequency scales the per-world chance (Off ⇒ none).
+        double chance = SettlementChance(planet) * _meta.Description.Settlements.StructureFactor();
         if (chance <= 0 || rng.NextDouble() > chance)
         {
             return; // this world has no settlement

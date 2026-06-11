@@ -104,6 +104,16 @@ public sealed partial class GameServer
             _ => 10.0, // "few" / default
         };
 
+        // World options: the creature-abundance rule scales every world's population (live-editable).
+        baseN *= Rules.CreatureAbundance switch
+        {
+            Shared.Configuration.AlienActivity.Off => 0.0,
+            Shared.Configuration.AlienActivity.Rare => 0.5,
+            Shared.Configuration.AlienActivity.Frequent => 1.5,
+            Shared.Configuration.AlienActivity.Extreme => 2.2,
+            _ => 1.0,
+        };
+
         if (baseN <= 0)
         {
             return 0;
@@ -317,12 +327,15 @@ public sealed partial class GameServer
     /// </summary>
     private void PopulateCreaturesNear(Shared.State.PlayerState player, int count)
     {
-        if (_speciesRoster.Length == 0)
+        // World options: the join-time seeding respects the abundance rule too — at Off the world
+        // stays lifeless, and at low settings the initial burst doesn't overshoot the world cap.
+        int cap = WorldCreatureCap(System.Math.Max(1, JoinedInActiveWorld().Count()));
+        if (_speciesRoster.Length == 0 || cap <= 0)
         {
             return;
         }
 
-        for (int i = 0; i < count && _creatures.Count < CreatureHardCap; i++)
+        for (int i = 0; i < count && _creatures.Count < System.Math.Min(cap, CreatureHardCap); i++)
         {
             TrySpawnCreatureNear(player);
         }

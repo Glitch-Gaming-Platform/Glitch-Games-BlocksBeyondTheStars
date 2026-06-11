@@ -223,6 +223,76 @@ public sealed class ServerConfig
                 case "creative-kit":
                     if (bool.TryParse(value, out var ck)) { CreativeStarterKit = ck; applied.Add("creative-kit"); }
                     break;
+
+                // --- World options (creation-time; the server bakes them into the save's metadata) ---
+                case "creatures":
+                    if (Enum.TryParse<AlienActivity>(value, ignoreCase: true, out var ca)) { Rules.CreatureAbundance = ca; applied.Add("creatures"); }
+                    break;
+                case "planet-enemies":
+                    if (Enum.TryParse<AlienActivity>(value, ignoreCase: true, out var pe)) { Rules.PlanetEnemies = pe; applied.Add("planet-enemies"); }
+                    break;
+                case "ufos":
+                    if (Enum.TryParse<AlienActivity>(value, ignoreCase: true, out var uf)) { Rules.AlienUfos = uf; applied.Add("ufos"); }
+                    break;
+                case "oxygen":
+                    if (Enum.TryParse<OxygenConsumption>(value, ignoreCase: true, out var ox)) { Rules.OxygenConsumption = ox; applied.Add("oxygen"); }
+                    break;
+                case "hunger":
+                    if (bool.TryParse(value, out var hg)) { Rules.Hunger = hg; applied.Add("hunger"); }
+                    break;
+                case "hazards":
+                    if (Enum.TryParse<HazardLevel>(value, ignoreCase: true, out var hz)) { Rules.EnvironmentalHazards = hz; applied.Add("hazards"); }
+                    break;
+                case "death-penalty":
+                    if (Enum.TryParse<DeathPenalty>(value, ignoreCase: true, out var dp)) { Rules.DeathPenalty = dp; applied.Add("death-penalty"); }
+                    break;
+                case "flora":
+                    if (Enum.TryParse<Spacecraft.Shared.World.Frequency>(value, ignoreCase: true, out var fl)) { World.FloraDensity = fl; applied.Add("flora"); }
+                    break;
+                case "ore":
+                    if (Enum.TryParse<Spacecraft.Shared.World.Frequency>(value, ignoreCase: true, out var or)) { World.RareResources = or; applied.Add("ore"); }
+                    break;
+                case "settlements":
+                    if (Enum.TryParse<Spacecraft.Shared.World.Frequency>(value, ignoreCase: true, out var se)) { World.Settlements = se; applied.Add("settlements"); }
+                    break;
+                case "planet-wrecks":
+                    if (Enum.TryParse<Spacecraft.Shared.World.Frequency>(value, ignoreCase: true, out var pw)) { World.PlanetWrecks = pw; applied.Add("planet-wrecks"); }
+                    break;
+                case "vaults":
+                    if (Enum.TryParse<Spacecraft.Shared.World.Frequency>(value, ignoreCase: true, out var va)) { World.Vaults = va; applied.Add("vaults"); }
+                    break;
+                case "stations":
+                    if (Enum.TryParse<Spacecraft.Shared.World.Frequency>(value, ignoreCase: true, out var sf)) { World.SpaceStations = sf; applied.Add("stations"); }
+                    break;
+                case "exotic":
+                    if (Enum.TryParse<Spacecraft.Shared.World.Frequency>(value, ignoreCase: true, out var ex)) { World.ExoticWorlds = ex; applied.Add("exotic"); }
+                    break;
+                case "systems":
+                    if (int.TryParse(value, out var sy)) { World.StarSystemCount = Math.Clamp(sy, 1, 32); applied.Add("systems"); }
+                    break;
+                case "planets-min":
+                    if (int.TryParse(value, out var pmin)) { World.PlanetsPerSystemMin = Math.Clamp(pmin, 1, 10); applied.Add("planets-min"); }
+                    break;
+                case "planets-max":
+                    if (int.TryParse(value, out var pmax)) { World.PlanetsPerSystemMax = Math.Clamp(pmax, 1, 12); applied.Add("planets-max"); }
+                    break;
+                case "moons-max":
+                    if (int.TryParse(value, out var mm)) { World.MoonsPerPlanetMax = Math.Clamp(mm, 0, 5); applied.Add("moons-max"); }
+                    break;
+                case "planet-types":
+                    // Advanced per-type page: "corrupted=Rare,ocean=Frequent,..." (unknown keys are ignored
+                    // by the universe generator; an empty dict keeps the data-driven spawn weights).
+                    foreach (var pair in value.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                    {
+                        var kv = pair.Split('=', 2);
+                        if (kv.Length == 2 && Enum.TryParse<Spacecraft.Shared.World.Frequency>(kv[1].Trim(), ignoreCase: true, out var tf))
+                        {
+                            World.PlanetTypeFrequencies[kv[0].Trim()] = tf;
+                        }
+                    }
+
+                    applied.Add("planet-types");
+                    break;
             }
         }
 

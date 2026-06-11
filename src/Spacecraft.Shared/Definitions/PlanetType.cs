@@ -170,6 +170,10 @@ public sealed class PlanetType
     /// worlds (rock/ice/desert/ocean) dominate while exotic ones (fungal/crystalline/floating) stay a find.</summary>
     public int SpawnWeight { get; set; } = 8;
 
+    /// <summary>Marks an EXOTIC world type (crystal/fungal/corrupted/floating…). The world-creation
+    /// "Exotische Welten" option scales the spawn weights of exactly these types.</summary>
+    public bool Exotic { get; set; }
+
     /// <summary>
     /// When true the world generates as pure empty space (all air, no terrain/caves/ore/flora). Used by
     /// orbital space stations, which exist as their own free-floating location with only their stamped

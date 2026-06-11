@@ -533,6 +533,23 @@ public sealed class ServerRules
     public bool KeepInventoryOnDeath { get; set; }
     public bool OxygenEnabled { get; set; }
     public bool AdminCheatsActive { get; set; }
+
+    // World options (live-editable by the world admin; shown in the in-game settings section).
+    public string CreatureAbundance { get; set; } = string.Empty;
+    public string PlanetEnemies { get; set; } = string.Empty;
+    public string SpaceNpcEnemies { get; set; } = string.Empty;
+    public string AlienUfos { get; set; } = string.Empty;
+}
+
+/// <summary>Client → server (world admin only): live-edits the gameplay world options — creature
+/// abundance and the three enemy activities. Values are <c>AlienActivity</c> names; empty = leave
+/// unchanged. The server applies, persists into the save's rules and re-broadcasts ServerRules.</summary>
+public sealed class SetWorldRulesIntent
+{
+    public string CreatureAbundance { get; set; } = string.Empty;
+    public string PlanetEnemies { get; set; } = string.Empty;
+    public string SpaceNpcEnemies { get; set; } = string.Empty;
+    public string AlienUfos { get; set; } = string.Empty;
 }
 
 // --- Missions ---

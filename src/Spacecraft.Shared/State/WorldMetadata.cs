@@ -40,4 +40,12 @@ public sealed class WorldMetadata
 
     /// <summary>True once the one-time creative starter kit has been granted, so reloads don't refill it.</summary>
     public bool CreativeKitGranted { get; set; }
+
+    /// <summary>
+    /// World rules chosen at creation (world options) and updated by in-game admin edits — the world
+    /// OWNS its rules once created: on load this replaces the launch config's rules, so singleplayer
+    /// relaunches (which pass creation options only once) and dedicated restarts keep the chosen set.
+    /// Null on saves from before world options existed (the launch config's rules apply then).
+    /// </summary>
+    public Spacecraft.Shared.Configuration.GameRules? RulesOverride { get; set; }
 }
