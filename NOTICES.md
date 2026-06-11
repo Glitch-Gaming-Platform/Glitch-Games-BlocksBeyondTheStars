@@ -20,7 +20,8 @@ for the exact prompts and `docs/SOUND_DESIGN.md` for the catalogue. They are AI-
 for the generating account's plan. Background **music** and the remaining UI/feedback cues stay
 **generated procedurally in code** (`ClientMusic`, `ClientAudio`).
 
-**UI icons:** `client/Assets/Resources/icons/*.png` (30 files, incl. menu category icons) are **AI-generated** with the
+**UI icons:** `client/Assets/Resources/icons/*.png` (40 files, incl. menu category icons, the world-map
+marker set `map_*` and the VEGA avatar `icon_vega`) are **AI-generated** with the
 **OpenAI** image API (`gpt-image-1-mini`, transparent cyan line icons — see
 `tools/ai-assets/gen_icons.py`); they are AI-synthesised images, use governed by the OpenAI
 usage terms for the generating account.

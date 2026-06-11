@@ -56,6 +56,18 @@ ICONS = [
     ("cat_planet", "a ringed planet"),
     ("cat_mission", "a clipboard with a checklist"),
     ("cat_target", "a crosshair target reticle"),
+    # World-map marker icons (uGUI icon pass — replace the unicode glyph markers).
+    ("map_player", "an upward pointing navigation arrowhead chevron"),
+    ("map_ship", "a small spaceship seen from above"),
+    ("map_waypoint", "a map waypoint flag on a pin"),
+    ("map_beacon", "a radio beacon tower emitting signal arcs"),
+    ("map_pad", "a circular landing pad ring with a center dot"),
+    ("map_settlement", "a small village hut with a chimney"),
+    ("map_ruin", "a broken cracked stone house ruin"),
+    ("map_wreck", "a crashed broken spaceship with a bent wing"),
+    ("map_station", "an orbital space station hub with a ring"),
+    # VEGA ship-AI avatar chip for the companion panel.
+    ("icon_vega", "a friendly artificial intelligence core, one glowing ring eye in a rounded housing"),
 ]
 
 

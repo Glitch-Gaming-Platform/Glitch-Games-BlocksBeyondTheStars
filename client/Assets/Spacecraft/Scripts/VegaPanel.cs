@@ -39,10 +39,19 @@ namespace Spacecraft.Client
         {
             _canvas = UiKit.CreateDiegeticCanvas("VegaPanel");
 
-            // Speech panel: left side above the vitals, out of the crosshair's way.
+            // Speech panel: left side above the vitals, out of the crosshair's way. VEGA gets a small
+            // generated avatar chip beside her name (uGUI icon pass).
             _speech = UiKit.AddPanel(_canvas.transform, 24, 600, 600, 150, new Color(0.05f, 0.10f, 0.16f, 0.82f)).gameObject;
-            UiKit.AddText(_speech.transform, 14, 6, 300, 28, L("ui.vega.name"), 20, UiKit.Cyan, TextAnchor.MiddleLeft, FontStyle.Bold);
-            _speechText = UiKit.AddText(_speech.transform, 14, 34, 572, 110, string.Empty, 19, UiKit.TextCol, TextAnchor.UpperLeft);
+            var avatar = UiKit.Icon("icon_vega");
+            float nameX = 14f;
+            if (avatar != null)
+            {
+                UiKit.AddImage(_speech.transform, 12, 5, 30, 30, avatar, UiKit.Cyan);
+                nameX = 50f;
+            }
+
+            UiKit.AddText(_speech.transform, nameX, 6, 300, 28, L("ui.vega.name"), 20, UiKit.Cyan, TextAnchor.MiddleLeft, FontStyle.Bold);
+            _speechText = UiKit.AddText(_speech.transform, 14, 38, 572, 106, string.Empty, 19, UiKit.TextCol, TextAnchor.UpperLeft);
             _speechText.horizontalOverflow = HorizontalWrapMode.Wrap;
             _speechText.verticalOverflow = VerticalWrapMode.Overflow;
             _speech.SetActive(false);

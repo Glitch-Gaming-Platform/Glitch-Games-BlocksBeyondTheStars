@@ -111,6 +111,25 @@ namespace Spacecraft.Client
             _info.horizontalOverflow = HorizontalWrapMode.Wrap;
             _info.verticalOverflow = VerticalWrapMode.Overflow;
 
+            // Icon legend (matches the marker sprites; replaces the old unicode-glyph line in the info text).
+            {
+                string[] legendIcons = { "map_player", "map_ship", "map_waypoint", "map_beacon", "map_pad" };
+                string[] legendKeys = { "ui.map.you", "ui.hud.ship", "ui.map.waypoint", "ui.beacon.default", "ui.map.pad" };
+                float lx = ix;
+                for (int li = 0; li < legendIcons.Length; li++)
+                {
+                    var sprite = UiKit.Icon(legendIcons[li]);
+                    if (sprite != null)
+                    {
+                        UiKit.AddImage(root, lx, 832, 24, 24, sprite, UiKit.Cyan);
+                        lx += 28f;
+                    }
+
+                    var lt = UiKit.AddText(root, lx, 828, 150, 30, L(legendKeys[li]), 16, UiKit.CyanDim, TextAnchor.MiddleLeft);
+                    lx += lt.preferredWidth + 26f;
+                }
+            }
+
             UiKit.AddButton(root, ix, 880, 120, 50, "−", () => { _radius = Mathf.Min(640, _radius + 90); Build(); });
             UiKit.AddButton(root, ix + 140, 880, 120, 50, "+", () => { _radius = Mathf.Max(60, _radius - 90); Build(); });
             UiKit.AddButton(root, ix + 300, 880, 240, 50, L("ui.map.clear_waypoint"), () => { Game.Waypoint = null; Refresh(); });
@@ -211,15 +230,15 @@ namespace Spacecraft.Client
                 Destroy(_mapRt.GetChild(i).gameObject);
             }
 
-            // Ship + stations + waypoint as dots; player as a heading arrow.
+            // Ship + stations + waypoint as icons; player as a heading arrow.
             if (Game.ShipPosition.HasValue)
             {
-                Marker(Game.ShipPosition.Value.x, Game.ShipPosition.Value.z, 18f, new Color(0.5f, 0.9f, 1f), "▣");
+                Marker(Game.ShipPosition.Value.x, Game.ShipPosition.Value.z, 20f, new Color(0.5f, 0.9f, 1f), "▣", "map_ship");
             }
 
             if (Game.Waypoint.HasValue)
             {
-                Marker(Game.Waypoint.Value.x, Game.Waypoint.Value.z, 22f, new Color(1f, 0.85f, 0.3f), "✛");
+                Marker(Game.Waypoint.Value.x, Game.Waypoint.Value.z, 24f, new Color(1f, 0.85f, 0.3f), "✛", "map_waypoint");
             }
 
             // World POIs (settlements, …) from the server.
@@ -228,8 +247,8 @@ namespace Spacecraft.Client
             {
                 foreach (var p in Game.PlanetPois)
                 {
-                    var (glyph, col) = PoiLook(p.Type);
-                    Marker(p.X, p.Z, 22f, col, glyph);
+                    var (glyph, col, icon) = PoiLook(p.Type);
+                    Marker(p.X, p.Z, 24f, col, glyph, icon);
                     float d = GroundDistance(p.X, p.Z);
                     poiLines.Append($"\n{glyph} {p.Name}  —  {Mathf.RoundToInt(d)} m");
                 }
@@ -241,7 +260,7 @@ namespace Spacecraft.Client
                 var beaconCol = new Color(1f, 0.72f, 0.2f);
                 foreach (var b in Game.Beacons)
                 {
-                    Marker(b.X, b.Z, 20f, beaconCol, "✦");
+                    Marker(b.X, b.Z, 22f, beaconCol, "✦", "map_beacon");
                     string name = string.IsNullOrEmpty(b.Label) ? L("ui.beacon.default") : b.Label;
                     MarkerLabel(b.X, b.Z, name, beaconCol);
                     float bd = GroundDistance(b.X, b.Z);
@@ -273,8 +292,8 @@ namespace Spacecraft.Client
                 }
             }
 
-            // Player arrow (rotated to heading; ▲ points north / +Z).
-            var pa = Marker(Game.PlayerPosition.x, Game.PlayerPosition.z, 26f, UiKit.Cyan, "▲");
+            // Player arrow (rotated to heading; the arrowhead icon points north / +Z).
+            var pa = Marker(Game.PlayerPosition.x, Game.PlayerPosition.z, 28f, UiKit.Cyan, "▲", "map_player");
             if (pa != null)
             {
                 pa.transform.localRotation = Quaternion.Euler(0, 0, -Game.PlayerYaw);
@@ -289,7 +308,6 @@ namespace Spacecraft.Client
                 _info.text =
                     $"{L("ui.map.you")}: X {Mathf.RoundToInt(Game.PlayerPosition.x)}  Z {Mathf.RoundToInt(Game.PlayerPosition.z)}\n" +
                     $"{L("ui.map.scale")}: ±{_radius} m\n" +
-                    $"▲ {L("ui.map.you")}    ▣ {L("ui.hud.ship")}    ✛ {L("ui.map.waypoint")}    ✦ {L("ui.beacon.default")}    ⊕ {L("ui.map.pad")}\n" +
                     $"{L("ui.map.click_hint")}{wp}{pois}";
             }
         }
@@ -302,16 +320,19 @@ namespace Spacecraft.Client
             return Mathf.Sqrt(dx * dx + dz * dz);
         }
 
-        private static (string glyph, Color col) PoiLook(string type) => type switch
+        private static (string glyph, Color col, string icon) PoiLook(string type) => type switch
         {
-            "settlement" => ("⌂", new Color(0.5f, 0.95f, 0.6f)),
-            "settlement_ruin" => ("⌂", new Color(0.65f, 0.6f, 0.55f)),
-            "wreck" => ("✖", new Color(1f, 0.55f, 0.3f)),
-            "landing" => ("⊕", new Color(0.5f, 0.85f, 1f)),
-            _ => ("◆", new Color(0.8f, 0.8f, 0.9f)),
+            "settlement" => ("⌂", new Color(0.5f, 0.95f, 0.6f), "map_settlement"),
+            "settlement_ruin" => ("⌂", new Color(0.65f, 0.6f, 0.55f), "map_ruin"),
+            "vault_ruin" => ("◆", new Color(0.8f, 0.7f, 0.95f), "map_ruin"),
+            "wreck" => ("✖", new Color(1f, 0.55f, 0.3f), "map_wreck"),
+            "landing" => ("⊕", new Color(0.5f, 0.85f, 1f), "map_pad"),
+            _ => ("◆", new Color(0.8f, 0.8f, 0.9f), "map_station"),
         };
 
-        private Text Marker(float wx, float wz, float size, Color color, string glyph)
+        /// <summary>A map marker: a generated HUD ICON when one exists (uGUI icon pass), else the unicode
+        /// glyph as fallback — both tinted with the marker colour.</summary>
+        private Graphic Marker(float wx, float wz, float size, Color color, string glyph, string icon = null)
         {
             // Round worlds: map the marker's world X/Z to the scene spot nearest the player (no seam on the map).
             float u = (Game.SceneX(wx) - _ox) / _side, v = (Game.SceneZ(wz) - _oz) / _side;
@@ -327,6 +348,17 @@ namespace Spacecraft.Client
             rt.pivot = new Vector2(0.5f, 0.5f);
             rt.anchoredPosition = Vector2.zero;
             rt.sizeDelta = new Vector2(size, size);
+
+            var sprite = icon != null ? UiKit.Icon(icon) : null;
+            if (sprite != null)
+            {
+                var img = go.AddComponent<Image>();
+                img.sprite = sprite;
+                img.color = color;
+                img.raycastTarget = false;
+                return img;
+            }
+
             var t = go.AddComponent<Text>();
             t.font = UiKit.Font;
             t.text = glyph;
@@ -385,12 +417,25 @@ namespace Spacecraft.Client
             rt.anchorMin = rt.anchorMax = new Vector2(u, v);
             rt.pivot = new Vector2(0.5f, 0.5f);
             rt.anchoredPosition = Vector2.zero;
-            rt.sizeDelta = new Vector2(20f, 20f);
+            float size = clamped ? 16f : 22f;
+            rt.sizeDelta = new Vector2(size, size);
+            var tint = clamped ? new Color(color.r, color.g, color.b, 0.7f) : color;
+
+            var sprite = UiKit.Icon("map_pad");
+            if (sprite != null)
+            {
+                var img = go.AddComponent<Image>();
+                img.sprite = sprite;
+                img.color = tint;
+                img.raycastTarget = false;
+                return;
+            }
+
             var t = go.AddComponent<Text>();
             t.font = UiKit.Font;
             t.text = "⊕";
             t.fontSize = clamped ? 15 : 20;
-            t.color = clamped ? new Color(color.r, color.g, color.b, 0.7f) : color;
+            t.color = tint;
             t.alignment = TextAnchor.MiddleCenter;
             t.horizontalOverflow = HorizontalWrapMode.Overflow;
             t.verticalOverflow = VerticalWrapMode.Overflow;
