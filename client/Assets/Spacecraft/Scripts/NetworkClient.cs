@@ -78,6 +78,9 @@ namespace Spacecraft.Client
         // Terrain-scanner pulse result (Feature 40): ore positions for the through-wall glow markers.
         public event Action<OreScanResult> OreScanReceived;
 
+        // Ship AI companion "VEGA": onboarding/advisor/story lines + the active objective chip.
+        public event Action<ShipAiLine> ShipAiLineReceived;
+
         public bool Connected { get; private set; }
 
         /// <summary>Uses the UDP transport by default; pass a loopback transport for singleplayer.</summary>
@@ -97,6 +100,9 @@ namespace Spacecraft.Client
         /// <summary>Asks the server for the greeting line of the nearby NPC of this role ("vendor"/"quartermaster")
         /// when opening its interaction (item 15). The server gates on proximity and replies with an NpcGreeting.</summary>
         public void SendNpcGreet(string role) => Send(new NpcGreetIntent { Role = role });
+
+        /// <summary>Skips the VEGA onboarding (grants the whole stage chain server-side; one-way).</summary>
+        public void SendSkipOnboarding() => Send(new SkipOnboardingIntent());
 
         public void SendMove(Vector3 pos, float yaw, float pitch)
             => Send(new MoveIntent { X = pos.x, Y = pos.y, Z = pos.z, Yaw = yaw, Pitch = pitch }, DeliveryMode.Unreliable);
@@ -309,6 +315,7 @@ namespace Spacecraft.Client
                 case TradeUpdate m: TradeUpdated?.Invoke(m); break;
                 case TradeClosed m: TradeClosedReceived?.Invoke(m); break;
                 case NpcGreeting m: NpcGreetingReceived?.Invoke(m); break;
+                case ShipAiLine m: ShipAiLineReceived?.Invoke(m); break;
                 case OreScanResult m: OreScanReceived?.Invoke(m); break;
             }
         }

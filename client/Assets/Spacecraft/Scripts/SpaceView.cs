@@ -300,6 +300,69 @@ namespace Spacecraft.Client
             }
         }
 
+        // VEGA autopilot (Mk2+ AI core): hands-off cruise toward the nearest station / landable body.
+        private bool _autopilot;
+
+        private void SetAutopilot(bool on)
+        {
+            if (_autopilot == on)
+            {
+                return;
+            }
+
+            _autopilot = on;
+            Game.ShowMessage(Loc(on ? "ui.vega.autopilot.on" : "ui.vega.autopilot.off",
+                on ? "Autopilot engaged" : "Autopilot disengaged"));
+        }
+
+        /// <summary>The autopilot's destination: the nearest space station, else the nearest landable body.
+        /// Returns the point to fly at plus the squared arrival distance (just outside dock/land range).</summary>
+        private bool TryAutopilotTarget(out Vector3 target, out float arriveSq)
+        {
+            Vector3 pos = _ship != null ? _ship.transform.localPosition : Vector3.zero;
+            target = Vector3.zero;
+            arriveSq = 0f;
+            float bestSq = float.MaxValue;
+
+            var space = Game.Space;
+            if (space != null)
+            {
+                foreach (var e in space.Entities)
+                {
+                    if (e.Kind != "SpaceStation")
+                    {
+                        continue;
+                    }
+
+                    var sp = new Vector3(e.X, e.Y, e.Z);
+                    float sq = (sp - pos).sqrMagnitude;
+                    if (sq < bestSq)
+                    {
+                        bestSq = sq;
+                        target = sp;
+                        arriveSq = BoardRange * BoardRange * 0.64f; // well inside dock range before handing over
+                    }
+                }
+            }
+
+            if (bestSq == float.MaxValue)
+            {
+                foreach (var body in _landables)
+                {
+                    float sq = (body.Pos - pos).sqrMagnitude;
+                    if (sq < bestSq)
+                    {
+                        bestSq = sq;
+                        target = body.Pos;
+                        float approach = body.Radius + KeepOutMargin + LandBand * 0.5f;
+                        arriveSq = approach * approach;
+                    }
+                }
+            }
+
+            return bestSq != float.MaxValue;
+        }
+
         private void UpdateCruise()
         {
             if (_ship == null)
@@ -360,13 +423,62 @@ namespace Spacecraft.Client
                 return;
             }
 
-            _yaw += Input.GetAxis("Mouse X") * LookSpeed * _shipTurnMul;
-            _pitch = Mathf.Clamp(_pitch - Input.GetAxis("Mouse Y") * LookSpeed * _shipTurnMul, -80f, 80f);
+            // P: VEGA autopilot (needs an AI Core Mk2 aboard) — flies toward the nearest station, else the
+            // nearest landable body, and hands back control on arrival or any manual input.
+            if (Input.GetKeyDown(KeyCode.P))
+            {
+                if (_autopilot)
+                {
+                    SetAutopilot(false);
+                }
+                else if (Game.AiCoreTier >= 2)
+                {
+                    SetAutopilot(true);
+                }
+                else
+                {
+                    Game.ShowMessage(Loc("ui.vega.autopilot.none", "Autopilot requires an AI Core Mk2"));
+                }
+            }
+
+            float fwd, strafe;
+            if (_autopilot && TryAutopilotTarget(out var apTarget, out float apArriveSq))
+            {
+                // Manual input takes the helm back instantly.
+                if (Mathf.Abs(Input.GetAxis("Vertical")) > 0.25f || Mathf.Abs(Input.GetAxis("Horizontal")) > 0.25f)
+                {
+                    SetAutopilot(false);
+                }
+                else if ((apTarget - _ship.transform.localPosition).sqrMagnitude <= apArriveSq)
+                {
+                    SetAutopilot(false); // arrived — the E dock/land prompt takes over
+                }
+                else
+                {
+                    // Steer the nose onto the target and cruise at full throttle.
+                    Vector3 to = (apTarget - _ship.transform.localPosition).normalized;
+                    float wantYaw = Mathf.Atan2(to.x, to.z) * Mathf.Rad2Deg;
+                    float wantPitch = -Mathf.Asin(Mathf.Clamp(to.y, -1f, 1f)) * Mathf.Rad2Deg;
+                    _yaw = Mathf.MoveTowardsAngle(_yaw, wantYaw, 60f * Time.deltaTime);
+                    _pitch = Mathf.MoveTowards(_pitch, Mathf.Clamp(wantPitch, -80f, 80f), 45f * Time.deltaTime);
+                }
+            }
+
+            if (_autopilot)
+            {
+                fwd = 1f;
+                strafe = 0f;
+            }
+            else
+            {
+                _yaw += Input.GetAxis("Mouse X") * LookSpeed * _shipTurnMul;
+                _pitch = Mathf.Clamp(_pitch - Input.GetAxis("Mouse Y") * LookSpeed * _shipTurnMul, -80f, 80f);
+                fwd = Input.GetAxis("Vertical");
+                strafe = Input.GetAxis("Horizontal");
+            }
+
             var rot = Quaternion.Euler(_pitch, _yaw, 0f);
             _ship.transform.localRotation = rot;
-
-            float fwd = Input.GetAxis("Vertical");
-            float strafe = Input.GetAxis("Horizontal");
             var move = rot * (Vector3.forward * fwd + Vector3.right * strafe) * (MoveSpeed * _shipSpeedMul * Time.deltaTime);
             var pos = _ship.transform.localPosition + move;
             if (pos.magnitude > _bounds)
@@ -2661,6 +2773,11 @@ namespace Spacecraft.Client
                 _fade.color = new Color(0f, 0f, 0f, 0f);
                 var loc = Game.Localizer;
                 _hint.text = loc != null ? loc.Get("ui.space.controls") : "WASD/Mouse fly · V view · E land/dock · L return · G EVA";
+                if (Game.AiCoreTier >= 2)
+                {
+                    _hint.text += " · " + Loc("ui.vega.autopilot.hint", "[P] Autopilot");
+                }
+
                 _hint.gameObject.SetActive(true);
 
                 // Prompt whichever you're closest to: dock a station (E) or land on a body (E) you've flown up to.

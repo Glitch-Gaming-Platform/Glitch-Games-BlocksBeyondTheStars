@@ -34,6 +34,7 @@ namespace Spacecraft.Client
 
         public static AudioClip Generate(string id) => id switch
         {
+            "ai_blip" => Beep("ai_blip", 880f, 0.16f, 0.30f), // VEGA radio chirp fallback (real cue is bundled)
             "mine_stone" => NoiseHit("mine_stone", 0.16f, 0.45f, 1500f, 26f),
             "mine_dirt" => NoiseHit("mine_dirt", 0.16f, 0.40f, 700f, 30f),
             "mine_metal" => Clang("mine_metal", 380f, 0.22f, 0.40f),

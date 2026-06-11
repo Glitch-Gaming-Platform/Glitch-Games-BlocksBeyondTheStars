@@ -732,6 +732,22 @@ namespace Spacecraft.Client
                 visorOn ? UiKit.Ok : UiKit.CyanDim, TextAnchor.MiddleLeft, FontStyle.Bold);
             y += 96f;
 
+            // VEGA advisor hints on/off — mutes the ship AI's optional coaching (onboarding chip stays).
+            bool vegaOn = Menu?.Settings?.VegaHints ?? true;
+            var vegaBtn = UiKit.AddButton(_listContent, 0, y, 780, 78, string.Empty, () =>
+            {
+                if (Menu?.Settings != null)
+                {
+                    Menu.Settings.VegaHints = !Menu.Settings.VegaHints;
+                    Menu.Settings.Save();
+                    RebuildList();
+                }
+            });
+            UiKit.AddText(vegaBtn.transform, 16, 0, 520, 78, L("ui.settings.vega_hints"), 24, UiKit.TextCol, TextAnchor.MiddleLeft, FontStyle.Bold);
+            UiKit.AddText(vegaBtn.transform, 560, 0, 200, 78, vegaOn ? L("ui.toggle.on") : L("ui.toggle.off"), 22,
+                vegaOn ? UiKit.Ok : UiKit.CyanDim, TextAnchor.MiddleLeft, FontStyle.Bold);
+            y += 96f;
+
             // Explicit save (on top of the periodic autosave).
             var save = UiKit.AddButton(_listContent, 0, y, 780, 78, L("ui.settings.save_game"), () =>
             {

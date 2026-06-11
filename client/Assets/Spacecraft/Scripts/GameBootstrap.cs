@@ -57,6 +57,9 @@ namespace Spacecraft.Client
         public string LocationName { get; private set; } = string.Empty;
         public string StationName { get; private set; } = string.Empty; // non-empty while boarded on a station
 
+        /// <summary>AI-core tier of the active ship (1 = bare VEGA, 2 = Mk2, 3 = Mk3) — gates the autopilot.</summary>
+        public int AiCoreTier { get; private set; } = 1;
+
         /// <summary>Whether we're currently inside the ship (authoritative; enables cargo crafting).</summary>
         public bool Aboard { get; private set; }
         public bool InEva { get; private set; } // server-authoritative: floating outside the ship in space
@@ -276,6 +279,9 @@ namespace Spacecraft.Client
 
         /// <summary>Last server feedback line (craft result / rejection / message) for a HUD toast.</summary>
         public string LastMessage { get; private set; } = string.Empty;
+
+        /// <summary>Shows a transient HUD message from a client-side system (e.g. the VEGA autopilot).</summary>
+        public void ShowMessage(string text) => LastMessage = text ?? string.Empty;
 
         /// <summary>The last cell the player tried to mine (set by the controller) — if the server rejects the
         /// dig as already-empty, the client clears its ghost block there to heal a stale chunk view (B32).</summary>
@@ -697,6 +703,7 @@ namespace Spacecraft.Client
             }
 
             StationName = m.StationName;
+            AiCoreTier = m.AiCoreTier;
             ServerSpawn ??= new Vector3(m.X, m.Y, m.Z);
         }
 

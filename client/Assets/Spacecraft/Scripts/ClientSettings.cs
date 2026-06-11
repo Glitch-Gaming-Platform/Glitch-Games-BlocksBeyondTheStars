@@ -59,6 +59,10 @@ namespace Spacecraft.Client
         /// <summary>Start in third-person (showing your own figure) instead of first-person.</summary>
         public bool ThirdPerson = false;
 
+        /// <summary>Show the ship AI's (VEGA) advisor hints and story lines. The onboarding objective chip
+        /// always shows until the tutorial is finished or skipped; this mutes the optional coaching.</summary>
+        public bool VegaHints = true;
+
         private static string FilePath => Path.Combine(Application.persistentDataPath, "client_settings.json");
 
         public static ClientSettings Load()

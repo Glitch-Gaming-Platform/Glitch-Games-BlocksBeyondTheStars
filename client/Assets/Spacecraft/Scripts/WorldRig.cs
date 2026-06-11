@@ -109,6 +109,11 @@ namespace Spacecraft.Client
             var beaconView = root.AddComponent<BeaconView>();
             beaconView.Game = boot;
 
+            // Ship AI companion "VEGA": onboarding lines, objective chip, advisor hints, story beats.
+            var vega = root.AddComponent<VegaPanel>();
+            vega.Game = boot;
+            vega.Settings = shell.Settings;
+
             // Other players' ships landing/launching at pads, in multiplayer (item 38).
             var shipTransit = root.AddComponent<ShipTransitView>();
             shipTransit.Game = boot;
