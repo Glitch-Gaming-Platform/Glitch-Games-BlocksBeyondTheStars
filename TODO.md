@@ -254,6 +254,94 @@ T1 noise (torus FBM + Value5D + WorldGenerator call sites) → T2 WorldConstants
 → T3 client (SceneZ + reposition + barrier removal + map) → T4 tests + playtest. **APPROVED + SHIPPED — see
 the DONE block above.**
 
+### ★ Onboarding/Progression via the SHIP AI "VEGA" — ✅ SHIPPED 2026-06-11 (O1+O2+O4+O5; O3 voice deferred; 435 tests green)
+**Shipped (decisions: text+blips first, scripted lines, full scope, dry-laconic persona, name VEGA):**
+- **O1 server core** (`GameServerShipAi.cs`, `PlayerState.Milestones` persisted via snapshot): 8-stage
+  onboarding chain (mine 3 → craft → scan → unlock → launch → dock → trade/mission → land), each gated by
+  the existing server event (hooks in mine/craft/scan/unlock/EnterSpace/StationBoarded/trade-close/vendor-
+  barter/AcceptMission/Travel). Out-of-order completions record silently; the chain skips them. Veteran
+  saves (knowledge/blueprints/missions present — incl. creative grants) auto-skip with one "systems online"
+  line. `ShipAiLine` (NetCodec **113**) carries locale KEY + objective chip + kind (onboarding/advisor/
+  story/system); `SkipOnboardingIntent` (**114**) grants the whole chain.
+- **O2 client companion UI** (`VegaPanel.cs`, mounted in WorldRig): typewriter speech panel + queued lines
+  + `ai_blip` radio chirp (ElevenLabs, procedural Beep fallback), persistent objective chip with live
+  progress (mine 1/3) and a skip button; settings toggle **VEGA hints** (`ClientSettings.VegaHints`,
+  Settings tab) mutes advisor lines; fully bilingual (~80 locale keys DE+EN, `vega.*`).
+- **O4 advisor**: once-per-save persisted hints (low O2/energy/hunger, inventory full, first nightfall,
+  "ruins detected" near vaults/wreck, world-type flavour for asteroid/ocean/corrupted/fungal/ice/volcanic)
+  via a 1 Hz `TickShipAi` poll.
+- **O5 game element**: **AI-core module line** `ai_core_mk2`/`ai_core_mk3` (ship_modules + blueprints +
+  OpenAI icons) — Mk2: terrain-scanner radius +6, hostile-contact callouts in space, **client autopilot**
+  (P in cruise, flies to nearest station/landable body, manual input takes the helm back; gated by
+  `PlayerStateUpdate.AiCoreTier`); Mk3: 12 % evasive-manoeuvre damage negation (`ApplyShipDamage`) with
+  callout + aux energy. **Memory-fragment story arc**: `ai_memory_fragment` drops from data terminals
+  (wrecks + vaults); VEGA redeems them aboard (paced), +3 knowledge each, 10 beats tell the Meridian-fleet
+  backstory (vaults/wrecks/corrupted worlds get lore), beat 10 teaches the Mk3 blueprint.
+- **Tests**: `ShipAiTests` (7) — boot+mine stage advance, veteran skip, skip intent, fragment redemption
+  pacing+reward, arc completion → Mk3 blueprint, AiCoreTier in player state, milestone persistence.
+**Deferred:** O3 ElevenLabs TTS voice (after line tone settles in playtest); LLM flavour for advisor/banter
+(L-stages pattern); autopilot path-finding beyond straight-line + keep-out sliding.
+
+_Original analysis below._
+
+### ★ Onboarding/Progression via a SHIP AI companion — ANALYSIS + PLAN (2026-06-11, decided + implemented above)
+**Request:** plan the first-hour onboarding/progression as a "ship AI" that accompanies the player — first as
+helper/advisor, later as a real game element. (This is the onboarding package deferred from "Welten reicher".)
+
+**Why a ship AI is the right vehicle (codebase facts):** the game already has every building block —
+server-side milestone hooks (`OnBlockMined`, `OnPlayerTravelled`, scan `FirstTime`, dock/board/trade/craft
+intents), per-player persistence (`PlayerState` + `SavePlayer`), a bilingual locale system, an optional LLM
+backend with graceful template fallback (`/npc-line`, `GameServerNpcGreeting` pattern: async + cached +
+cooldown), ship modules as data (`data/ship_modules.json` + free-form stats), and story-ready POIs that
+currently lack narrative purpose (buried vaults W-R3, wrecks with data terminals, ruined settlements,
+`data_cache` blocks). What's missing is exactly what the AI provides: a first-join flow, a hint engine, and
+a reason to visit the POIs. There is no tutorial today beyond a static keybind hint line (`ui.hud.hint`).
+
+**Concept — three phases, one character:**
+- **Phase A — Onboarding (first hour).** The starter ship's AI boots on a NEW game ("emergency reactivation")
+  and walks the player through a staged chain matched to real progression, each stage gated by an EXISTING
+  server event: 1 survive/HUD basics + mine (OnBlockMined) → 2 craft (craft handler) → 3 scan + knowledge
+  (ScanResult.FirstTime) → 4 first blueprint unlock → 5 board ship/ship tech → 6 launch (EnterSpace) →
+  7 star map + dock a station (StationBoarded) → 8 first trade/board mission (TradeClosed/AcceptMission) →
+  9 land a second world (OnPlayerTravelled) → 10 send-off pointing at vaults/wrecks. Server-authoritative,
+  per-player (`PlayerState` milestone set), **skippable** (settings toggle + auto-grant for veteran saves:
+  players with existing blueprints/knowledge only get a one-line "systems online").
+- **Phase B — Advisor (ongoing).** Contextual, rate-limited hints after onboarding: low O2/energy with
+  advice, first visit to a new world type (flavour + dangers), night/enemy warnings, full inventory, "ruins
+  detected nearby" nudges toward unvisited POIs. Each hint fires once (persisted), global cooldown, mute
+  toggle. All lines scripted + bilingual (offline-safe); optional LLM flavour via the L1 pattern.
+- **Phase C — Game element (own package, after A+B playtest).** The AI becomes an upgradable **ship module
+  line** (`ai_core_mk1..3` in ship_modules.json) plus a collectible-driven story:
+  *Abilities by tier:* Mk1 (start) hints + basic scan ping; Mk2 **autopilot** (auto-course to a map target),
+  ore-vein highlight (extends the Feature-40 terrain scanner), space threat callouts; Mk3 combat co-pilot
+  (evasive boost / point-defence assist), energy/fuel optimiser stat, landing assist.
+  *Memory fragments:* wreck data terminals, vault loot and data_cache blocks drop **AI memory fragments**;
+  restoring them unlocks story beats (where does the AI come from? what happened to its fleet?), new persona
+  lines, and occasional POI reveals/blueprint hints — finally giving vaults/wrecks narrative pull.
+  *Persona:* relationship-style growth (reuse the `NpcRelationship` pattern keyed `ship_ai`), tone shifts
+  with progress; optional LLM banter. Strictly per-player (each player has their own ship AI; lines are
+  sent only to that session).
+
+**Technical staging:**
+- **O1 server core:** `PlayerState.Milestones` (HashSet<string>) + onboarding stage; new `ShipAiLine`
+  message (NetCodec tag — next free, verify ~113 — MUST be Register()'d); `GameServerShipAi.cs` partial
+  wiring the stage chain into the existing handlers; lines as locale keys (DE+EN); veteran auto-grant;
+  config/settings respect; tests (stage advance per event, persistence round-trip, veteran skip, per-player
+  isolation in multiplayer).
+- **O2 client companion UI:** HUD companion widget (small avatar chip + typewriter text panel + line queue),
+  persistent objective chip for the current stage, soft radio chime (`ClientAudio.Cue`), settings toggles
+  (hints on/off), bilingual.
+- **O3 voice (decision):** ElevenLabs TTS for the ~30–40 scripted lines, DE+EN, bundled like existing audio
+  (Resources/audio); dynamic/LLM lines stay text-only. Radio open/close blips either way.
+- **O4 advisor engine:** trigger table (condition + once-flag + cooldown) for Phase B hints.
+- **O5 game element:** ai_core module line + autopilot first ability + memory fragments + persona (split
+  into its own analysis when A+B have shipped and playtested).
+
+**Decisions (answered 2026-06-11):** TEXT + radio blips first (TTS voice deferred to O3, after line tone
+settles in playtest); onboarding lines 100% scripted/bilingual (LLM flavour only later in advisor/banter);
+scope = **FULL O1–O5 minus O3** (onboarding + advisor + AI-core modules/fragments in this package); persona
+**dry-laconic with humour**; name **VEGA**. → IN PROGRESS.
+
 ### ★ "Welten reicher" — ✅ DONE 2026-06-10 (W-R1–W-R4 shipped; onboarding deferred by decision; 423 tests green)
 **Decisions:** all four measures in scope (terrain drama, POIs/dungeons, set-dressing, weather drama);
 **onboarding later as its own package**; POI density **moderate** (several small + 1–2 large per world);
