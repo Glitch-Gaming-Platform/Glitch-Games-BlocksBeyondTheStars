@@ -181,6 +181,22 @@ namespace BlocksBeyondTheStars.Client
                 bool collidable = collKey != "water" && collKey != "fire";
                 int wx = origin.X + x, wy = origin.Y + y, wz = origin.Z + z;
 
+                // Natural-block variation: a deterministic WORLD-position hash (stable across remeshes,
+                // identical on all clients) picks one of the block's variant tiles and a 90° rotation
+                // for the top/bottom faces — breaking the visible texture tiling on open ground.
+                int uvRot = 0;
+                if (atlas != null && atlas.TryGetVariants(id.Value, out var variantSlots))
+                {
+                    int hash = unchecked(wx * 73856093 ^ wy * 19349663 ^ wz * 83492791);
+                    int pick = (int)((uint)hash % (uint)(variantSlots.Length + 1));
+                    if (pick > 0)
+                    {
+                        uv = atlas.TileUv(variantSlots[pick - 1]);
+                    }
+
+                    uvRot = (hash >> 8) & 3;
+                }
+
                 // Water SURFACE cells (air above) get a body classification — open water with gentle
                 // waves + coastal foam, calm lake, or flowing river — packed into the top face's
                 // TEXCOORD2 for the transparent shader. Other faces/blocks keep the flora-tint layout.
@@ -235,7 +251,8 @@ namespace BlocksBeyondTheStars.Client
                         ? new Color(matR, matG, s, emission)
                         : new Color(baseColor.r * s, baseColor.g * s, baseColor.b * s, 1f);
                     int faceBase = verts.Count;
-                    AddFace(verts, transparent ? trisT : tris, colors, uvs, tangents, new Vector3(x, y, z), f, col, uv);
+                    AddFace(verts, transparent ? trisT : tris, colors, uvs, tangents, new Vector3(x, y, z), f, col, uv,
+                        dir.Y != 0 ? uvRot : 0); // rotate only top/bottom faces — sides keep their up-orientation
                     if (collidable)
                     {
                         colliderTris.Add(faceBase); colliderTris.Add(faceBase + 1); colliderTris.Add(faceBase + 2);
@@ -531,7 +548,7 @@ namespace BlocksBeyondTheStars.Client
                 0.35f + 0.5f * (float)rng.NextDouble());
         }
 
-        private static void AddFace(List<Vector3> verts, List<int> tris, List<Color> colors, List<Vector2> uvs, List<Vector4> tangents, Vector3 p, int face, Color color, Rect uv)
+        private static void AddFace(List<Vector3> verts, List<int> tris, List<Color> colors, List<Vector2> uvs, List<Vector4> tangents, Vector3 p, int face, Color color, Rect uv, int uvRot = 0)
         {
             int baseIndex = verts.Count;
             Vector3[] q = FaceQuad(p, face);
@@ -540,16 +557,23 @@ namespace BlocksBeyondTheStars.Client
 
             // Tangent = world-space U direction (q0→q3, matching the UV mapping below); w = bitangent
             // handedness. Lets the shader transform the tangent-space normal map into world space.
+            // (A rotated UV set rotates the normal-map relief with it — for the noisy natural tiles
+            // that use uvRot the slight lighting rotation is invisible, so the tangent stays as-is.)
             Vector3 e1 = q[1] - q[0], e3 = q[3] - q[0];
             Vector3 nrm = Vector3.Cross(e1, e3).normalized;
             Vector3 tan = e3.normalized;
             float hand = Vector3.Dot(Vector3.Cross(nrm, tan), e1) < 0f ? -1f : 1f;
             var tv = new Vector4(tan.x, tan.y, tan.z, hand);
             tangents.Add(tv); tangents.Add(tv); tangents.Add(tv); tangents.Add(tv);
-            uvs.Add(new Vector2(uv.xMin, uv.yMin));
-            uvs.Add(new Vector2(uv.xMin, uv.yMax));
-            uvs.Add(new Vector2(uv.xMax, uv.yMax));
-            uvs.Add(new Vector2(uv.xMax, uv.yMin));
+
+            // 90°-step UV rotation: cycle the corner order (uvRot 0..3).
+            Vector2 c0 = new(uv.xMin, uv.yMin), c1 = new(uv.xMin, uv.yMax);
+            Vector2 c2 = new(uv.xMax, uv.yMax), c3 = new(uv.xMax, uv.yMin);
+            var corners = new[] { c0, c1, c2, c3 };
+            uvs.Add(corners[uvRot & 3]);
+            uvs.Add(corners[(uvRot + 1) & 3]);
+            uvs.Add(corners[(uvRot + 2) & 3]);
+            uvs.Add(corners[(uvRot + 3) & 3]);
             tris.Add(baseIndex); tris.Add(baseIndex + 1); tris.Add(baseIndex + 2);
             tris.Add(baseIndex); tris.Add(baseIndex + 2); tris.Add(baseIndex + 3);
         }

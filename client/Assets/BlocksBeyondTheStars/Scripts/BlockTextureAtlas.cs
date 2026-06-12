@@ -43,8 +43,108 @@ namespace BlocksBeyondTheStars.Client
                 }
             }
 
+            BuildVariants(content);
             Texture.Apply(updateMipmaps: true);
-            BuildNormalAtlas();
+            BuildNormalAtlas(); // derives from the final atlas, so variants get normals automatically
+        }
+
+        /// <summary>Natural blocks whose visible tiling is broken with procedural variant tiles
+        /// (+ 90° face rotation in the mesher). Ship/tech panels are excluded — those must align.</summary>
+        private static readonly string[] VariantKeys =
+            { "stone", "dirt", "sand", "snow", "basalt", "deepslate", "granite", "mud" };
+
+        private readonly System.Collections.Generic.Dictionary<ushort, ushort[]> _variants = new();
+
+        /// <summary>The extra atlas slots painted as variants of this block's base tile, if any.</summary>
+        public bool TryGetVariants(ushort id, out ushort[] slots) => _variants.TryGetValue(id, out slots);
+
+        /// <summary>Paints 2 derived variant tiles per natural block (cracked-darker / speckled-lighter)
+        /// into spare atlas slots, filled from the TOP slot downward so they never collide with real
+        /// block ids (which grow upward). Deterministic per block, so all clients agree.</summary>
+        private void BuildVariants(GameContent content)
+        {
+            int maxId = 0;
+            foreach (var b in content.Blocks.Values)
+            {
+                maxId = Mathf.Max(maxId, b.NumericId.Value);
+            }
+
+            int next = Cols * Rows - 1;
+            foreach (var key in VariantKeys)
+            {
+                var def = content.GetBlock(key);
+                if (def == null || def.NumericId.Value == 0 || def.NumericId.Value >= Cols * Rows)
+                {
+                    continue;
+                }
+
+                if (next - 2 <= maxId)
+                {
+                    break; // atlas nearly full — skip remaining variants rather than overwrite real tiles
+                }
+
+                ushort baseId = def.NumericId.Value;
+                var slots = new ushort[2];
+                for (int v = 0; v < 2; v++)
+                {
+                    slots[v] = (ushort)next--;
+                    PaintVariant(baseId, slots[v], v);
+                }
+
+                _variants[baseId] = slots;
+            }
+        }
+
+        private void PaintVariant(ushort baseId, ushort slot, int variant)
+        {
+            int sx = (baseId % Cols) * Tile, sy = (baseId / Cols) * Tile;
+            int dx = (slot % Cols) * Tile, dy = (slot / Cols) * Tile;
+            var px = Texture.GetPixels(sx, sy, Tile, Tile);
+            var rng = new System.Random(baseId * 31 + variant);
+
+            static Color Scale(Color c, float k)
+                => new(Mathf.Clamp01(c.r * k), Mathf.Clamp01(c.g * k), Mathf.Clamp01(c.b * k), c.a);
+
+            if (variant == 0)
+            {
+                // Variant A: slightly darker with a few thin cracks wandering across the tile.
+                for (int i = 0; i < px.Length; i++)
+                {
+                    px[i] = Scale(px[i], 0.90f);
+                }
+
+                for (int c = 0; c < 3; c++)
+                {
+                    int x = rng.Next(Tile), y = rng.Next(Tile);
+                    int steps = Tile / 2 + rng.Next(Tile / 2);
+                    for (int s = 0; s < steps; s++)
+                    {
+                        px[Mathf.Clamp(y, 0, Tile - 1) * Tile + Mathf.Clamp(x, 0, Tile - 1)] =
+                            Scale(px[Mathf.Clamp(y, 0, Tile - 1) * Tile + Mathf.Clamp(x, 0, Tile - 1)], 0.55f);
+                        x += rng.Next(3) - 1;
+                        y += rng.Next(3) - 1;
+                    }
+                }
+            }
+            else
+            {
+                // Variant B: slightly lighter with small two-tone speckles (pebbles/veins).
+                for (int i = 0; i < px.Length; i++)
+                {
+                    px[i] = Scale(px[i], 1.06f);
+                }
+
+                for (int s = 0; s < 30; s++)
+                {
+                    int x = rng.Next(Tile - 1), y = rng.Next(Tile - 1);
+                    float k = rng.Next(2) == 0 ? 0.72f : 1.18f;
+                    px[y * Tile + x] = Scale(px[y * Tile + x], k);
+                    px[y * Tile + x + 1] = Scale(px[y * Tile + x + 1], k);
+                    px[(y + 1) * Tile + x] = Scale(px[(y + 1) * Tile + x], k);
+                }
+            }
+
+            Texture.SetPixels(dx, dy, Tile, Tile, px);
         }
 
         /// <summary>Derives the normal atlas from the finished colour atlas: per pixel, the luminance
