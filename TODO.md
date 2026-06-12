@@ -22,6 +22,73 @@ At-a-glance order of everything still open (new items added 2026-06-07 interleav
 analysis-first tasks below). **Same workflow** unless noted: analyse → write the plan here → ask questions →
 only then implement. Items marked *(analysis only)* must NOT be implemented yet.
 
+### ★ Landed ship as a real object instead of a world stamp (analysed 2026-06-12) — ANALYSIS ONLY, decision pending
+**Goal:** the landed ship should be its own placed voxel OBJECT (own mesh, own colliders, hull-paint
+applies) instead of being STAMPED into the world block grid.
+
+**How it works today (the stamp):** `StampShip()`/`StampShipLayout()`
+([GameServerShipStructure.cs](src/BlocksBeyondTheStars.GameServer/GameServerShipStructure.cs)) writes the
+hull cell-by-cell via `_world.SetBlock` at the player's claimed pad — every cell also persists as a
+`block_edit` row in SQLite (`ServerWorld.SetBlock` → repo). It mutates terrain on the way: flora keep-out
+clear, cave-plugging foundation (depth 6), flush doorstep carving. Called at world load, on landing
+(`RelocateToAssignedPad`), on return from a station, on ship switch while landed
+(`ClearStampedShip` + restamp + `RestreamShipChunks`), and for the walk-in ship INTERIOR in space (a
+per-player void world `shipint:<id>` gets the same stamp). Launching does NOT clear the stamp — the hull
+stays parked on the pad as world blocks. Consumers keyed off the stamp:
+- aboard detection `ShipInteriorContains` → cargo crafting, oxygen regen, inventory scope
+- mining protection `IsShipBlock`/`BlockInStamp` (hull indestructible)
+- station markers (`_stations` + `UseStation` reach), heal-tank respawn, doors (`CurStamp.Doors` →
+  `RegisterDoors` server door entities), creature/NPC keep-out (`EntityBlockedByShip`), minimap anchor
+  (`SendShipPlacement`), restamp materialize FX (client `ShipBuildFx` keyed on `ShipStations` resend)
+- client side: the hull renders + collides as ordinary world chunks; on-foot aiming/mining ray-marches
+  the WORLD grid; weather (`WeatherFx3D` per-column sky scans), `ComputeExposedToSky`, footstep/swim
+  block queries and interior skylight all read the world grid — the stamped hull "just works" for them.
+
+**Target model (ship = object):** reuse what the flight scene already proved. The server already builds a
+sparse `SpaceStructure` (`ship:<player>`) from the design for space (item 20 S1/S2) with EVA collision +
+`StructureEditIntent`/`StructureBlockChanged` edit routing; the client already meshes it with colliders
+(`SpaceView.BuildVoxChunks`) and — since today — with the hull PAINT in the mesh. A landed ship becomes
+the same structure anchored at a world position; nothing is written into the world grid.
+
+**Work packages (server):**
+1. `LandedShip` state per player per world (structure + anchor + entry pose) replacing `ShipStamp`;
+   placement keeps `PadGroundY`; decide terrain policy (keep light pad flattening/foundation as pad
+   worldgen, or none). New net message (design + anchor + owner; REGISTER in NetCodec!) sent on world
+   join/landing/switch + a removal on launch — launch finally removes the parked ship (today's stamp
+   stays behind; old-pad residue also persists in `block_edit` forever).
+2. Re-key interior systems to structure-local coords: aboard test, stations + reach, heal-tank/respawn,
+   doors (entities at anchor-transformed positions), creature keep-out (already geometric boxes).
+3. Edit routing on the surface: aim hits on the structure go to `HandleStructureEdit` (exists for space);
+   decide whether the landed hull stays indestructible (today) or becomes editable like an EVA.
+4. Ship-interior world (`shipint:`) — keep stamped (void world, harmless; smallest scope) or convert too.
+5. Persistence: nothing new — the structure derives from the persisted design at landing; EVA edits
+   already live in the space instance structure. Big win: no more `block_edit` pollution per landing.
+**Work packages (client):**
+6. `LandedShipView`: mesh the structure at the anchor (torus seam-aware like other world entities) with
+   colliders + hull paint; materialize FX keys off the new message instead of `ShipStations`.
+7. Walking works free of charge — `PlayerController` is a Unity `CharacterController`, the structure's
+   MeshColliders carry it (same as world chunks). BUT aiming/mining ray-marches the world grid by design
+   (chunk-collider race) → add a structure DDA pass (exists as the EVA `AimShipVoxel`) + route to
+   structure edits.
+8. Composite "what's above/below me" queries: weather drops would fall through the object hull and the
+   lens-wash/`ComputeExposedToSky` would say "exposed" inside the ship. Simplest: treat the
+   server-authoritative `Aboard` flag as covered + let the per-column rain scan also test the landed
+   structure's bounds. Footstep-material queries inside the ship read terrain → minor, fix or accept.
+9. Interior light: the structure mesher already darkens interiors via its own grid (proven by the space
+   cabin + `_Sc_Indoor`); the URP `BlockAtlas` ShadowCaster gives the object a real ground shadow.
+**Payoffs:** hull paint applies when landed (incl. OTHER players' parked ships in their colours — today
+they're colourless stamps); no ghost-block/broadcast class of bugs; no terrain mutation or save
+pollution; launch/land lifecycle becomes explicit (parked ship disappears when you fly).
+**Risks:** many implicit "ship = world blocks" assumptions (server tests around stamps, spawn safety
+when the structure collider streams in late, seam wrap for the anchored object); scope is a staged,
+item-20-sized refactor (recommend 3-4 shippable stages mirroring the WP list above).
+**Cheaper alternative (if the motivation is mainly the paint):** keep stamping, send the ship footprint +
+owner colour to clients, and let the WORLD mesher pass a paint resolver for `iron_wall` cells inside
+those bounds — roughly a tenth of the effort, but keeps every other stamp drawback.
+**Open questions:** (1) convert the space ship-interior world too, or leave stamped? (2) terrain policy
+under the object (flatten pad in worldgen vs none)? (3) landed hull editable or indestructible?
+(4) confirm other players' landed ships should appear as painted objects.
+
 ### ★ Ship hull colour pick has no visible effect (reported 2026-06-12) — ✅ FIXED (real voxel-hull tint)
 **Symptom:** cycling the hull colour in the menu's Ship → paint tab updates the small swatch, but the
 ship itself never changes — neither the rotating menu preview nor the ship in flight.
