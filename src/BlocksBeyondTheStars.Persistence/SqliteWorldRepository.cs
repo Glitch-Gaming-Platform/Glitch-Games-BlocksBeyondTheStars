@@ -68,7 +68,10 @@ public sealed class SqliteWorldRepository : IWorldRepository
             CREATE TABLE IF NOT EXISTS mission (id TEXT PRIMARY KEY, json TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS space_structure (
                 id TEXT PRIMARY KEY, owner TEXT NOT NULL, name TEXT NOT NULL, location TEXT NOT NULL,
-                px REAL NOT NULL, py REAL NOT NULL, pz REAL NOT NULL, boardable INTEGER NOT NULL, blocks TEXT NOT NULL);");
+                px REAL NOT NULL, py REAL NOT NULL, pz REAL NOT NULL, boardable INTEGER NOT NULL, blocks TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS structure_edit (
+                structure TEXT NOT NULL, x INTEGER NOT NULL, y INTEGER NOT NULL, z INTEGER NOT NULL,
+                block INTEGER NOT NULL, PRIMARY KEY (structure, x, y, z));");
         // (Landing pads are deterministic + live-occupancy now — no per-player landing_zone table; item 38.)
     }
 
@@ -410,6 +413,54 @@ public sealed class SqliteWorldRepository : IWorldRepository
             using var cmd = Connection.CreateCommand();
             cmd.CommandText = "DELETE FROM space_structure WHERE id = $id;";
             cmd.Parameters.AddWithValue("$id", id);
+            cmd.ExecuteNonQuery();
+        }
+    }
+
+    // --- In-space voxel structure edits (own-ship hull deltas, item 20) ---
+
+    public void SetStructureBlock(string structureId, Vector3i position, ushort block)
+    {
+        lock (_gate)
+        {
+            using var cmd = Connection.CreateCommand();
+            cmd.CommandText = "INSERT INTO structure_edit (structure, x, y, z, block) VALUES ($s, $x, $y, $z, $b) " +
+                              "ON CONFLICT(structure, x, y, z) DO UPDATE SET block = excluded.block;";
+            cmd.Parameters.AddWithValue("$s", structureId);
+            cmd.Parameters.AddWithValue("$x", position.X);
+            cmd.Parameters.AddWithValue("$y", position.Y);
+            cmd.Parameters.AddWithValue("$z", position.Z);
+            cmd.Parameters.AddWithValue("$b", block);
+            cmd.ExecuteNonQuery();
+        }
+    }
+
+    public IReadOnlyList<BlockEdit> LoadStructureEdits(string structureId)
+    {
+        var result = new List<BlockEdit>();
+        lock (_gate)
+        {
+            using var cmd = Connection.CreateCommand();
+            cmd.CommandText = "SELECT x, y, z, block FROM structure_edit WHERE structure = $s;";
+            cmd.Parameters.AddWithValue("$s", structureId);
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                var pos = new Vector3i(reader.GetInt32(0), reader.GetInt32(1), reader.GetInt32(2));
+                result.Add(new BlockEdit(pos, (ushort)reader.GetInt32(3)));
+            }
+        }
+
+        return result;
+    }
+
+    public void DeleteStructureEdits(string structureId)
+    {
+        lock (_gate)
+        {
+            using var cmd = Connection.CreateCommand();
+            cmd.CommandText = "DELETE FROM structure_edit WHERE structure = $s;";
+            cmd.Parameters.AddWithValue("$s", structureId);
             cmd.ExecuteNonQuery();
         }
     }

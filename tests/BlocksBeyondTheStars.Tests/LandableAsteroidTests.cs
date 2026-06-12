@@ -137,6 +137,66 @@ public sealed class LandableAsteroidTests : IDisposable
         Assert.True(p.State.Oxygen < 50f, "Airless asteroid should drain oxygen on the surface.");
     }
 
+    [Fact]
+    public void WalkableAsteroid_BlockEdits_Persist_AcrossServerRestart()
+    {
+        // Item 20 durable save (regression): a player edit (mined-out block) on a walkable, landable
+        // "asteroid" BODY survives a server restart. These bodies load as a standard ServerWorld keyed by
+        // body id, so mine/place already route through ServerWorld.SetBlock -> _repo.SetBlock (per-cell
+        // deltas, the same path planets/moons use). This locks that durability in for the asteroid class.
+        // The walkable circumference is body-sized (small for an asteroid), so probe the SERVER's actual world
+        // for a solid surface cell rather than a standalone generator (which would use a different size).
+        Vector3i pos = default;
+        {
+            using var repo1 = new SqliteWorldRepository(new SaveGamePaths(_root, "ast_persist"));
+            var st1 = new LoopbackServerTransport(new LoopbackLink());
+            var config1 = new ServerConfig
+            {
+                WorldName = "ast_persist", Seed = 11, StartPlanet = "asteroid",
+                AutoSaveIntervalMinutes = 9999, PlaceStarterShip = false,
+            };
+            var s1 = new SvGameServer(config1, _content, st1, repo1);
+            s1.Start();
+
+            var miner = s1.AddLocalPlayer("Miner");
+            miner.State.AboardShip = false;
+
+            // Find the topmost solid cell in a column (scan down from well above any terrain).
+            int wx = 6, wz = 6;
+            for (int y = 160; y > 0; y--)
+            {
+                if (!s1.World.GetBlock(new Vector3i(wx, y, wz)).IsAir)
+                {
+                    pos = new Vector3i(wx, y, wz);
+                    break;
+                }
+            }
+
+            Assert.True(pos.Y > 0, "the asteroid column should have a solid surface cell");
+
+            miner.State.Position = new Vector3f(wx + 0.5f, pos.Y + 1f, wz + 0.5f); // stand on the cell, within reach
+            miner.State.SelectedHotbarSlot = 0;
+            miner.State.Inventory.SetSlot(0, new Shared.State.ItemStack("titanium_drill", 1)); // strong enough for crystal
+
+            s1.MineBlock("Miner", pos.X, pos.Y, pos.Z);
+            Assert.True(s1.World.GetBlock(pos).IsAir, "mining should clear the surface cell");
+            repo1.Flush();
+        }
+
+        // Reopen the same world → the mined-out cell is still air (edit restored from the per-cell delta).
+        using var repo2 = new SqliteWorldRepository(new SaveGamePaths(_root, "ast_persist"));
+        var st2 = new LoopbackServerTransport(new LoopbackLink());
+        var config2 = new ServerConfig
+        {
+            WorldName = "ast_persist", Seed = 11, StartPlanet = "asteroid",
+            AutoSaveIntervalMinutes = 9999, PlaceStarterShip = false,
+        };
+        var s2 = new SvGameServer(config2, _content, st2, repo2);
+        s2.Start();
+        s2.AddLocalPlayer("Miner");
+        Assert.True(s2.World.GetBlock(pos).IsAir, "the mined-out asteroid cell must survive a server restart");
+    }
+
     public void Dispose()
     {
         try

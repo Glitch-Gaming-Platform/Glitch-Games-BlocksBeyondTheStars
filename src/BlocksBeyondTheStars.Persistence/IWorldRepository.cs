@@ -130,6 +130,18 @@ public interface IWorldRepository : IDisposable
 
     void DeleteSpaceStructure(string id);
 
+    /// <summary>Records a single player edit (mine or place, incl. air) on an in-space voxel structure —
+    /// the own-ship hull during an EVA. Only deltas against the deterministic baseline are stored, keyed by
+    /// the structure id (e.g. "ship:&lt;playerId&gt;"), mirroring the per-cell planet block-edit model.</summary>
+    void SetStructureBlock(string structureId, Vector3i position, ushort block);
+
+    /// <summary>Loads all stored edits for an in-space voxel structure (re-applied on top of the rebuilt
+    /// baseline when the structure is reconstructed on space entry / server restart).</summary>
+    IReadOnlyList<BlockEdit> LoadStructureEdits(string structureId);
+
+    /// <summary>Removes all stored edits for an in-space voxel structure (e.g. the ship hull was reset).</summary>
+    void DeleteStructureEdits(string structureId);
+
     /// <summary>Records the generation/discovery status of a location (system or body).</summary>
     void SetLocationStatus(string locationId, string status);
 

@@ -240,6 +240,105 @@ public sealed class SpaceCombatTests : IDisposable
     }
 
     [Fact]
+    public void ShipHullEdits_Persist_AcrossServerRestart()
+    {
+        // item 20 S4 durable save: a player's own EVA hull edits (a mined-out cell + a built cell) survive a
+        // server restart and re-entry into space (per-cell deltas re-applied on the rebuilt ship baseline).
+        int sx = -1, sy = -1, sz = -1;     // a hull cell we mine out
+        int ex = -1, ey = -1, ez = -1;     // an empty cell we build into
+        {
+            var s1 = NewServer("shipedit_persist", r => r.FreeSpaceFlight = true, out var repo1);
+            using (repo1)
+            {
+                var pilot = s1.AddLocalPlayer("Pilot");
+                s1.EnterSpace("Pilot");
+                pilot.State.InEva = true;
+                pilot.State.InstantBuild = true;
+
+                // Find a solid hull cell to mine and an adjacent air cell to build into.
+                for (int x = 0; x < 24 && sx < 0; x++)
+                for (int y = 0; y < 24 && sx < 0; y++)
+                for (int z = 0; z < 24 && sx < 0; z++)
+                {
+                    if (s1.StructureBlockForTest("Pilot", x, y, z) != 0) { sx = x; sy = y; sz = z; }
+                }
+
+                Assert.True(sx >= 0, "the ship structure should have at least one solid cell");
+
+                // Mine the hull cell → air.
+                s1.HandleStructureEditForTest("Pilot",
+                    new StructureEditIntent { StructureId = "ship:Pilot", X = sx, Y = sy, Z = sz, Mine = true });
+                Assert.Equal(0, s1.StructureBlockForTest("Pilot", sx, sy, sz));
+
+                // Build iron_wall into the now-empty cell (the same cell, proving a place-delta persists too).
+                ex = sx; ey = sy; ez = sz;
+                s1.HandleStructureEditForTest("Pilot",
+                    new StructureEditIntent { StructureId = "ship:Pilot", X = ex, Y = ey, Z = ez, Mine = false, ItemKey = "iron_wall" });
+                Assert.NotEqual(0, s1.StructureBlockForTest("Pilot", ex, ey, ez));
+
+                // Now mine it out again so the persisted end-state is AIR (a removed hull cell), the harder case.
+                s1.HandleStructureEditForTest("Pilot",
+                    new StructureEditIntent { StructureId = "ship:Pilot", X = sx, Y = sy, Z = sz, Mine = true });
+                Assert.Equal(0, s1.StructureBlockForTest("Pilot", sx, sy, sz));
+                repo1.Flush();
+            }
+        }
+
+        // Reopen the same world in a fresh server, re-enter space → the rebuilt ship has the mined-out cell.
+        var s2 = NewServer("shipedit_persist", r => r.FreeSpaceFlight = true, out var repo2);
+        using (repo2)
+        {
+            s2.AddLocalPlayer("Pilot");
+            s2.EnterSpace("Pilot");
+            Assert.Equal(0, s2.StructureBlockForTest("Pilot", sx, sy, sz)); // mined-out hull cell stayed gone
+        }
+    }
+
+    [Fact]
+    public void ShipBuiltCell_Persists_AcrossServerRestart()
+    {
+        // Companion to the mine case: a cell the player BUILT onto the hull (where the baseline was air) is
+        // still solid after a restart + re-entry.
+        int bx = -1, by = -1, bz = -1;
+        {
+            var s1 = NewServer("shipbuilt_persist", r => r.FreeSpaceFlight = true, out var repo1);
+            using (repo1)
+            {
+                var pilot = s1.AddLocalPlayer("Pilot");
+                s1.EnterSpace("Pilot");
+                pilot.State.InEva = true;
+                pilot.State.InstantBuild = true;
+
+                // Find an air cell adjacent to a solid hull cell (a buildable spot just outside the hull).
+                for (int x = 0; x < 24 && bx < 0; x++)
+                for (int y = 0; y < 24 && bx < 0; y++)
+                for (int z = 0; z < 24 && bx < 0; z++)
+                {
+                    if (s1.StructureBlockForTest("Pilot", x, y, z) != 0
+                        && s1.StructureBlockForTest("Pilot", x, y + 1, z) == 0)
+                    {
+                        bx = x; by = y + 1; bz = z;
+                    }
+                }
+
+                Assert.True(bx >= 0, "expected an empty cell above a hull cell");
+                s1.HandleStructureEditForTest("Pilot",
+                    new StructureEditIntent { StructureId = "ship:Pilot", X = bx, Y = by, Z = bz, Mine = false, ItemKey = "iron_wall" });
+                Assert.NotEqual(0, s1.StructureBlockForTest("Pilot", bx, by, bz));
+                repo1.Flush();
+            }
+        }
+
+        var s2 = NewServer("shipbuilt_persist", r => r.FreeSpaceFlight = true, out var repo2);
+        using (repo2)
+        {
+            s2.AddLocalPlayer("Pilot");
+            s2.EnterSpace("Pilot");
+            Assert.NotEqual(0, s2.StructureBlockForTest("Pilot", bx, by, bz)); // built cell survived the restart
+        }
+    }
+
+    [Fact]
     public void StructureEdit_RejectedWhenTooFarFromAsteroid()
     {
         // item 20 S5: a static structure can only be edited from close range (anti-grief).

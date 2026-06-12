@@ -117,6 +117,7 @@ public sealed partial class GameServer
                 s.Set(p, _content.GetBlock(cell.Id)?.NumericId ?? wall);
             }
 
+            ApplyPersistedShipEdits(s);
             return s;
         }
 
@@ -175,7 +176,20 @@ public sealed partial class GameServer
         s.Set(new Vector3i(cx, height + 1, halfZ * 2 - 1), glass);
         s.Set(new Vector3i(cx, height + 1, halfZ * 2 - 2), glass);
 
+        ApplyPersistedShipEdits(s);
         return s;
+    }
+
+    /// <summary>Re-applies the player's persisted EVA hull edits (item 20 S4 durable save) on top of the
+    /// freshly rebuilt ship voxel baseline, so mined-out / built-on cells survive a server restart and
+    /// re-entry into space. Only player deltas are stored (mirrors the per-cell planet block-edit model),
+    /// keeping it Raspberry-Pi-friendly. An edit setting a cell to air is honoured via <see cref="SpaceStructure.Set"/>.</summary>
+    private void ApplyPersistedShipEdits(SpaceStructure s)
+    {
+        foreach (var edit in _repo.LoadStructureEdits(s.Id))
+        {
+            s.Set(edit.WorldPosition, new BlockId(edit.Block));
+        }
     }
 
     /// <summary>Places or mines one cell on a voxel structure during an EVA spacewalk (item 20 S2) — the
@@ -238,6 +252,13 @@ public sealed partial class GameServer
             }
 
             s.Set(pos, BlockId.Air);
+
+            // item 20 S4 durable save: a hull cell the owner mined out persists as a per-cell delta (only
+            // player changes are stored), so the edit survives a server restart + re-entry into space.
+            if (s.Kind == "ship")
+            {
+                _repo.SetStructureBlock(s.Id, pos, BlockId.AirValue);
+            }
 
             // Bank the mined block's drops (ore from asteroids; rebuild materials from a ship hull).
             if (_content.BlockById(existing) is { } def && def.Drops.Count > 0)
@@ -312,6 +333,14 @@ public sealed partial class GameServer
         }
 
         s.Set(pos, blockDef.NumericId);
+
+        // item 20 S4 durable save: a hull cell the owner built persists as a per-cell delta (own ship only;
+        // a station's whole build is persisted via PersistStation below).
+        if (s.Kind == "ship")
+        {
+            _repo.SetStructureBlock(s.Id, pos, blockDef.NumericId.Value);
+        }
+
         BroadcastToInstance(instance, new StructureBlockChanged
         {
             StructureId = s.Id, X = pos.X, Y = pos.Y, Z = pos.Z, Block = blockDef.NumericId.Value,
