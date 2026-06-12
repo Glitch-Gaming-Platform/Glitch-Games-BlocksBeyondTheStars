@@ -225,6 +225,11 @@ namespace BlocksBeyondTheStars.Client
             stationDecor.Game = boot;
             stationDecor.Camera = cam;
 
+            // Interior ship-damage dressing (sparks below 50% hull, emergency light + alarm below 25%).
+            var shipDamage = root.AddComponent<ShipDamageView>();
+            shipDamage.Game = boot;
+            shipDamage.Camera = cam;
+
             // URP post-processing volume (bloom/tonemap/vignette/grade + menu blur); no-op under Built-in RP.
             var urpPost = root.AddComponent<UrpScenePost>();
             urpPost.Game = boot;

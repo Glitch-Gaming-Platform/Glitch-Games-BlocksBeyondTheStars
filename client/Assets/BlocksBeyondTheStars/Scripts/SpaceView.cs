@@ -288,6 +288,29 @@ namespace BlocksBeyondTheStars.Client
 
         private float _exhaustSpawnTimer;
         private Material _exhaustBitMat;
+        private Material _hitSparkMat;
+
+        /// <summary>An orange spark burst at the ship when a hit lands (paired with the screen flash).</summary>
+        private void SpawnHitSparks(float mag)
+        {
+            if (Camera == null)
+            {
+                return;
+            }
+
+            _hitSparkMat ??= Unlit(new Color(1f, 0.62f, 0.18f));
+            Vector3 at = _ship != null ? _ship.transform.position : Camera.transform.position + Camera.transform.forward * 6f;
+            int count = 4 + Mathf.RoundToInt(mag * 6f);
+            for (int i = 0; i < count; i++)
+            {
+                var p = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                StripCollider(p);
+                p.transform.position = at + Random.insideUnitSphere * 1.2f;
+                p.transform.localScale = Vector3.one * 0.14f;
+                p.GetComponent<Renderer>().sharedMaterial = _hitSparkMat;
+                p.AddComponent<ExhaustBit>().Vel = Random.onUnitSphere * (6f + mag * 6f);
+            }
+        }
 
         /// <summary>One exhaust bit: spawned at the flame tip, flying backwards with jitter, fading fast.</summary>
         private void SpawnExhaustBit(float throttle)
@@ -1716,6 +1739,7 @@ namespace BlocksBeyondTheStars.Client
                 float mag = Mathf.Clamp01(drop / 8f); // a full jolt only for a big single hit (~8 dmg)
                 _hitFlash = Mathf.Max(_hitFlash, 0.2f + 0.6f * mag);
                 _shake = Mathf.Max(_shake, 0.08f + 0.6f * mag);
+                SpawnHitSparks(mag); // visible damage at the hull, not just a screen tint
             }
 
             _lastHull = s.Hull;
