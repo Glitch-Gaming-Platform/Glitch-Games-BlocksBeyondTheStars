@@ -45,7 +45,13 @@ and `creature_*.bytes` (12 hide tiles: scales/fur/chitin/hide/slime/feathers/spo
 tileable 64px tiles that the avatar/creatures tint by colour — see `tools/ai-assets/gen_avatar.py` and
 `gen_creatures.py`); same OpenAI usage terms.
 
-**No third-party models or fonts** are bundled — the rest of the visuals remain runtime-generated
+**UI font:**
+
+- `client/Assets/Resources/fonts/Rajdhani-Medium.ttf` — Rajdhani, by Indian Type Foundry —
+  SIL Open Font License 1.1 (bundled as `Rajdhani-OFL.txt` next to the font) —
+  https://fonts.google.com/specimen/Rajdhani
+
+**No third-party models** are bundled — the rest of the visuals remain runtime-generated
 (vertex/atlas block colours, code-built avatars + logo, procedural UI panels). See
 `docs/CLIENT_SHELL_AND_ASSETS.md` for the placeholder strategy and asset folder layout.
 

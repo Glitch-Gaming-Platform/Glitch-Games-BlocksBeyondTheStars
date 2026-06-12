@@ -50,7 +50,8 @@ namespace BlocksBeyondTheStars.Client
 
         public static Font Font =>
             _font != null ? _font
-            : _font = (Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf")
+            : _font = (Resources.Load<Font>("fonts/Rajdhani-Medium") // bundled sci-fi UI font (OFL, full DE glyphs)
+                       ?? Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf")
                        ?? Font.CreateDynamicFontFromOSFont(new[] { "Consolas", "Arial", "Liberation Sans" }, 16));
 
         public static Sprite PanelSprite => _panelSprite != null ? _panelSprite : _panelSprite = RoundedSprite(18, 3);
