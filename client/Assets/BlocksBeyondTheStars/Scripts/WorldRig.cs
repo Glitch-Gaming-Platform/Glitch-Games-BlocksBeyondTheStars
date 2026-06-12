@@ -90,6 +90,7 @@ namespace BlocksBeyondTheStars.Client
             pc.Avatar = avatar;
             pc.MouseSensitivity = shell.Settings.MouseSensitivity;
             pc.InvertY = shell.Settings.InvertY;
+            pc.CameraMotion = shell.Settings.CameraMotion;
             pc.ThirdPerson = shell.Settings.ThirdPerson;
 
             // Localized vitals HUD + hotbar.
@@ -221,6 +222,7 @@ namespace BlocksBeyondTheStars.Client
             // URP post-processing volume (bloom/tonemap/vignette/grade + menu blur); no-op under Built-in RP.
             var urpPost = root.AddComponent<UrpScenePost>();
             urpPost.Game = boot;
+            urpPost.ReducedEffects = shell.Settings.ReducedEffects; // skip alarm/damage pulses + bursts
 
             // Terrain-scanner overlay (Feature 40): through-wall ore glow markers after a scan pulse.
             var oreScan = root.AddComponent<OreScanView>();

@@ -603,6 +603,7 @@
   "ui.settings.sfx_volume": "Effektlautstärke",
   "ui.settings.mouse_sensitivity": "Maus-Empfindlichkeit",
   "ui.settings.invert_y": "Vertikale Sicht invertieren",
+  "ui.settings.camera_motion": "Kamerabewegung (Wippen/Wackeln)",
   "ui.settings.character": "Charakter",
   "ui.tab.settings": "Einstellungen",
   "ui.settings.volume": "Lautstärke",

@@ -49,6 +49,10 @@ namespace BlocksBeyondTheStars.Client
         public bool ReducedEffects = false;
         public bool LargeUi = false;
 
+        /// <summary>Camera motion comfort toggle: head bob, the moving FOV kick and impact camera
+        /// shake. Off = a steady camera for motion-sensitive players; sounds are unaffected.</summary>
+        public bool CameraMotion = true;
+
         /// <summary>Holographic visor HUD styling (curvature + chromatic fringe + scanlines + glow). On = the
         /// stylised visor look; off = a clean, flat HUD overlay (better readability). Default on but subtle.</summary>
         public bool VisorEffects = true;

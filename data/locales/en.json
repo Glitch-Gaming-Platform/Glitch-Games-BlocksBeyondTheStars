@@ -598,6 +598,7 @@
   "ui.settings.sfx_volume": "Effects volume",
   "ui.settings.mouse_sensitivity": "Mouse sensitivity",
   "ui.settings.invert_y": "Invert vertical look",
+  "ui.settings.camera_motion": "Camera motion (bob/shake)",
   "ui.settings.character": "Character",
   "ui.tab.settings": "Settings",
   "ui.settings.volume": "Volume",

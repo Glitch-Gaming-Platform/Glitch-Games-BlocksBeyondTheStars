@@ -33,6 +33,9 @@ namespace BlocksBeyondTheStars.Client
         public float SwimSpeedMul = 0.62f; // horizontal movement is slower in water
         public float MouseSensitivity = 2f;
         public bool InvertY = false;
+
+        /// <summary>Comfort toggle (settings): head bob + FOV kick + impact shake. Off = steady camera.</summary>
+        public bool CameraMotion = true;
         public bool ThirdPerson = false;
         public float Reach = 8f; // match the server's MaxReach (8) — a shorter client reach left a silent dead-band (B32)
 
@@ -1045,15 +1048,17 @@ namespace BlocksBeyondTheStars.Client
                 return;
             }
 
-            float amt = _moving ? 1f : 0f;
-            _bobPhase += dt * (_moving ? 9f : 0f);
+            // Comfort: with CameraMotion off, bob/FOV-kick/shake all flatten to a steady camera.
+            float motion = CameraMotion ? 1f : 0f;
+            float amt = (_moving ? 1f : 0f) * motion;
+            _bobPhase += dt * (_moving ? 9f : 0f) * motion;
             float bobY = Mathf.Sin(_bobPhase * 2f) * 0.035f * amt;
             float bobX = Mathf.Cos(_bobPhase) * 0.025f * amt;
             Camera.transform.localPosition = FirstPersonEye + new Vector3(bobX, bobY, 0f);
 
-            Camera.fieldOfView = Mathf.MoveTowards(Camera.fieldOfView, _baseFov + (_moving ? 4f : 0f), dt * 40f);
+            Camera.fieldOfView = Mathf.MoveTowards(Camera.fieldOfView, _baseFov + (_moving ? 4f * motion : 0f), dt * 40f);
 
-            float s = _camShake;
+            float s = _camShake * motion;
             float sp = Mathf.Sin(Time.time * 80f) * s * 3f;
             float sr = Mathf.Cos(Time.time * 67f) * s * 2.5f;
             Camera.transform.localEulerAngles = new Vector3(_pitch + sp, 0f, sr);
