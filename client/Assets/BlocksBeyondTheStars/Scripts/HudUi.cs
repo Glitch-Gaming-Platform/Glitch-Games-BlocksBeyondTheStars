@@ -51,6 +51,12 @@ namespace BlocksBeyondTheStars.Client
         private string _causeKey = string.Empty;
         private float _o2BeepTimer; // periodic low-oxygen warning tone (interval shrinks as O₂ drops)
 
+        /// <summary>Set while a HUD exists so world-side FX (MiningFx) can hand off pickup fly-ins.</summary>
+        public static HudUi Instance { get; private set; }
+        private Canvas _flyCanvas; // own overlay canvas so the visor distortion can't bend the fly-ins
+
+        private void Awake() => Instance = this;
+
         private void LateUpdate()
         {
             if (Game?.Localizer == null)
@@ -152,6 +158,81 @@ namespace BlocksBeyondTheStars.Client
             if (_canvas != null)
             {
                 Destroy(_canvas.gameObject);
+            }
+
+            if (_flyCanvas != null)
+            {
+                Destroy(_flyCanvas.gameObject);
+            }
+
+            if (Instance == this)
+            {
+                Instance = null;
+            }
+        }
+
+        /// <summary>A small block-tile icon flying from the mined block toward the hotbar — the
+        /// "it went into your inventory" read (mining-loop juice). No-op if the block is unknown.</summary>
+        public void FlyPickup(Vector3 worldPos, BlocksBeyondTheStars.Shared.Primitives.BlockId block)
+        {
+            var cam = Camera.main;
+            var def = Game?.Content?.BlockById(block);
+            if (cam == null || def == null || Game.Atlas == null)
+            {
+                return;
+            }
+
+            Vector3 sp = cam.WorldToScreenPoint(worldPos);
+            if (sp.z <= 0f)
+            {
+                return; // behind the camera
+            }
+
+            if (_flyCanvas == null)
+            {
+                var go = new GameObject("PickupFlyCanvas");
+                _flyCanvas = go.AddComponent<Canvas>();
+                _flyCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                _flyCanvas.sortingOrder = 240;
+            }
+
+            var iconGo = new GameObject("fly_icon");
+            iconGo.transform.SetParent(_flyCanvas.transform, false);
+            var raw = iconGo.AddComponent<RawImage>();
+            raw.texture = Game.Atlas.Texture;
+            raw.uvRect = Game.Atlas.TileUv(def.NumericId.Value);
+            raw.raycastTarget = false;
+            var rt = raw.rectTransform;
+            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.sizeDelta = new Vector2(34f, 34f);
+
+            Vector2 center = new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
+            var fly = iconGo.AddComponent<FlyIcon>();
+            fly.From = new Vector2(sp.x, sp.y) - center;
+            fly.To = new Vector2(0f, -Screen.height * 0.5f + 70f); // the hotbar zone (bottom-centre)
+        }
+
+        /// <summary>Eases a pickup icon from its spawn point into the hotbar zone, shrinking, then dies.</summary>
+        private sealed class FlyIcon : MonoBehaviour
+        {
+            public Vector2 From, To;
+
+            private const float Life = 0.45f;
+            private float _t;
+            private RectTransform _rt;
+
+            private void Awake() => _rt = (RectTransform)transform;
+
+            private void Update()
+            {
+                _t += Time.deltaTime;
+                float k = Mathf.Clamp01(_t / Life);
+                _rt.anchoredPosition = Vector2.Lerp(From, To, k * k); // ease-in: accelerates toward the bar
+                transform.localScale = Vector3.one * Mathf.Lerp(1.1f, 0.45f, k);
+                if (_t >= Life)
+                {
+                    Destroy(gameObject);
+                }
             }
         }
 

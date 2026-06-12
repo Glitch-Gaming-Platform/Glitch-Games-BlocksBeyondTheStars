@@ -19,6 +19,7 @@ namespace BlocksBeyondTheStars.Client
         private Material _outlineMat;
         private Material _digMat;
         private Material _placeMat;
+        private Material _flashMat;
         private bool _subscribed;
 
         private void Start()
@@ -26,6 +27,7 @@ namespace BlocksBeyondTheStars.Client
             _outlineMat = Mat(new Color(0.05f, 0.05f, 0.06f));
             _digMat = Mat(new Color(0.65f, 0.58f, 0.48f));
             _placeMat = Mat(new Color(0.80f, 0.85f, 0.95f));
+            _flashMat = Mat(new Color(1f, 0.86f, 0.5f));
             _outline = BuildWireCube(_outlineMat);
             _outline.SetActive(false);
         }
@@ -74,6 +76,7 @@ namespace BlocksBeyondTheStars.Client
 
         private int _crackX, _crackY, _crackZ;
         private float _crackFrac, _crackAt;
+        private BlocksBeyondTheStars.Shared.Primitives.BlockId _crackBlock; // what is being mined (sampled pre-break)
 
         private void OnMineProgress(MiningProgress m)
         {
@@ -82,11 +85,40 @@ namespace BlocksBeyondTheStars.Client
             _crackZ = m.Z;
             _crackFrac = Mathf.Clamp01(m.Fraction);
             _crackAt = Time.time;
+            if (Game?.World != null)
+            {
+                // Sample the block while it still exists — by the time BlockChanged arrives the world
+                // has already been updated, so this is the only place the mined id is observable.
+                _crackBlock = Game.World.GetBlock(m.X, m.Y, m.Z);
+            }
         }
 
         private void OnBlock(BlockChanged m)
         {
-            SpawnBurst(new Vector3(m.X + 0.5f, m.Y + 0.5f, m.Z + 0.5f), m.Block == 0 ? _digMat : _placeMat);
+            var pos = new Vector3(m.X + 0.5f, m.Y + 0.5f, m.Z + 0.5f);
+            SpawnBurst(pos, m.Block == 0 ? _digMat : _placeMat);
+            if (m.Block != 0)
+            {
+                return;
+            }
+
+            FlashAt(pos); // the final-hit pop
+            if (m.X == _crackX && m.Y == _crackY && m.Z == _crackZ && _crackBlock.Value != 0)
+            {
+                HudUi.Instance?.FlyPickup(pos, _crackBlock); // mined tile flies into the hotbar
+                _crackBlock = default;
+            }
+        }
+
+        /// <summary>A bright one-shot pop slightly proud of the broken block — the "final hit" flash.</summary>
+        private void FlashAt(Vector3 pos)
+        {
+            var p = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            StripCollider(p);
+            p.transform.position = pos;
+            p.transform.localScale = Vector3.one * 1.06f;
+            p.GetComponent<Renderer>().sharedMaterial = _flashMat;
+            p.AddComponent<FlashFx>();
         }
 
         private void SpawnBurst(Vector3 pos, Material mat)
@@ -145,6 +177,23 @@ namespace BlocksBeyondTheStars.Client
             if (col != null)
             {
                 Destroy(col);
+            }
+        }
+
+        /// <summary>The final-hit flash: a bright shell that swells slightly and vanishes in ~0.12 s.</summary>
+        private sealed class FlashFx : MonoBehaviour
+        {
+            private const float Life = 0.12f;
+            private float _t;
+
+            private void Update()
+            {
+                _t += Time.deltaTime;
+                transform.localScale = Vector3.one * Mathf.Lerp(1.06f, 1.22f, _t / Life);
+                if (_t >= Life)
+                {
+                    Destroy(gameObject);
+                }
             }
         }
 
