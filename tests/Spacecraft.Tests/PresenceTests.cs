@@ -75,6 +75,32 @@ public sealed class PresenceTests : IDisposable
     }
 
     [Fact]
+    public void OrbitingPlayer_IsStealthMarked_SoNoGhostAvatarStaysOnThePad()
+    {
+        using var repo = new SqliteWorldRepository(new SaveGamePaths(_root, "orbit"));
+        var transport = new RecordingTransport();
+        var config = new ServerConfig { WorldName = "orbit", Seed = 1, AutoSaveIntervalMinutes = 9999, PlaceStarterShip = false };
+        config.Rules.FreeSpaceFlight = true;
+        var server = new SvGameServer(config, _content, transport, repo);
+        server.Start();
+
+        var alice = server.AddLocalPlayer("Alice");
+        server.AddLocalPlayer("Bob");
+        server.EnterSpace("Bob"); // Bob launches — his surface avatar must vanish for Alice
+
+        transport.Sent.Clear();
+        server.Tick(0.2);
+
+        var toAlice = transport.Sent
+            .Where(x => x.Conn == alice.ConnectionId && x.Msg is PlayerPresence p && p.PlayerId == "Bob")
+            .Select(x => (PlayerPresence)x.Msg)
+            .FirstOrDefault();
+
+        Assert.NotNull(toAlice);
+        Assert.True(toAlice!.Stealthed, "a player flying in space must not keep standing at the pad as a frozen ghost");
+    }
+
+    [Fact]
     public void NoPresence_WhenAlone()
     {
         using var repo = new SqliteWorldRepository(new SaveGamePaths(_root, "alone"));

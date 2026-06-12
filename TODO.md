@@ -91,6 +91,45 @@ habitats + per-planet palette; WorldGenerator per-planet archetype set + new fea
 fields (spawnWeight, terrain style, flora/creature theme, feature toggles); UniverseGenerator per-type
 weights. New blocks → textures (OpenAI) + atlas + locale (bilingual).
 
+### ★ Multiplayer-after-torus audit — ✅ FIXED/SHIPPED (decisions: both bugfixes + FULL voxel design)
+All four gaps below are implemented: G1 wrap-path smoothing (`RemotePlayers` lerps along
+WrapDeltaX/Z, settled position re-canonicalised); G2 in-space players are stealth-marked in presence
+(test `OrbitingPlayer_IsStealthMarked_SoNoGhostAvatarStaysOnThePad`) AND the client finally honours
+`Stealthed` (avatar + nameplate hidden — the stealth suit never actually hid avatars before); G3+G4
+other players' ships render as their REAL voxel designs: the server cross-sends every instance
+member's ship design (`Kind "ship_remote"`, cached per pilot client-side), `SyncRemotePlayers`
+upgrades the generic hull to the voxel ship (same compact flight scale), and the landing/launch FX
+builds the mover's actual ship via the shared `ShipMeshBuilder` (design rides ahead of the FX;
+generic hull-coloured silhouette stays as fallback, e.g. default ships without a design).
+
+### ★ Multiplayer-after-torus audit (original analysis)
+Audit: what multiplayer code still needs adapting after round (torus) worlds, incl. whether other
+players' landing/launch animations and space ships use their real ship optics.
+
+**Already torus-correct:** remote avatars render at the wrap-copy nearest the viewer
+(`RemotePlayers` via `ScenePos`); the landing/launch FX positions via `SceneX/SceneZ`; presence is
+per-world; all server proximity systems (doors/creatures/enemies/NPCs/blocks) are wrap-aware; space
+instances use their own flat coordinate space (no wrap needed); dock/trade targeting uses scene
+positions. The player's OWN launch/landing uses their real voxel ship (`BuildVoxelShip`).
+
+**Gaps found:**
+- **G1 — seam sweep:** `RemotePlayers.Update` lerps the avatar's smoothed position LINEARLY in
+  canonical world space. When a remote player crosses a wrap seam their canonical coordinate jumps
+  (e.g. X 11990 → 5) and the avatar visibly sweeps across the whole world for a moment. Fix: lerp
+  along the shortest wrap path (WrapDeltaX/Z with the world circumference).
+- **G2 — ghost avatar while in space:** `TickPresence` does NOT filter `InSpace` (every other
+  system does). A player who launches keeps broadcasting their last surface position — others see
+  a frozen avatar standing at the pad while that player is in orbit. Cheapest fix: mark presence
+  `Stealthed` for in-space players (clients already hide stealthed avatars + nameplates).
+- **G3 — landing/launch FX is a GENERIC ship:** `ShipTransitFx` carries only name/pos/landing/hull
+  colour; `ShipTransitView` builds a one-size hand-made cube silhouette. Neither the mover's ship
+  CLASS (scout/corvette/hauler proportions) nor their voxel design shows — and after touchdown the
+  REAL stamped ship appears, a visible model switch. Options: per-class silhouette (add ShipType to
+  the message, cheap) … full voxel-design transfer (heavy).
+- **G4 — other ships in SPACE are generic too:** `NetSpacePlayer` carries pos/yaw/EVA/hull only;
+  `BuildRemoteAvatar` is a fixed small hull+cockpit — correct hull colour (item 32) but identical
+  size/shape for every ship class. Same options as G3.
+
 ### ★ True-to-world orbit rendering + real pad map + forests + skylands (requested 2026-06-11) — ✅ SHIPPED (tests green, client built)
 **Decisions:** M-key map keeps its fog-of-war (untouched); "die Karte" = the LANDING-PAD CHOOSER;
 skylands now. Facts found: `Spacecraft.WorldGeneration.dll` ships with the client → the deterministic

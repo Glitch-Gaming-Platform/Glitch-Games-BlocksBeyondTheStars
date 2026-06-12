@@ -379,7 +379,10 @@ public sealed partial class GameServer
     }
 
     /// <summary>Sends a structure's voxel grid + size to a client as a <see cref="SpaceShipDesign"/> (item 20, S1).</summary>
-    private void SendShipDesign(PlayerSession session, SpaceStructure s)
+    /// <summary><paramref name="kindOverride"/> = "ship_remote" sends ANOTHER player's ship design (the
+    /// client caches it per pilot for the flight view + the landing/launch FX instead of treating it
+    /// as the own ship).</summary>
+    private void SendShipDesign(PlayerSession session, SpaceStructure s, string kindOverride = null)
     {
         int n = s.Cells.Count;
         var xs = new int[n];
@@ -399,7 +402,7 @@ public sealed partial class GameServer
         Send(session, new SpaceShipDesign
         {
             Id = s.Id,
-            Kind = s.Kind,
+            Kind = kindOverride ?? s.Kind,
             PosX = s.Position.X,
             PosY = s.Position.Y,
             PosZ = s.Position.Z,

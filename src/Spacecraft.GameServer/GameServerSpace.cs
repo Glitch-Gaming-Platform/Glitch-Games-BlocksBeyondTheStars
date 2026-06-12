@@ -391,6 +391,7 @@ public sealed partial class GameServer
     private void BroadcastShipTransit(PlayerSession mover, string bodyId, float x, float y, float z, bool landing)
     {
         ShipTransitFx? msg = null;
+        SpaceStructure? design = null;
         foreach (var s in _sessions.Values)
         {
             if (!s.Joined || s == mover || s.CurrentLocationId != bodyId || InSpace(s.State.PlayerId))
@@ -398,7 +399,16 @@ public sealed partial class GameServer
                 continue;
             }
 
-            msg ??= new ShipTransitFx { Name = mover.State.Name, X = x, Y = y, Z = z, Landing = landing, Hull = mover.HullColor };
+            msg ??= new ShipTransitFx
+            {
+                PlayerId = mover.State.PlayerId, Name = mover.State.Name,
+                X = x, Y = y, Z = z, Landing = landing, Hull = mover.HullColor,
+            };
+
+            // The mover's REAL voxel ship design rides ahead of the FX, so the watcher's animation
+            // shows the actual ship that is landing/launching, not a generic silhouette.
+            design ??= BuildShipStructure(mover.State.PlayerId);
+            SendShipDesign(s, design, "ship_remote");
             Send(s, msg);
         }
     }

@@ -31,6 +31,10 @@ public sealed class LandingPadList
 /// they see a landing/launch animation (item 38). Server → the other players on that body (not the mover).</summary>
 public sealed class ShipTransitFx
 {
+    /// <summary>The mover's player id — keys the cached remote ship design so the animation shows
+    /// their REAL voxel ship (a generic silhouette is the fallback).</summary>
+    public string PlayerId { get; set; } = string.Empty;
+
     public string Name { get; set; } = string.Empty;
     public float X { get; set; }
     public float Y { get; set; } // ground level at the pad — the ship descends to / launches from here

@@ -146,6 +146,14 @@ namespace Spacecraft.Client
         public ShipCombatStatus ShipCombat { get; private set; }
         public SpaceState Space { get; private set; }       // current space instance (null when not flying)
         public SpaceShipDesign ShipDesign { get; private set; } // item 20 S1: own ship as a voxel structure (flight view)
+
+        // OTHER players' voxel ship designs (Kind "ship_remote", Id "ship:<playerId>"), cached per pilot —
+        // the flight view + the landing/launch FX render their REAL ships instead of generic silhouettes.
+        private readonly System.Collections.Generic.Dictionary<string, SpaceShipDesign> _remoteShipDesigns = new();
+
+        /// <summary>The cached voxel design of another player's ship, or null when none arrived yet.</summary>
+        public SpaceShipDesign RemoteShipDesignFor(string playerId)
+            => !string.IsNullOrEmpty(playerId) && _remoteShipDesigns.TryGetValue(playerId, out var d) ? d : null;
         public bool InSpace { get; private set; }
         public bool SpaceSkipLaunch { get; private set; }    // entered space already airborne (helm) → no take-off anim
         public NetCombatEntity[] PlanetEnemies { get; private set; } = System.Array.Empty<NetCombatEntity>();
@@ -434,7 +442,17 @@ namespace Spacecraft.Client
             };
             // item 20 S1/S3: voxel structures for the flight view. Only the player's OWN ship drives the _ship
             // mesh (Game.ShipDesign); asteroid bodies (Kind != "ship") are handled directly by SpaceView.
-            Network.SpaceShipDesignReceived += m => { if (m.Kind == "ship" || string.IsNullOrEmpty(m.Kind)) { ShipDesign = m; } };
+            Network.SpaceShipDesignReceived += m =>
+            {
+                if (m.Kind == "ship" || string.IsNullOrEmpty(m.Kind))
+                {
+                    ShipDesign = m;
+                }
+                else if (m.Kind == "ship_remote" && m.Id.StartsWith("ship:", System.StringComparison.Ordinal))
+                {
+                    _remoteShipDesigns[m.Id.Substring(5)] = m; // keyed by the owning player's id
+                }
+            };
             Network.SpaceClosed += m => { InSpace = false; Space = null; LastMessage = m.Reason; };
             Network.StationBoardedReceived += m => LastMessage = $"Boarded {m.Name}.";
             Network.PlanetEnemiesReceived += m => PlanetEnemies = m.Enemies;

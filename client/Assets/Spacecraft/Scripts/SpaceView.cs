@@ -72,7 +72,7 @@ namespace Spacecraft.Client
         private readonly Dictionary<string, GameObject> _entities = new Dictionary<string, GameObject>();
 
         // Other players sharing this space instance, drawn as a ship or a floating EVA suit (R2 visibility).
-        private sealed class RemoteAvatar { public GameObject Root; public GameObject Ship; public GameObject Suit; public Material HullMat; }
+        private sealed class RemoteAvatar { public GameObject Root; public GameObject Ship; public GameObject Suit; public Material HullMat; public bool Voxel; }
         private readonly Dictionary<string, RemoteAvatar> _remotePlayers = new Dictionary<string, RemoteAvatar>();
         private readonly HashSet<string> _remoteSeen = new HashSet<string>();
         private readonly List<string> _remoteRemove = new List<string>();
@@ -2369,6 +2369,22 @@ namespace Spacecraft.Client
 
                     av.Root.transform.localPosition = new Vector3(rp.X, rp.Y, rp.Z);
                     av.Root.transform.localRotation = Quaternion.Euler(0f, rp.Yaw, 0f);
+
+                    // Upgrade the generic hull to the pilot's REAL voxel ship once its design arrived
+                    // (the server cross-sends every instance member's design as "ship_remote").
+                    if (!av.Voxel && Game.RemoteShipDesignFor(rp.PlayerId) is { } rd && ShipMeshBuilder.HasDesign(rd))
+                    {
+                        var vox = ShipMeshBuilder.BuildVoxelShip(Game, av.Root.transform, rd, out _);
+                        if (vox != null)
+                        {
+                            Destroy(av.Ship);
+                            vox.transform.localScale = Vector3.one * FlightShipScale; // same compact flight scale as the own ship
+                            av.Ship = vox;
+                            av.HullMat = null; // a voxel ship carries its real block textures — no flat tint
+                            av.Voxel = true;
+                        }
+                    }
+
                     av.Ship.SetActive(!rp.Eva);
                     av.Suit.SetActive(rp.Eva);
                     if (av.HullMat != null)

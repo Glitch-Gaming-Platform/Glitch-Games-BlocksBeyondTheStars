@@ -86,11 +86,51 @@ namespace Spacecraft.Client
                 return;
             }
 
-            var hull = new Color(((fx.Hull >> 16) & 0xFF) / 255f, ((fx.Hull >> 8) & 0xFF) / 255f, (fx.Hull & 0xFF) / 255f);
             float startY = fx.Landing ? fx.Y + HighOffset : fx.Y + PadOffset;
-            var root = BuildShip(new Vector3(Game.SceneX(fx.X), startY, Game.SceneZ(fx.Z)), hull, out var engine);
+            var pos = new Vector3(Game.SceneX(fx.X), startY, Game.SceneZ(fx.Z));
+
+            // The mover's REAL voxel ship when its design is cached (the server sends it ahead of the
+            // FX); the hand-built silhouette in their hull colour stays as the fallback.
+            GameObject root = null;
+            Light engine = null;
+            var design = Game.RemoteShipDesignFor(fx.PlayerId);
+            if (ShipMeshBuilder.HasDesign(design))
+            {
+                root = new GameObject("ShipTransit");
+                root.transform.position = pos;
+                if (ShipMeshBuilder.BuildVoxelShip(Game, root.transform, design, out _) != null)
+                {
+                    engine = AddEngineGlow(root.transform);
+                }
+                else
+                {
+                    Destroy(root); // atlas/material not ready — fall back below
+                    root = null;
+                }
+            }
+
+            if (root == null)
+            {
+                var hull = new Color(((fx.Hull >> 16) & 0xFF) / 255f, ((fx.Hull >> 8) & 0xFF) / 255f, (fx.Hull & 0xFF) / 255f);
+                root = BuildShip(pos, hull, out engine);
+            }
+
             _active.Add(new Transit { Root = root.transform, Engine = engine, T = 0f, Landing = fx.Landing, GroundY = fx.Y });
             ClientAudio.Instance?.Cue("ship_launch"); // thruster roar (same cue your own launch uses)
+        }
+
+        /// <summary>The warm under-hull thruster glow shared by both the voxel and the fallback ship.</summary>
+        private static Light AddEngineGlow(Transform parent)
+        {
+            var lightGo = new GameObject("EngineGlow");
+            lightGo.transform.SetParent(parent, false);
+            lightGo.transform.localPosition = new Vector3(0f, -1.4f, -1.8f);
+            var engine = lightGo.AddComponent<Light>();
+            engine.type = LightType.Point;
+            engine.color = new Color(1f, 0.65f, 0.3f);
+            engine.range = 14f;
+            engine.intensity = 0f;
+            return engine;
         }
 
         private static GameObject BuildShip(Vector3 pos, Color hull, out Light engine)
@@ -113,15 +153,7 @@ namespace Spacecraft.Client
             var flameMat = new Material(Shader.Find("Unlit/Color") ?? shader) { color = new Color(1f, 0.6f, 0.2f) };
             Cube("Flame", root.transform, new Vector3(0f, -0.9f, -1.8f), new Vector3(0.9f, 1.4f, 0.9f), flameMat);
 
-            var lightGo = new GameObject("EngineGlow");
-            lightGo.transform.SetParent(root.transform, false);
-            lightGo.transform.localPosition = new Vector3(0f, -1.4f, -1.8f);
-            engine = lightGo.AddComponent<Light>();
-            engine.type = LightType.Point;
-            engine.color = new Color(1f, 0.65f, 0.3f);
-            engine.range = 14f;
-            engine.intensity = 0f;
-
+            engine = AddEngineGlow(root.transform);
             return root;
         }
 

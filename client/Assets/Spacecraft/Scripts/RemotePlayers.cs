@@ -24,6 +24,7 @@ namespace Spacecraft.Client
             public Vector3 SettledWorld;  // smoothed position in world space (converted to scene for display)
             public float Yaw;
             public bool Jetpacking;        // show a thrust flame under the avatar while firing
+            public bool Hidden;            // stealth field active, or the player is up in space — no avatar
             public int Gear = -1;          // cached so gear is only rebuilt on change
             public string Held = "\0";     // cached held item key
         }
@@ -56,15 +57,24 @@ namespace Spacecraft.Client
                 _subscribed = true;
             }
 
-            // Smoothly move avatars toward their latest reported position/heading. Smoothing is done in
-            // world space, then mapped to the scene at the copy nearest the player (longitude wraps).
+            // Smoothly move avatars toward their latest reported position/heading. Smoothing follows the
+            // SHORTEST wrap path on the torus (both seams): the canonical coordinate jumps a whole world
+            // when a player crosses a seam, and a plain lerp made their avatar sweep across the entire map.
+            int circ = Game != null ? Game.Circumference : Spacecraft.Shared.World.WorldConstants.Circumference;
+            float k = Mathf.Clamp01(Time.deltaTime * 10f);
             foreach (var r in _remotes.Values)
             {
-                r.SettledWorld = Vector3.Lerp(r.SettledWorld, r.Target, Time.deltaTime * 10f);
+                float dx = (float)Spacecraft.Shared.World.WorldConstants.WrapDeltaX(r.Target.x - r.SettledWorld.x, circ);
+                float dz = (float)Spacecraft.Shared.World.WorldConstants.WrapDeltaZ(r.Target.z - r.SettledWorld.z, circ);
+                r.SettledWorld += new Vector3(dx, r.Target.y - r.SettledWorld.y, dz) * k;
+                r.SettledWorld = new Vector3(
+                    (float)Spacecraft.Shared.World.WorldConstants.WrapX(r.SettledWorld.x, circ),
+                    r.SettledWorld.y,
+                    (float)Spacecraft.Shared.World.WorldConstants.WrapZ(r.SettledWorld.z, circ));
                 r.Go.transform.position = Game != null ? Game.ScenePos(r.SettledWorld.x, r.SettledWorld.y, r.SettledWorld.z) : r.SettledWorld;
                 r.Go.transform.rotation = Quaternion.Euler(0f, r.Yaw, 0f);
 
-                if (r.Jetpacking && Weapons != null)
+                if (r.Jetpacking && !r.Hidden && Weapons != null)
                 {
                     Weapons.Sparks(r.Go.transform.position + Vector3.down * 0.1f, new Color(1f, 0.65f, 0.25f), 3);
                 }
@@ -94,6 +104,14 @@ namespace Spacecraft.Client
             r.Target = new Vector3(m.X, m.Y, m.Z);
             r.Yaw = m.Yaw;
             r.Jetpacking = m.Jetpacking;
+
+            // Stealth field active, or the player is up in SPACE (the server stealth-marks orbiters so
+            // no frozen ghost avatar keeps standing at the pad they launched from): hide avatar + plate.
+            if (m.Stealthed != r.Hidden)
+            {
+                r.Hidden = m.Stealthed;
+                r.Avatar.SetVisible(!m.Stealthed);
+            }
 
             // Equipped gear (helmet/chest/legs/pack/lamp) shown on the remote avatar.
             if (m.Gear != r.Gear)
@@ -132,7 +150,10 @@ namespace Spacecraft.Client
             var labels = ScreenLabelLayer.Instance;
             foreach (var r in _remotes.Values)
             {
-                labels.World(cam, r.Go.transform.position + Vector3.up * 2.1f, r.Name, UiKit.TextCol);
+                if (!r.Hidden)
+                {
+                    labels.World(cam, r.Go.transform.position + Vector3.up * 2.1f, r.Name, UiKit.TextCol);
+                }
             }
         }
 

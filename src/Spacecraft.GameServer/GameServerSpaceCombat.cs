@@ -319,6 +319,24 @@ public sealed partial class GameServer
                     SendShipDesign(session, st);
                 }
             }
+
+            // Other pilots' ships show their REAL voxel designs too: hand the newcomer every other
+            // ship already out here, and hand the newcomer's ship to everyone else in the instance.
+            foreach (var st in instance.Structures.Values)
+            {
+                if (st.Kind == "ship" && st.Id != structureId)
+                {
+                    SendShipDesign(session, st, "ship_remote");
+                }
+            }
+
+            foreach (var pid in instance.Players)
+            {
+                if (pid != playerId && FindSessionByPlayerId(pid) is { } other)
+                {
+                    SendShipDesign(other, structure, "ship_remote");
+                }
+            }
         }
     }
 

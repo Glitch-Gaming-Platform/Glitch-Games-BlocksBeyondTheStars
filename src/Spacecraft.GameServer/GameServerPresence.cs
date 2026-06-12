@@ -42,7 +42,7 @@ public sealed partial class GameServer
         }
     }
 
-    private static PlayerPresence PresenceOf(PlayerSession s)
+    private PlayerPresence PresenceOf(PlayerSession s)
     {
         var p = s.State;
         return new PlayerPresence
@@ -57,7 +57,9 @@ public sealed partial class GameServer
             Torso = s.TorsoColor,
             Arms = s.ArmColor,
             Legs = s.LegColor,
-            Stealthed = p.Stealthed,
+            // A player flying up in SPACE keeps their world id but must not keep standing on the pad
+            // as a frozen ghost — mark them stealthed (clients hide stealthed avatars + nameplates).
+            Stealthed = p.Stealthed || InSpace(p.PlayerId),
             Jetpacking = p.Jetpacking,
             Gear = GearMask(p),
             Held = HeldItemKey(p),
