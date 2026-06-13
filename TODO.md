@@ -22,6 +22,29 @@ At-a-glance order of everything still open (new items added 2026-06-07 interleav
 analysis-first tasks below). **Same workflow** unless noted: analyse → write the plan here → ask questions →
 only then implement. Items marked *(analysis only)* must NOT be implemented yet.
 
+### ★ Bug — raw scene flashes before the loading screen on world entry — ✅ IMPLEMENTED (2026-06-13)
+**Symptom:** starting a new game (and, in a weaker form, landing on a new/existing world) briefly showed the
+star system, then the bare planet surface, and only *then* the loading screen.
+**Root cause:** a gap between two decoupled loading screens. The shell `UiLoading` (canvas, sortingOrder 0)
+is torn down the instant `AppShell.LaunchGame` flips to `InGame`, but the in-game `WorldLoadingOverlay`
+(sortingOrder 75) only *armed* on the network `WorldLoadStarted` (arrives frames later) and, even then,
+deliberately held while `SpaceViewActive` — so the freshly-built `WorldRig` rendered its raw scene
+uncovered. The landing variant was the overlay's 0.30s **fade-in** letting the surface bleed through after
+the in-space descent ended.
+**Fix (`WorldLoadingOverlay` + `WorldRig`):**
+- New `WorldLoadingOverlay.PrimeForInitialLoad()` raises the veil **opaque before the first in-game frame**,
+  called synchronously from `WorldRig.Build` right after the overlay is added — seamless cut from the
+  already-opaque shell loading screen. Flagged `_initial`, it bypasses the "hold through the in-space
+  descent" rule (no star-system flash) and holds until the join confirms (`_joinSeen`, set on
+  `WorldLoadStarted`) **and** `WorldReady` (gate: `WorldReady && (!_initial || _joinSeen)`), then the normal
+  fade-out reveals the world. (Join always spawns on a surface, so `WorldReady` reliably fires; `MaxShow=25s`
+  is the backstop.)
+- `Raise()` now snaps to **opaque instantly** (was a 0.30s fade-in) so a landing/board never flashes the
+  surface/old view; only the reveal still fades (`FadeOut`, `FadeIn` removed).
+- `[DefaultExecutionOrder(100)]` on the overlay so its `Update` runs after `SpaceView` clears
+  `SpaceViewActive` in the same frame — raising the veil before that frame renders kills the 1-frame
+  landing flash deterministically.
+
 ### ★ Travel rework: current-vs-hyperspace systems, visit-gated quick-travel, Instant Travel option — ✅ IMPLEMENTED (2026-06-13)
 **Goal:** the Map/travel screen distinguishes the current system from distant ones, quick-travel is limited
 to worlds you've actually visited (unless an "Instant Travel" option is on), and a never-visited system is a

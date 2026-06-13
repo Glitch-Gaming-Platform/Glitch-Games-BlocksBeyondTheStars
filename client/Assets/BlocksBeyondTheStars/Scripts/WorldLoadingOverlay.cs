@@ -12,6 +12,10 @@ namespace BlocksBeyondTheStars.Client
     /// <see cref="HyperspaceWarp"/> instead, so those don't raise this overlay.
     /// Pure uGUI on a DPI-scaled canvas above everything; no bundled art.
     /// </summary>
+    // Run after the gameplay views (default order 0), so when SpaceView ends its landing descent and clears
+    // SpaceViewActive in its own Update, this overlay sees it the SAME frame and raises the (opaque) veil
+    // before that frame renders — without this the surface could flash for one frame on a landing.
+    [DefaultExecutionOrder(100)]
     public sealed class WorldLoadingOverlay : MonoBehaviour
     {
         public GameBootstrap Game;
@@ -21,8 +25,7 @@ namespace BlocksBeyondTheStars.Client
         private const float MinShow = 3.0f;    // always hold the screen long enough to read it (planet + station)
         private const float MaxShow = 25f;     // hard safety: drop the veil even if "ready" never arrives
         private const float ConfirmTimeout = 2.5f; // pre-raised veil: drop it if no world load confirms by here
-        private const float FadeIn = 0.30f;
-        private const float FadeOut = 0.55f;
+        private const float FadeOut = 0.55f;        // only the reveal fades; the veil snaps to opaque on raise
 
         private Canvas _canvas;
         private Image _backdrop;
@@ -39,6 +42,8 @@ namespace BlocksBeyondTheStars.Client
         private float _alpha;   // 0 hidden → 1 fully opaque veil
         private bool _awaitingConfirm; // veil pre-raised at intent time; waiting for the load to confirm (B34)
         private float _confirmTimer;   // seconds since the pre-raise, to time out an unconfirmed transition
+        private bool _initial;  // the initial world-entry veil: pre-raised opaque before the first frame, bypasses the in-space hold
+        private bool _joinSeen; // a WorldLoadStarted has arrived since priming — gates the initial veil's fade-out
 
         // WorldRig sets Game right after AddComponent, so subscribe in Start (not OnEnable, which would
         // run during AddComponent while Game is still null).
@@ -67,6 +72,11 @@ namespace BlocksBeyondTheStars.Client
 
         private void OnWorldLoadStarted()
         {
+            // The join confirmed: an initial-entry veil (pre-raised before the first frame) may now honour
+            // WorldReady for its fade-out. Until this arrives WorldReady defaults true, so the gate below
+            // keeps the curtain up through the brief connect/join window.
+            _joinSeen = true;
+
             // A descent-less transition pre-raised the veil already — just confirm it (so the timeout doesn't
             // drop it) and refresh the title now that the destination is known; don't reset the on-screen timer.
             if (_active)
@@ -93,20 +103,48 @@ namespace BlocksBeyondTheStars.Client
             Raise();
         }
 
-        /// <summary>Brings the veil on screen (or restarts its on-screen timer if already up).</summary>
+        /// <summary>Brings the veil on screen opaque immediately (or restarts its on-screen timer if already up).
+        /// The raise is a hard cut — never a fade-in — so the view it's hiding (the just-finished space descent,
+        /// or the on-foot view on a board/enter) can't bleed through while it ramps up. Only the reveal fades.</summary>
         private void Raise()
         {
             EnsureBuilt();
             RefreshLabels();
             _t = 0f;
             _fadingOut = false;
+            _initial = false; // an in-game landing/boarding veil, not the initial-entry curtain
             if (!_active)
             {
-                _alpha = 0f;
+                _alpha = 1f; // snap to opaque this frame so the surface/old view never flashes behind a fade-in
                 _active = true;
                 _canvas.enabled = true;
                 _backdrop.raycastTarget = true; // swallow clicks while the world loads
             }
+        }
+
+        /// <summary>
+        /// Raises the veil fully opaque BEFORE the first in-game frame renders, so the freshly-built world
+        /// rig never flashes its raw scene (the space view / bare surface) during entry. Called synchronously
+        /// by <see cref="WorldRig"/> right after the rig is built — the cut from the already-opaque shell
+        /// loading screen is seamless. Marks the veil as the initial-load curtain, which bypasses the "hold
+        /// through the in-space descent" rule (so the star system never flashes) and keeps it up until the
+        /// join confirms and the world is ready — the normal fade-out path then takes over.
+        /// </summary>
+        public void PrimeForInitialLoad()
+        {
+            EnsureBuilt();
+            RefreshLabels();
+            _initial = true;
+            _armed = false;
+            _awaitingConfirm = false;
+            _joinSeen = false;
+            _t = 0f;
+            _fadingOut = false;
+            _alpha = 1f; // opaque immediately — no fade-in, so the very first frame is covered
+            _active = true;
+            _canvas.enabled = true;
+            _backdrop.raycastTarget = true; // swallow clicks while the world loads
+            Apply(); // paint it opaque this frame, before the in-game cameras render
         }
 
         private void Update()
@@ -147,16 +185,18 @@ namespace BlocksBeyondTheStars.Client
             _t += Time.deltaTime;
 
             // Begin the fade-out once the world is ready (and we've shown it long enough), or after the
-            // safety timeout so a stuck load can never trap the player behind the veil.
-            bool ready = Game != null && Game.WorldReady;
+            // safety timeout so a stuck load can never trap the player behind the veil. The initial-entry
+            // veil additionally waits for the join to confirm — WorldReady defaults true, so without this
+            // gate the curtain could drop in the brief window before JoinAccepted arrives.
+            bool ready = Game != null && Game.WorldReady && (!_initial || _joinSeen);
             if (!_fadingOut && ((ready && _t >= MinShow) || _t >= MaxShow))
             {
                 _fadingOut = true;
             }
 
-            float target = _fadingOut ? 0f : 1f;
-            float rate = _fadingOut ? 1f / FadeOut : 1f / FadeIn;
-            _alpha = Mathf.MoveTowards(_alpha, target, rate * Time.deltaTime);
+            // The veil is opaque the instant it's raised (Raise/PrimeForInitialLoad set alpha = 1); only the
+            // reveal at the end fades, so nothing behind the curtain ever flashes while it ramps up.
+            _alpha = _fadingOut ? Mathf.MoveTowards(_alpha, 0f, Time.deltaTime / FadeOut) : 1f;
 
             Apply();
 
@@ -164,6 +204,7 @@ namespace BlocksBeyondTheStars.Client
             {
                 _active = false;
                 _awaitingConfirm = false;
+                _initial = false; // the entry curtain is done; later landings/boardings use the normal path
                 _backdrop.raycastTarget = false;
                 _canvas.enabled = false;
             }

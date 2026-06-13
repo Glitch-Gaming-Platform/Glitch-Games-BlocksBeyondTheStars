@@ -134,6 +134,10 @@ namespace BlocksBeyondTheStars.Client
             // Loading curtain over the world build-up on join / landing / station boarding.
             var loading = root.AddComponent<WorldLoadingOverlay>();
             loading.Game = boot;
+            // Raise the curtain opaque NOW, synchronously, before this frame renders — so the freshly-built
+            // rig never flashes its raw scene (the star system, then the bare surface) during entry. It holds
+            // until the join confirms and the world is ready, then fades to reveal the world.
+            loading.PrimeForInitialLoad();
 
             // In-game gameplay menu (inventory / crafting / tech / ship / map / missions), Tab.
             var menu = root.AddComponent<GameMenu>();
