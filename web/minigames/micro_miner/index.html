@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<link rel="stylesheet" href="../_shared/theme.css"></head><body>
+<script src="../_shared/framework.js"></script>
+<script>
+BBTS.register({
+  title: { en: "Micro Miner", de: "Mikro-Miner" }, difficulty: 2,
+  desc: { en: "Dig through the rock, grab ore, and climb back to the surface before your energy runs dry — ore only counts once you surface.",
+          de: "Grab dich durch das Gestein, sammle Erz und kehr zur Oberfläche zurück, bevor die Energie leer ist — Erz zählt erst oben." },
+  hint: { en: "← ↑ ↓ → dig / move · return to the top to bank ore", de: "← ↑ ↓ → graben / bewegen · oben einzahlen" },
+  help: [{ en: "Move into rock to dig it (costs energy)", de: "In Gestein hineinbewegen, um zu graben (kostet Energie)" },
+         { en: "Bright cells are ore. Return to the top surface to bank your haul.", de: "Helle Zellen sind Erz. Kehre zur Oberfläche zurück, um die Beute einzuzahlen." }],
+  create: function (api) {
+    var COLS = 16, ROWS = 12, CELL = 34, W = COLS * CELL, H = ROWS * CELL;
+    var ctx = api.canvas(W, H).getContext('2d');
+    var cellv, drone, energy, carry, done, repAcc; // cellv: 0 empty, 1 stone, 2 ore
+    function k(x, y) { return y * COLS + x; }
+    function reset() {
+      cellv = []; energy = 120; carry = 0; done = false; repAcc = 0;
+      for (var y = 0; y < ROWS; y++) for (var x = 0; x < COLS; x++) cellv[k(x, y)] = y === 0 ? 0 : (Math.random() < 0.22 ? 2 : 1);
+      drone = { x: (COLS / 2) | 0, y: 0 };
+      api.hud({ energy: energy, ore: 0 }); draw();
+    }
+    function move(dx, dy) {
+      if (done) return; var nx = drone.x + dx, ny = drone.y + dy; if (nx < 0 || ny < 0 || nx >= COLS || ny >= ROWS) return;
+      var v = cellv[k(nx, ny)];
+      if (v === 1) { energy -= 2; cellv[k(nx, ny)] = 0; }
+      else if (v === 2) { energy -= 3; cellv[k(nx, ny)] = 0; carry += 1; api.hud({ ore: carry }); }
+      else energy -= 1;
+      drone.x = nx; drone.y = ny; api.hud({ energy: Math.max(0, energy) });
+      if (energy <= 0) { done = true; api.fail({ score: 0 }); return; }
+      if (ny === 0 && carry > 0) { done = true; var sc = carry * 25; var rating = carry >= 14 ? 3 : carry >= 7 ? 2 : 1; api.complete({ score: sc, rating: rating }); return; }
+      draw();
+    }
+    api.bind('Left', function () { move(-1, 0); }); api.bind('Right', function () { move(1, 0); });
+    api.bind('Up', function () { move(0, -1); }); api.bind('Down', function () { move(0, 1); });
+    api.loop(function (dt) { repAcc += dt; if (repAcc > 0.12) { repAcc = 0; if (api.held('Left')) move(-1, 0); else if (api.held('Right')) move(1, 0); else if (api.held('Up')) move(0, -1); else if (api.held('Down')) move(0, 1); } });
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+      for (var y = 0; y < ROWS; y++) for (var x = 0; x < COLS; x++) { var v = cellv[k(x, y)];
+        if (v === 1) { ctx.fillStyle = 'rgba(70,214,255,0.13)'; ctx.fillRect(x * CELL + 1, y * CELL + 1, CELL - 2, CELL - 2); }
+        else if (v === 2) { ctx.fillStyle = 'rgba(124,255,176,0.85)'; ctx.fillRect(x * CELL + 6, y * CELL + 6, CELL - 12, CELL - 12); } }
+      ctx.fillStyle = 'rgba(124,255,176,0.12)'; ctx.fillRect(0, 0, W, CELL); // surface
+      ctx.fillStyle = '#46d6ff'; ctx.shadowColor = '#46d6ff'; ctx.shadowBlur = 10; ctx.fillRect(drone.x * CELL + 5, drone.y * CELL + 5, CELL - 10, CELL - 10); ctx.shadowBlur = 0;
+    }
+    return { start: reset };
+  }
+});
+</script></body></html>

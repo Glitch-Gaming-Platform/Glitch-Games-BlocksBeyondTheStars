@@ -1,45 +1,65 @@
 {
-  "_comment": "Bundled minigame catalogue. The ORDER is stable and authoritative: a data cube's seed is mapped to a game by index (seed mod games.length), so reordering changes which cube grants which game. The server never reads this file — it only places cubes with seeds; the client resolves seed -> game here. Games are NOT user-moddable; add a game by dropping a folder under minigames/<key>/ and appending an entry here.",
+  "_comment": "Bundled data-fragment minigames. ORDER IS AUTHORITATIVE: a data cube's seed maps to a game by index (seed mod games.length). Append new games; reordering changes which cube yields which fragment. Add a game by dropping web/minigames/<key>/index.html (using ../_shared/framework.js) + an entry here, then run scripts/sync-client-libs.ps1.",
   "games": [
-    {
-      "key": "snake",
-      "entry": "snake/index.html",
-      "icon": "🐍",
-      "title": { "en": "Cosmic Snake", "de": "Kosmische Schlange" },
-      "desc": {
-        "en": "Steer the data-serpent, swallow energy nodes and grow. Don't bite your own tail or hit the wall.",
-        "de": "Steuere die Datenschlange, friss Energieknoten und wachse. Beiße nicht in deinen Schwanz und meide die Wand."
-      }
-    },
-    {
-      "key": "2048",
-      "entry": "2048/index.html",
-      "icon": "🔢",
-      "title": { "en": "2048", "de": "2048" },
-      "desc": {
-        "en": "Slide and merge matching tiles to reach 2048. A quiet number puzzle for the long haul between stars.",
-        "de": "Schiebe und verschmelze gleiche Kacheln bis 2048. Ein ruhiges Zahlenrätsel für die lange Reise zwischen den Sternen."
-      }
-    },
-    {
-      "key": "memory",
-      "entry": "memory/index.html",
-      "icon": "🃏",
-      "title": { "en": "Memory Matrix", "de": "Gedächtnis-Matrix" },
-      "desc": {
-        "en": "Flip the glyph cards two at a time and find every matching pair in as few moves as you can.",
-        "de": "Drehe die Glyphen-Karten paarweise um und finde alle Paare mit möglichst wenigen Zügen."
-      }
-    },
-    {
-      "key": "breakout",
-      "entry": "breakout/index.html",
-      "icon": "🧱",
-      "title": { "en": "Astro Breakout", "de": "Astro-Breakout" },
-      "desc": {
-        "en": "Bounce the core off your paddle to shatter every block. Clear the field before you run out of cores.",
-        "de": "Lenke den Kern mit dem Schläger und zertrümmere jeden Block. Räume das Feld, bevor die Kerne ausgehen."
-      }
-    }
+    { "key": "blockfall", "entry": "blockfall/index.html", "icon": "🧱",
+      "title": { "en": "Blockfall", "de": "Blockfall" },
+      "desc": { "en": "A station-worker block-stacking classic. Clear full rows to survive.", "de": "Ein Block-Stapel-Klassiker der Stationsarbeiter. Schließe Reihen, um zu überleben." } },
+    { "key": "asteroid_breaker", "entry": "asteroid_breaker/index.html", "icon": "🪨",
+      "title": { "en": "Asteroid Breaker", "de": "Asteroid Breaker" },
+      "desc": { "en": "Mining-laser training: bounce the core to shatter every asteroid.", "de": "Mining-Laser-Training: lenke den Kern und zertrümmere jeden Asteroiden." } },
+    { "key": "circuit_weaver", "entry": "circuit_weaver/index.html", "icon": "🔌",
+      "title": { "en": "Circuit Weaver", "de": "Circuit Weaver" },
+      "desc": { "en": "Repair training: rotate conduits so energy reaches the receiver.", "de": "Reparatur-Training: drehe Leitungen, bis Energie den Empfänger erreicht." } },
+    { "key": "signal_tuner", "entry": "signal_tuner/index.html", "icon": "📡",
+      "title": { "en": "Signal Tuner", "de": "Signal-Tuner" },
+      "desc": { "en": "Lock onto a hidden signal and hold it steady until it decodes.", "de": "Justiere ein verborgenes Signal und halte es stabil, bis es dekodiert." } },
+    { "key": "drone_rescue", "entry": "drone_rescue/index.html", "icon": "🤖",
+      "title": { "en": "Drone Rescue", "de": "Drohnen-Rettung" },
+      "desc": { "en": "Pilot a repair drone: fix every node, then reach extraction.", "de": "Steuere eine Reparaturdrohne: repariere alle Knoten, dann zur Extraktion." } },
+    { "key": "cargo_sorter", "entry": "cargo_sorter/index.html", "icon": "📦",
+      "title": { "en": "Cargo Sorter", "de": "Frachtsortierer" },
+      "desc": { "en": "Trade-station drill: route each crate to the right cargo bay.", "de": "Handelsstations-Training: leite jede Kiste in die richtige Frachtbucht." } },
+    { "key": "blueprint_scramble", "entry": "blueprint_scramble/index.html", "icon": "📐",
+      "title": { "en": "Blueprint Scramble", "de": "Blaupausen-Puzzle" },
+      "desc": { "en": "Rotate the scrambled fragments to rebuild a salvaged blueprint.", "de": "Drehe die verdrehten Fragmente, um eine geborgene Blaupause zu rekonstruieren." } },
+    { "key": "orbit_slingshot", "entry": "orbit_slingshot/index.html", "icon": "🪐",
+      "title": { "en": "Orbit Slingshot", "de": "Orbit-Schleuder" },
+      "desc": { "en": "Navigation training: use gravity to curve a probe into the target.", "de": "Navigations-Training: nutze Gravitation, um eine Sonde ins Ziel zu lenken." } },
+    { "key": "laser_grid", "entry": "laser_grid/index.html", "icon": "✴",
+      "title": { "en": "Laser Mirror Grid", "de": "Laser-Spiegelgitter" },
+      "desc": { "en": "Flip the mirrors to route the beam to the target node.", "de": "Schalte die Spiegel um, um den Strahl zum Zielknoten zu leiten." } },
+    { "key": "micro_miner", "entry": "micro_miner/index.html", "icon": "⛏",
+      "title": { "en": "Micro Miner", "de": "Mikro-Miner" },
+      "desc": { "en": "Dig for ore and surface before your energy runs out.", "de": "Grab nach Erz und kehr zur Oberfläche zurück, bevor die Energie leer ist." } },
+    { "key": "star_memory", "entry": "star_memory/index.html", "icon": "✦",
+      "title": { "en": "Star Map Memory", "de": "Sternkarten-Gedächtnis" },
+      "desc": { "en": "Navigator memory drill: find every matching chart pair.", "de": "Navigatoren-Gedächtnis: finde alle passenden Kartenpaare." } },
+    { "key": "glyph_decoder", "entry": "glyph_decoder/index.html", "icon": "⟁",
+      "title": { "en": "Alien Glyph Decoder", "de": "Alien-Glyphen-Entschlüssler" },
+      "desc": { "en": "Study alien glyphs, then decode their meanings from memory.", "de": "Präge dir Alien-Glyphen ein und entschlüssle ihre Bedeutung." } },
+    { "key": "reactor_balance", "entry": "reactor_balance/index.html", "icon": "☢",
+      "title": { "en": "Reactor Balance", "de": "Reaktor-Balance" },
+      "desc": { "en": "Hold the reactor gauges in their zones without a meltdown.", "de": "Halte die Reaktoranzeigen in ihren Zonen ohne Kernschmelze." } },
+    { "key": "oxygen_loop", "entry": "oxygen_loop/index.html", "icon": "💨",
+      "title": { "en": "Oxygen Loop", "de": "Sauerstoff-Kreislauf" },
+      "desc": { "en": "Life-support drill: route oxygen pipes from the core to the habitat.", "de": "Lebenserhaltungs-Training: leite Sauerstoffrohre vom Kern zum Habitat." } },
+    { "key": "comet_courier", "entry": "comet_courier/index.html", "icon": "☄",
+      "title": { "en": "Comet Courier", "de": "Kometen-Kurier" },
+      "desc": { "en": "Courier run: dodge asteroids and scoop up data packets.", "de": "Kurierflug: weiche Asteroiden aus und sammle Datenpakete." } },
+    { "key": "docking_sim", "entry": "docking_sim/index.html", "icon": "🛰",
+      "title": { "en": "Docking Simulator", "de": "Andock-Simulator" },
+      "desc": { "en": "Precision piloting: glide gently onto the docking ring.", "de": "Präzisions-Steuerung: gleite sanft in den Andockring." } },
+    { "key": "data_fishing", "entry": "data_fishing/index.html", "icon": "〰",
+      "title": { "en": "Data Fishing", "de": "Daten-Fang" },
+      "desc": { "en": "Catch clean data packets, dodge the corrupted ones.", "de": "Fang saubere Datenpakete, meide die beschädigten." } },
+    { "key": "nanobot_repair", "entry": "nanobot_repair/index.html", "icon": "🔧",
+      "title": { "en": "Nanobot Repair", "de": "Nanobot-Reparatur" },
+      "desc": { "en": "Route a nanobot across the circuit to repair every node.", "de": "Leite einen Nanobot über die Schaltung, um alle Knoten zu reparieren." } },
+    { "key": "planet_scanner", "entry": "planet_scanner/index.html", "icon": "🔭",
+      "title": { "en": "Planet Scanner", "de": "Planeten-Scanner" },
+      "desc": { "en": "Pulse-scan a planet to locate its hidden signatures.", "de": "Scanne einen Planeten, um verborgene Signaturen zu orten." } },
+    { "key": "void_solitaire", "entry": "void_solitaire/index.html", "icon": "🃏",
+      "title": { "en": "Void Solitaire", "de": "Void-Solitär" },
+      "desc": { "en": "A calm card sweep — clear the board by matching pairs.", "de": "Ein ruhiges Kartenspiel — räume das Feld mit passenden Paaren." } }
   ]
 }

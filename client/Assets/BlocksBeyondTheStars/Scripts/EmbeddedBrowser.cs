@@ -22,7 +22,7 @@ namespace BlocksBeyondTheStars.Client
 
         public LocalContentServer Content { get; } = new LocalContentServer();
 
-        private Action<string, int> _onScore;
+        private Action<string, int, int, bool> _onResult;
 #if BBS_UWB
         private RectTransform _surface;     // the shared RawImage the browser renders into (UWB only)
         private Image _cover;               // opaque themed overlay masking CEF's white→black startup flash
@@ -57,11 +57,12 @@ namespace BlocksBeyondTheStars.Client
         /// <summary>Loopback URL for a path under StreamingAssets (e.g. <c>"wiki/index.html?lang=de"</c>).</summary>
         public string Url(string relativePath) => Content.Url(relativePath);
 
-        /// <summary>Sets the handler invoked when a minigame reports a score through the JS bridge
-        /// (<c>uwb.ExecuteJsMethod("reportScore", gameKey, score)</c>).</summary>
-        public void SetScoreHandler(Action<string, int> handler) => _onScore = handler;
+        /// <summary>Sets the handler invoked when a minigame reports a finished run through the JS bridge
+        /// (<c>uwb.ExecuteJsMethod("reportResult", gameKey, score, rating, completed)</c>).</summary>
+        public void SetResultHandler(Action<string, int, int, bool> handler) => _onResult = handler;
 
-        internal void OnReportScore(string gameKey, int score) => _onScore?.Invoke(gameKey, score);
+        internal void OnReportResult(string gameKey, int score, int rating, bool completed)
+            => _onResult?.Invoke(gameKey, score, rating, completed);
 
         /// <summary>Sets the localized label shown on the loading cover that masks the browser's startup flash.</summary>
         public void SetLoadingLabel(string label)
@@ -157,7 +158,8 @@ namespace BlocksBeyondTheStars.Client
                 ui.inputHandler = Resources.Load<VoltstroStudios.UnityWebBrowser.Input.WebBrowserInputHandler>("Old Input Handler");
                 _client.initialUrl = "about:blank";
                 _client.jsMethodManager.jsMethodsEnable = true;
-                _client.RegisterJsMethod<string, int>("reportScore", (gameKey, score) => OnReportScore(gameKey, score));
+                _client.RegisterJsMethod<string, int, int, bool>("reportResult",
+                    (gameKey, score, rating, completed) => OnReportResult(gameKey, score, rating, completed));
                 _client.OnLoadFinish += url => { _loadedFlag = true; }; // page painted → drop the loading cover
 
                 if (_client.engine == null)

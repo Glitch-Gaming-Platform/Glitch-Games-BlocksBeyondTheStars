@@ -32,8 +32,15 @@ not user-moddable. Full design: [docs/MINIGAMES_AND_WIKI.md](docs/MINIGAMES_AND_
   (glowing textured cube, light, hum + download SFX, E-label) + PlayerController E-interact; `WikiUI` +
   `ArcadeUI` full-screen screens reached from **Codex**/**Arcade** buttons in the menu header; `GameBootstrap`
   mirrors `UnlockedGames` + builds the discovered-systems/worlds JSON; local highscores in `ClientSettings`.
-- **Content:** 4 bundled games (Snake, 2048, Memory, Breakout) + a data-generated wiki SPA + authored guide
-  articles, all bilingual; assets `Resources/props/data_cube.png` + `Resources/audio/data_cube_{hum,download}.mp3`.
+- **Content:** **20 bundled minigames** ("data fragments": Blockfall, Asteroid Breaker, Circuit Weaver,
+  Signal Tuner, Drone Rescue, Cargo Sorter, Blueprint Scramble, Orbit Slingshot, Laser Mirror Grid, Micro
+  Miner, Star Map Memory, Alien Glyph Decoder, Reactor Balance, Oxygen Loop, Comet Courier, Docking Simulator,
+  Data Fishing, Nanobot Repair, Planet Scanner, Void Solitaire) on one shared framework (`_shared/framework.js`
+  + `theme.css`, uniform start/help/pause/result + blue-line theme) + a data-generated Codex SPA, all
+  bilingual; assets `Resources/props/data_cube.png` + `Resources/audio/data_cube_{hum,download}.mp3`.
+- **Reward:** finishing a fragment grants knowledge points (server, rating-scaled, repeatable, NetCodec 121
+  `MinigameResultIntent`). Menu point is **DataQubes** (framed as recovering data fragments, not "games").
+  A Creative world's "unlock all" also recovers every fragment for testing.
 - **Pending manual step:** install UnityWebBrowser + set the `BBS_UWB` define (see the doc). Until then the
   browser shows a placeholder; everything else (cubes, downloads, collection, highscores) already works.
 

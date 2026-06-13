@@ -6,9 +6,16 @@ Two browser-backed features, sharing one embedded-browser layer:
    chapters are generated live from the content JSON; the **Systems & Worlds** chapters are discovery-gated
    (only places the player has actually visited appear). Reached from a **Codex** button in the in-game menu
    header.
-2. **Arcade** — the player's personal collection of small bundled HTML5/JS minigames (Snake, 2048, Memory,
-   Breakout). Games are **downloaded from "data cubes"** scattered on planets, then played from an **Arcade**
-   button in the menu header. Highscores are local-only (no leaderboard).
+2. **DataQubes** — the player's collection of "data fragments": 20 bundled HTML5/JS minigames (Blockfall,
+   Asteroid Breaker, Circuit Weaver, Signal Tuner, Drone Rescue, Cargo Sorter, Blueprint Scramble, Orbit
+   Slingshot, Laser Mirror Grid, Micro Miner, Star Map Memory, Alien Glyph Decoder, Reactor Balance, Oxygen
+   Loop, Comet Courier, Docking Simulator, Data Fishing, Nanobot Repair, Planet Scanner, Void Solitaire). They
+   are **recovered from "data cubes"** scattered on planets, then run from a **DataQubes** button in the menu
+   header. All games share one **framework** (`_shared/framework.js` + `theme.css`): a uniform shell
+   (start/help/pause/result), abstract input model and the blue-line theme. Finishing a run grants
+   **knowledge points** (server-side, rating-scaled, repeatable). Highscores are local-only.
+
+   A Creative world's "unlock all" option also recovers **every** data fragment up front (for testing).
 
 ## How it fits together
 
@@ -30,9 +37,11 @@ Menu "Codex"/"Arcade" button
 - `PlayerState.UnlockedGames` + `PlayerSnapshot.UnlockedGames` — persisted like `UnlockedBlueprints`.
 - `GameServerDataCubes.cs` — `StampDataCubes()` scatters 0–N cubes per body (≈45% none), deterministic from
   the world seed; cubes are server entities (not blocks). `HandleUnlockGame()` validates proximity.
-- Net messages (`MinigameMessages.cs`, registered in `NetCodec` tags 118–120): `DataCubeList`,
-  `UnlockGameIntent`, `GameUnlocks`.
-- Gated by `ServerConfig.PlaceDataCubes` (default on).
+- Net messages (`MinigameMessages.cs`, registered in `NetCodec` tags 118–121): `DataCubeList`,
+  `UnlockGameIntent`, `GameUnlocks`, `MinigameResultIntent` (finished run → server grants knowledge points,
+  rating-scaled, repeatable, in `GameServerDataCubes.HandleMinigameResult`).
+- Gated by `ServerConfig.PlaceDataCubes` (default on). A Creative world (`CreativeUnlockAllBlueprints`) also
+  unlocks every minigame via `UnlockAllGames` (keys read from the synced `minigames/catalog.json`).
 
 ### Client
 - `LocalContentServer.cs` — loopback static server for StreamingAssets, plus the dynamic
@@ -50,7 +59,8 @@ Menu "Codex"/"Arcade" button
 `client/Assets/StreamingAssets/` is **git-ignored and generated** (like `client/Assets/Plugins`). The tracked
 **source** for the browser content lives in repo-root **`web/`** and is copied into StreamingAssets by
 `scripts/sync-client-libs.ps1` (run it after editing, then refresh Unity):
-- `web/minigames/catalog.json` + `web/minigames/<key>/index.html` (+ `_shared/bridge.js`, `_shared/arcade.css`).
+- `web/minigames/catalog.json` + `web/minigames/<key>/index.html` (+ the shared framework
+  `_shared/framework.js`, `_shared/theme.css`, `_shared/flowpuzzle.js`).
 - `web/wiki/index.html` + `wiki.js` + `wiki.css` + `articles.json`.
 - Bilingual via the existing locale files (`data/locales/{en,de}.json`, also synced).
 
@@ -130,45 +140,36 @@ To turn on the real browser:
 A minigame is a self-contained folder of HTML/JS/CSS under `web/minigames/<key>/`, plus one entry in
 `web/minigames/catalog.json`. No C#/Unity changes are needed.
 
-### 1. Create the game folder
-```
-web/minigames/<key>/
-  index.html        # entry point (any extra .js/.css/assets live alongside)
-```
-- Make it self-contained (relative paths only). It's served over `http://127.0.0.1:<port>/minigames/<key>/`,
-  so `fetch()`, ES modules and `<canvas>` all work like a normal site.
-- Reuse the shared frame from a sibling folder: `../_shared/arcade.css` (sci-fi theme) and
-  `../_shared/bridge.js` (the C# bridge). Both are served too.
-- **Sound:** WAV/OGG/Opus only (the embedded CEF ships open codecs — MP3/AAC may not play).
-
-### 2. Use the bridge (`web/minigames/_shared/bridge.js`)
-Include it, then use the `BBS` global. The C# host passes `?lang`, `?hi` (the player's local best) and `?game`
-on the URL; the bridge reads them for you:
-- `BBS.lang` — `"de"` or `"en"` (all in-game text must be bilingual).
-- `BBS.t({ en: "...", de: "..." })` — pick the active-language string.
-- `BBS.best` — the player's current local high score for this game (show it as "Best").
-- `BBS.reportScore(score)` — call on game-over; C# keeps the per-game personal best in `ClientSettings`
-  (local only, no leaderboard). Safe no-op in a plain dev browser.
+### 1. Create the game folder using the framework
+All games share `_shared/framework.js` (the shell — start/help/pause/result screens, abstract input, paused
+rAF loop, HUD, the result→knowledge bridge) and `_shared/theme.css` (the blue-line look). A game only
+implements its mechanic and registers via `BBTS.register({...})`. Served over
+`http://127.0.0.1:<port>/minigames/<key>/`, so `fetch()`, ES modules and `<canvas>` all work.
 
 Minimal template:
 ```html
-<!DOCTYPE html><html><head><meta charset="utf-8">
-<link rel="stylesheet" href="../_shared/arcade.css"></head>
-<body><div class="wrap">
-  <div class="title" id="t"></div>
-  <div class="hud"><span id="bl"></span><b id="best">0</b></div>
-  <!-- your game here -->
-</div>
-<script src="../_shared/bridge.js"></script>
-<script>
-  document.getElementById('t').textContent  = BBS.t({en:"My Game", de:"Mein Spiel"});
-  document.getElementById('bl').textContent = BBS.t({en:"Best", de:"Beste"});
-  document.getElementById('best').textContent = BBS.best;
-  // …on game over: BBS.reportScore(finalScore);
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../_shared/theme.css"></head>
+<body><script src="../_shared/framework.js"></script><script>
+BBTS.register({
+  title: { en: "My Game", de: "Mein Spiel" }, difficulty: 2,
+  desc:  { en: "One-line goal.", de: "Einzeiliges Ziel." },
+  help:  [{ en: "What the controls do", de: "Was die Steuerung macht" }],
+  create: function (api) {
+    // api.canvas(w,h) → canvas+api.ctx ; api.el(tag,cls,parent,html) for DOM
+    // api.bind('Left'|'Right'|'Up'|'Down'|'Confirm'|'Primary'|'Secondary', fn) ; api.held(action)
+    // api.pointer(p => { p.type 'down'|'move'|'up', p.x, p.y }) ; api.loop(dt => {…})
+    // api.hud({ score: 0, … }) ; api.complete({score, rating:1..3}) ; api.fail({score})
+    return { start: function () { /* (re)start a fresh round */ } };
+  }
+});
 </script></body></html>
 ```
+- **Reward:** the framework reports `{score, rating, completed}` to Unity on `api.complete()` → the server
+  grants knowledge points (rating-scaled, repeatable). You don't wire rewards per game.
+- **Bilingual** ({en,de}) everywhere; **sound** WAV/OGG/Opus only (CEF ships open codecs).
+- Reusable engines live in `_shared/` (e.g. `flowpuzzle.js` powers Circuit Weaver + Oxygen Loop).
 
-### 3. Register it in `web/minigames/catalog.json`
+### 2. Register it in `web/minigames/catalog.json`
 Append an entry to the `games` array:
 ```json
 {
@@ -184,10 +185,10 @@ Append an entry to the `games` array:
   (`seed mod games.length`). Appending is safe; **reordering/removing changes which cube grants which game**
   (and would orphan keys already in players' saved collections).
 
-### 4. Sync + test
+### 3. Sync + test
 - Run `scripts/sync-client-libs.ps1` (copies `web/* → StreamingAssets`), then refresh Unity.
 - Test fast: open `web/minigames/<key>/index.html` directly in a desktop browser (the bridge no-ops, so it
-  still plays). In-game, grab a data cube or temporarily seed `PlayerState.UnlockedGames` to see it in Arcade.
+  still plays). In-game, use a Creative world ("unlock all") to get every fragment in the DataQubes menu.
 
-A scoring note: "higher is better" (the stored best is the max). For move-based games (like Memory) convert to
-a higher-is-better score before calling `reportScore`.
+Scoring note: "higher is better" (rating 1–3 drives the knowledge reward). For move/time-based games convert
+to a higher-is-better score + rating before calling `api.complete({score, rating})`.

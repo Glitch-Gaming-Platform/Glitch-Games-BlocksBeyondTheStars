@@ -1219,6 +1219,7 @@ public sealed partial class GameServer
             case TractorPullIntent: HandleTractorPull(session); break;
             case DoorInteractIntent door: HandleDoorInteract(session, door); break;
             case UnlockGameIntent unlockGame: HandleUnlockGame(session, unlockGame); break;
+            case MinigameResultIntent miniResult: HandleMinigameResult(session, miniResult); break;
             case FallDamageIntent fall: HandleFallDamage(session, fall); break;
             case AdminCommandIntent admin: HandleAdminCommand(session, admin); break;
             case RequestMissions: SendMissionList(session); break;
@@ -1488,6 +1489,8 @@ public sealed partial class GameServer
             {
                 _repo.SavePlayer(p);
             }
+
+            UnlockAllGames(session); // Creative: also recover every data fragment (minigame) so they can be tested
         }
 
         if (_meta.CreativeStartAllShips)

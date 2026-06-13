@@ -179,6 +179,7 @@ public static class NetCodec
         Register(118, typeof(DataCubeList));    // Server -> Client (cubes to render on the current world)
         Register(119, typeof(UnlockGameIntent)); // Client -> Server (download the cube I'm standing at)
         Register(120, typeof(GameUnlocks));      // Server -> Client (my full downloaded-games collection)
+        Register(121, typeof(MinigameResultIntent)); // Client -> Server (a minigame run finished → knowledge reward)
     }
 
     private static void Register(byte tag, Type type)

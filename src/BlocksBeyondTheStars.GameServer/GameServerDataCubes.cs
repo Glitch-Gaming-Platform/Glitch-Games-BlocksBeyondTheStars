@@ -152,4 +152,60 @@ public sealed partial class GameServer
             SendGameUnlocks(session);
         }
     }
+
+    /// <summary>A minigame run finished — grant a small knowledge reward scaled by the reported rating. Repeatable
+    /// (the player can re-run a fragment for more research), but each grant is small + capped, and the rating is
+    /// clamped server-side. Knowledge feeds the tech tree; the client reads it back from the inventory sync.</summary>
+    private void HandleMinigameResult(PlayerSession session, MinigameResultIntent intent)
+    {
+        if (!intent.Completed)
+        {
+            return; // only completed runs reward
+        }
+
+        int rating = System.Math.Clamp(intent.Rating, 1, 3);
+        int reward = rating * 5; // 1/2/3 stars -> 5/10/15 knowledge
+        session.State.KnowledgePoints += reward;
+        SendInventory(session); // carries KnowledgePoints to the client
+        Send(session, new ServerMessage { Text = $"+{reward} knowledge — data fragment analysed." });
+    }
+
+    private List<string> _minigameKeys;
+
+    /// <summary>Loads the bundled minigame keys from the client catalogue (synced next to the data dir), so the
+    /// server can unlock them all in a Creative world. Best-effort: empty if the catalogue isn't found.</summary>
+    private IReadOnlyList<string> MinigameKeys()
+    {
+        if (_minigameKeys != null) return _minigameKeys;
+        _minigameKeys = new List<string>();
+        try
+        {
+            var path = System.IO.Path.Combine(_config.DataDir, "..", "minigames", "catalog.json");
+            if (System.IO.File.Exists(path))
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(System.IO.File.ReadAllText(path));
+                if (doc.RootElement.TryGetProperty("games", out var games) && games.ValueKind == System.Text.Json.JsonValueKind.Array)
+                {
+                    foreach (var g in games.EnumerateArray())
+                    {
+                        if (g.TryGetProperty("key", out var k) && k.ValueKind == System.Text.Json.JsonValueKind.String)
+                        {
+                            var key = k.GetString();
+                            if (!string.IsNullOrEmpty(key)) _minigameKeys.Add(key);
+                        }
+                    }
+                }
+            }
+        }
+        catch (System.Exception e) { _log.Info($"Minigame catalog not loaded for creative unlock: {e.Message}"); }
+        return _minigameKeys;
+    }
+
+    /// <summary>Creative grant: recover every data fragment so they can all be tested from the DataQubes menu.</summary>
+    private void UnlockAllGames(PlayerSession session)
+    {
+        bool changed = false;
+        foreach (var key in MinigameKeys()) changed |= session.State.UnlockedGames.Add(key);
+        if (changed) SendGameUnlocks(session);
+    }
 }

@@ -49,3 +49,14 @@ public sealed class GameUnlocks
 {
     public string[] Unlocked { get; set; } = System.Array.Empty<string>();
 }
+
+/// <summary>A minigame ("data fragment") run finished — the client reports the outcome so the server can grant
+/// a knowledge reward (client → server). The result is client-trusted (minigames carry no balance-critical
+/// stake, like the cube download); the server clamps the rating and caps the reward.</summary>
+public sealed class MinigameResultIntent
+{
+    public string GameKey { get; set; } = string.Empty;
+    public int Score { get; set; }
+    public int Rating { get; set; }      // 0 = failed, 1..3 = completed quality
+    public bool Completed { get; set; }
+}

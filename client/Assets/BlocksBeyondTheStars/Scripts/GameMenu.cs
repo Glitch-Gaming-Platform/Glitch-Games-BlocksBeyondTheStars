@@ -183,9 +183,11 @@ namespace BlocksBeyondTheStars.Client
                 var go = new GameObject("EmbeddedBrowser");
                 go.transform.SetParent(transform, false);
                 _host = go.AddComponent<EmbeddedBrowser>();
-                _host.SetScoreHandler((key, score) =>
+                _host.SetResultHandler((key, score, rating, completed) =>
                 {
                     if (Settings != null && Settings.RecordMinigameScore(key, score)) Settings.Save();
+                    // A finished run grants a server-side knowledge reward (repeatable, rating-scaled).
+                    if (completed) Game?.Network?.SendMinigameResult(key, score, rating, completed);
                 });
                 if (_host.Content != null)
                 {

@@ -260,6 +260,10 @@ namespace BlocksBeyondTheStars.Client
         /// resolves which game the cube holds (from its seed); the server validates proximity to the cube.</summary>
         public void SendUnlockGame(int cubeId, string gameKey) => Send(new UnlockGameIntent { CubeId = cubeId, GameKey = gameKey ?? string.Empty });
 
+        /// <summary>Reports a finished minigame run so the server can grant a knowledge reward.</summary>
+        public void SendMinigameResult(string gameKey, int score, int rating, bool completed)
+            => Send(new MinigameResultIntent { GameKey = gameKey ?? string.Empty, Score = score, Rating = rating, Completed = completed });
+
         // --- Navigation & missions (M23) ---
         public void SendRequestStarMap() => Send(new RequestStarMap());
 
