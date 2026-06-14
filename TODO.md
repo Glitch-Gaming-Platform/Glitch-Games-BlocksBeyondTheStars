@@ -124,6 +124,11 @@ existing sun lighting + procedural flora/fauna tint must stay intact.
   unchanged) is baked per-vertex into TEXCOORD3 and added in `BlockAtlas.shader`. `ClientWorld` keeps a light-source
   registry so a lamp's colour propagates across chunk seams. Sun + flora tint paths untouched. Icons (menu + hotbar)
   tint via `IconResolver.Tint`.
+- **Directional block-light shading (2026-06-14):** the mesher also bakes a dominant light DIRECTION per vertex
+  (gradient of the light field → TEXCOORD4); `BlockAtlas.shader` (both URP + Built-in paths) shades placed lights
+  with N·L diffuse + a Blinn-Phong glint (in the light's colour) + normal-map relief instead of a flat wash, with a
+  fill floor so wrapped-around faces stay lit and a flat fallback where no direction was baked. No flood-fill/perf
+  change; lamps now sculpt surfaces. (Chosen over real URP lights, which would leak through walls + cap the count.)
 **Open/follow-ups:** fine HSV colour picker (palette only for now); coloured light is client-derived (not persisted) and
 re-floods on chunk rebuild — diagonal-neighbour seams possible for lights right on a chunk corner; light radius = 9.
 

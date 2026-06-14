@@ -62,6 +62,7 @@ Shader "BlocksBeyondTheStars/BlockAtlas"
                 float2 sky : TEXCOORD1;  // x = skylight, y = tint mode (1 flora, 2 hull paint, 3 player dye)
                 float4 leaf : TEXCOORD2; // x = foliage flag, yzw = flora/hull/dye tint (black = use global flora hue)
                 float3 bl : TEXCOORD3;   // propagated coloured block-light (placed lights illuminate)
+                float3 blDir : TEXCOORD4; // dominant block-light direction (toward source); 0 = none
                 float4 color : COLOR;    // r=gloss, g=metal, b=face AO, a=emission
             };
 
@@ -77,6 +78,7 @@ Shader "BlocksBeyondTheStars/BlockAtlas"
                 float4 mat : TEXCOORD6;
                 float  fog : TEXCOORD7;
                 float3 bl : TEXCOORD8;
+                float3 blDir : TEXCOORD9;
             };
 
             Varyings vert(Attributes v)
@@ -92,6 +94,7 @@ Shader "BlocksBeyondTheStars/BlockAtlas"
                 o.leaf = v.leaf;
                 o.mat = v.color;
                 o.bl = v.bl;
+                o.blDir = v.blDir;
                 o.fog = ComputeFogFactor(o.positionCS.z);
                 return o;
             }
@@ -167,9 +170,23 @@ Shader "BlocksBeyondTheStars/BlockAtlas"
                 col += albedo * i.mat.a * 2.0;
 
                 // Placed coloured lights (flood-filled per-vertex, TEXCOORD3): illuminate this surface in
-                // their colour, regardless of sun/skylight, so lamps light caves + night builds. Bright
-                // enough near the source to feed the bloom pass.
-                col += albedo * i.bl * 2.0;
+                // their colour, regardless of sun/skylight, so lamps light caves + night builds. The baked
+                // dominant direction (TEXCOORD4) lets us shade them like the sun — N·L diffuse shaping + a
+                // Blinn-Phong glint + normal-map relief — so lamps sculpt the surface instead of flat-washing
+                // it. A fill floor keeps faces the light wrapped around lit; bright enough to feed the bloom.
+                float blLen = length(i.blDir);
+                if (blLen > 0.01)
+                {
+                    float3 blL = i.blDir / blLen;
+                    float blNdl = saturate(dot(N, blL));
+                    col += albedo * i.bl * (0.5 + 0.5 * blNdl) * 2.0;
+                    float blSpec = pow(saturate(dot(N, normalize(blL + V))), specPow) * gloss * blNdl;
+                    col += i.bl * specCol * blSpec * 1.2;
+                }
+                else
+                {
+                    col += albedo * i.bl * 2.0; // no direction baked (uniform/none) → flat fallback
+                }
 
                 if (_Sc_LampColor.a > 0.5)
                 {
@@ -271,6 +288,7 @@ Shader "BlocksBeyondTheStars/BlockAtlas"
                 float2 sky : TEXCOORD1;  // x = skylight (1 sees sky, 0 underground/indoors); y = tint mode (1 flora, 2 hull paint, 3 player dye)
                 float4 leaf : TEXCOORD2; // x = foliage flag (1 → alpha-cutout); yzw = flora/hull/dye tint
                 float3 bl : TEXCOORD3;   // propagated coloured block-light (placed lights illuminate)
+                float3 blDir : TEXCOORD4; // dominant block-light direction (toward source); 0 = none
                 fixed4 color : COLOR;   // r=gloss, g=metal, b=face AO
             };
 
@@ -284,6 +302,7 @@ Shader "BlocksBeyondTheStars/BlockAtlas"
                 float2 skyl : TEXCOORD5; // x = skylight, y = tint mode
                 float4 leaf : TEXCOORD6; // x = foliage flag, yzw = per-species/hull/dye tint
                 float3 bl : TEXCOORD7; // propagated coloured block-light
+                float3 blDir : TEXCOORD8; // dominant block-light direction
                 fixed4 mat : COLOR;
                 UNITY_FOG_COORDS(3)
             };
@@ -299,6 +318,7 @@ Shader "BlocksBeyondTheStars/BlockAtlas"
                 o.skyl = v.sky;
                 o.leaf = v.leaf;
                 o.bl = v.bl;
+                o.blDir = v.blDir;
                 o.mat = v.color;
                 UNITY_TRANSFER_FOG(o, o.pos);
                 return o;
@@ -397,8 +417,22 @@ Shader "BlocksBeyondTheStars/BlockAtlas"
                 col += albedo * i.mat.a * 2.0;
 
                 // Placed coloured lights (flood-filled per-vertex, TEXCOORD3): illuminate this surface in
-                // their colour, regardless of sun/skylight, so lamps light caves + night builds.
-                col += albedo * i.bl * 2.0;
+                // their colour, regardless of sun/skylight, so lamps light caves + night builds. The baked
+                // dominant direction (TEXCOORD4) shades them like the sun — N·L diffuse + a Blinn-Phong glint
+                // + normal-map relief — so lamps sculpt the surface; a fill floor keeps wrapped-around faces lit.
+                float blLen = length(i.blDir);
+                if (blLen > 0.01)
+                {
+                    float3 blL = i.blDir / blLen;
+                    float blNdl = saturate(dot(N, blL));
+                    col += albedo * i.bl * (0.5 + 0.5 * blNdl) * 2.0;
+                    float blSpec = pow(saturate(dot(N, normalize(blL + V))), specPow) * gloss * blNdl;
+                    col += i.bl * specCol * blSpec * 1.2;
+                }
+                else
+                {
+                    col += albedo * i.bl * 2.0; // no direction baked (uniform/none) → flat fallback
+                }
 
                 // Headlamp / flashlight — a custom spotlight (this shader bypasses Unity's light passes,
                 // so the lamp is fed in as globals by the player instead of a real Light).

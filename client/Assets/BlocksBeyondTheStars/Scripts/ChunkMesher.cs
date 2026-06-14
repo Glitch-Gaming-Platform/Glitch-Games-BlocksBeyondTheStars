@@ -44,6 +44,7 @@ namespace BlocksBeyondTheStars.Client
             // the ship's hull paint (mode 2) or the player's dye colour (mode 3).
             var leafUv = new List<Vector4>();
             var blockLight = new List<Vector3>(); // TEXCOORD3: propagated coloured block-light at each vertex (0..1 rgb)
+            var blockLightDir = new List<Vector3>(); // TEXCOORD4: dominant block-light direction (toward source), 0 = none
             var tangents = new List<Vector4>(); // per-face tangents for normal mapping
 
             var origin = WorldConstants.ChunkOrigin(chunk.Coord);
@@ -56,6 +57,29 @@ namespace BlocksBeyondTheStars.Client
             var blockLightField = BuildBlockLight(chunk, content, worldBlock, origin, n, lights);
             Vector3 BlockLightAt(int wx, int wy, int wz)
                 => blockLightField != null && blockLightField.TryGetValue((wx, wy, wz), out var v) ? v : Vector3.zero;
+
+            // Dominant direction TOWARD the block-light source at a cell: the gradient of the light field's
+            // luminance (brighter neighbours pull the vector their way). Lets the shader shade placed lights
+            // with N·L + a glint + normal-map relief instead of a flat wash. Zero where there's no light (or a
+            // perfectly uniform field) → the shader falls back to the old flat additive look.
+            Vector3 BlockLightDirAt(int wx, int wy, int wz)
+            {
+                if (blockLightField == null)
+                {
+                    return Vector3.zero;
+                }
+
+                Vector3 grad = Vector3.zero;
+                for (int f = 0; f < Faces.Length; f++)
+                {
+                    var d = Faces[f];
+                    var nb = BlockLightAt(wx + d.X, wy + d.Y, wz + d.Z);
+                    float luma = nb.x * 0.299f + nb.y * 0.587f + nb.z * 0.114f;
+                    grad += new Vector3(d.X, d.Y, d.Z) * luma;
+                }
+
+                return grad.sqrMagnitude > 1e-6f ? grad.normalized : Vector3.zero;
+            }
 
             // Per-column "highest solid block" cache → a face is sky-lit only if the air cell it faces is
             // above its column's top (so caves, building/ship interiors and overhang undersides go dark,
@@ -237,14 +261,15 @@ namespace BlocksBeyondTheStars.Client
                 {
                     float plantSky = Skylight(wx, wy + 1, wz); // open sky above the plant
                     Vector3 plantBl = BlockLightAt(wx, wy, wz);  // coloured block-light reaching the plant
+                    Vector3 plantBlDir = BlockLightDirAt(wx, wy, wz); // dominant light direction at the plant
                     var plantCol = new Color(matR, matG, 0.9f, emission);
                     // Per-plant size variance (a grass field is tall + short tufts, not a uniform lawn): a
                     // deterministic bell scale from the world cell, so all clients agree. Height varies more
                     // than width; they're keyed off different salts so a plant can be tall + slender or low + bushy.
                     float plantH = CrossPlantScale(wx, wy, wz, 0x1, 0.35f);
                     float plantW = CrossPlantScale(wx, wy, wz, 0x2, 0.20f);
-                    AddCrossPlant(verts, tris, colors, uvs, tangents, skyUv, leafUv, blockLight,
-                        new Vector3(x, y, z), plantCol, uv, plantSky, speciesTint, plantBl, plantH, plantW);
+                    AddCrossPlant(verts, tris, colors, uvs, tangents, skyUv, leafUv, blockLight, blockLightDir,
+                        new Vector3(x, y, z), plantCol, uv, plantSky, speciesTint, plantBl, plantBlDir, plantH, plantW);
                     continue;
                 }
 
@@ -298,6 +323,8 @@ namespace BlocksBeyondTheStars.Client
                     // samples) — placed lights illuminate the wall regardless of sun/skylight.
                     Vector3 faceBl = BlockLightAt(nx, ny, nz);
                     blockLight.Add(faceBl); blockLight.Add(faceBl); blockLight.Add(faceBl); blockLight.Add(faceBl);
+                    Vector3 faceBlDir = BlockLightDirAt(nx, ny, nz);
+                    blockLightDir.Add(faceBlDir); blockLightDir.Add(faceBlDir); blockLightDir.Add(faceBlDir); blockLightDir.Add(faceBlDir);
                     // Water top faces carry the water-body data instead of the (always-zero-for-water)
                     // flora tint; only the transparent shader ever reads these vertices. Foam + wave
                     // amplitude are CORNER-smoothed (x=mode, y=foam, z=amp factor, w=flow axis 0=X/1=Z)
@@ -336,6 +363,7 @@ namespace BlocksBeyondTheStars.Client
             mesh.SetUVs(1, skyUv); // skylight in TEXCOORD1.x, tint mode in .y (1 flora, 2 hull paint, 3 player dye)
             mesh.SetUVs(2, leafUv); // foliage cutout flag in TEXCOORD2.x, flora/hull/dye tint in .yzw
             mesh.SetUVs(3, blockLight); // TEXCOORD3.xyz: propagated coloured block-light (placed lights illuminate)
+            mesh.SetUVs(4, blockLightDir); // TEXCOORD4.xyz: dominant block-light direction (N·L shaping + glint)
             mesh.SetTangents(tangents);
             mesh.RecalculateNormals();
             mesh.RecalculateBounds();
@@ -371,8 +399,8 @@ namespace BlocksBeyondTheStars.Client
         /// no collider triangles, so small plants are walk-through. <paramref name="heightScale"/> /
         /// <paramref name="widthScale"/> give each plant its own size (so a field reads as tall + short tufts).</summary>
         private static void AddCrossPlant(List<Vector3> verts, List<int> tris, List<Color> colors, List<Vector2> uvs,
-            List<Vector4> tangents, List<Vector2> skyUv, List<Vector4> leafUv, List<Vector3> blockLight, Vector3 cell, Color col, Rect uv, float sky,
-            Color tint, Vector3 bl, float heightScale = 1f, float widthScale = 1f)
+            List<Vector4> tangents, List<Vector2> skyUv, List<Vector4> leafUv, List<Vector3> blockLight, List<Vector3> blockLightDir, Vector3 cell, Color col, Rect uv, float sky,
+            Color tint, Vector3 bl, Vector3 blDir, float heightScale = 1f, float widthScale = 1f)
         {
             // The two crossed planes' floor diagonals, inset symmetrically from the cell centre (so the width
             // scales about the middle), clamped inside the cell to avoid bleeding into neighbours.
@@ -411,6 +439,7 @@ namespace BlocksBeyondTheStars.Client
                         skyUv.Add(new Vector2(sky, 1f)); // flora flag on — takes the species/world tint
                         leafUv.Add(new Vector4(1f, tint.r, tint.g, tint.b)); // cutout on + per-species tint
                         blockLight.Add(bl); // coloured block-light reaching the plant
+                        blockLightDir.Add(blDir); // matching block-light direction
                     }
 
                     tris.Add(baseIdx); tris.Add(baseIdx + 2); tris.Add(baseIdx + 1);
