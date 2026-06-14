@@ -1,5 +1,7 @@
 using System.Linq;
 using BlocksBeyondTheStars.Networking.Messages;
+using BlocksBeyondTheStars.Shared.Geometry;
+using BlocksBeyondTheStars.Shared.Primitives;
 using BlocksBeyondTheStars.Shared.Story;
 using BlocksBeyondTheStars.Shared.World;
 
@@ -117,6 +119,112 @@ public sealed partial class GameServer
     private bool IsGuardianSystemLocation(string locationId)
         => !string.IsNullOrEmpty(locationId) && _galaxy?.FindBody(locationId)?.SystemId == GuardianFinaleSystemId;
 
+    // ---------------- Stage 2: the inner-core chamber + its two routes ----------------
+
+    /// <summary>How close to the core terminal the player must be for the breach to channel (chamber-sized).</summary>
+    private const float CoreChamberReach = 7f;
+
+    /// <summary>Stamps the buried Guardian-core chamber on the finale body (idempotent per world). The chamber
+    /// sits ~24 blocks down with an iron shell and a glowing red core column at its centre (the terminal you
+    /// breach). Two routes reach it: <b>Route A</b> drops down a pre-carved 3×3 <b>aperture shaft</b> from the
+    /// surface (ringed by plating so the maw is visible); <b>Route B</b> simply mines down through the shell.
+    /// The finale body carries no other structures (see the per-world init), so nothing collides with it.</summary>
+    private void StampGuardianCoreChamber()
+    {
+        var aw = _worlds.Active;
+        if (aw.GuardianCoreStamped)
+        {
+            return;
+        }
+
+        aw.GuardianCoreStamped = true;
+        var planet = _world.Planet;
+        if (planet.Void)
+        {
+            return;
+        }
+
+        var shell = (_content.GetBlock("iron_wall") ?? _content.GetBlock("deepslate") ?? _content.GetBlock("stone"))!.NumericId;
+        var core = _content.GetBlock("light_red")?.NumericId ?? BlockId.Air;
+
+        int ax = WorldConstants.WrapX(48, _world.Circumference);
+        int az = 24;
+        int surfaceY = _generator.SurfaceHeight(planet, ax, az);
+        if (surfaceY < 40)
+        {
+            surfaceY = 64; // the finale core must bury cleanly even over low terrain
+        }
+
+        int floorY = surfaceY - 24;
+        aw.CoreChamberCenter = new Vector3i(ax, floorY + 1, az);
+        aw.HasCoreChamber = true;
+
+        // Chamber: an 11×11 outer shell (9×9 inside), 6 air high — the inner core, walled in iron.
+        const int R = 5;
+        for (int dx = -R; dx <= R; dx++)
+        for (int dz = -R; dz <= R; dz++)
+        for (int dy = -1; dy <= 6; dy++)
+        {
+            var p = new Vector3i(WorldConstants.WrapX(ax + dx, _world.Circumference), floorY + dy, az + dz);
+            bool isShell = dx == -R || dx == R || dz == -R || dz == R || dy == -1 || dy == 6;
+            _world.SetBlock(p, isShell ? shell : BlockId.Air);
+        }
+
+        // The glowing red core column at the centre — the terminal the player breaches.
+        if (!core.IsAir)
+        {
+            for (int dy = 0; dy <= 3; dy++)
+            {
+                _world.SetBlock(new Vector3i(ax, floorY + dy, az), core);
+            }
+        }
+
+        // Route A — the aperture: a 3×3 open shaft from the surface down into the chamber ceiling.
+        for (int dy = floorY + 6; dy <= surfaceY + 1; dy++)
+        for (int dx = -1; dx <= 1; dx++)
+        for (int dz = -1; dz <= 1; dz++)
+        {
+            _world.SetBlock(new Vector3i(WorldConstants.WrapX(ax + dx, _world.Circumference), dy, az + dz), BlockId.Air);
+        }
+
+        // A low ring of plating around the shaft mouth so the opening reads as the core's maw from the surface.
+        for (int dx = -2; dx <= 2; dx++)
+        for (int dz = -2; dz <= 2; dz++)
+        {
+            if (System.Math.Abs(dx) != 2 && System.Math.Abs(dz) != 2)
+            {
+                continue;
+            }
+
+            int rx = WorldConstants.WrapX(ax + dx, _world.Circumference);
+            int ry = _generator.SurfaceHeight(planet, rx, az + dz);
+            _world.SetBlock(new Vector3i(rx, ry + 1, az + dz), shell);
+            _world.SetBlock(new Vector3i(rx, ry + 2, az + dz), shell);
+        }
+
+        _log.Info($"Stamped the Guardian core chamber on '{_world.LocationId}' at ({ax},{floorY},{az}).");
+    }
+
+    /// <summary>True once the player has reached the inner-core chamber on the finale body (within
+    /// <see cref="CoreChamberReach"/> of the terminal). On any other world (no chamber) this defers to the
+    /// system gate, so it never blocks the hack where a chamber was never stamped.</summary>
+    private bool IsAtCoreChamber(PlayerSession session) => IsWithinCoreChamber(session.State.Position);
+
+    private bool IsWithinCoreChamber(Vector3f pos)
+    {
+        var aw = _worlds.Active;
+        if (!aw.HasCoreChamber)
+        {
+            return true; // not on the finale body → the system gate already governs
+        }
+
+        var c = aw.CoreChamberCenter;
+        double dx = WorldConstants.WrapDeltaX(pos.X - c.X, _world.Circumference);
+        double dy = pos.Y - c.Y;
+        double dz = pos.Z - c.Z;
+        return dx * dx + dy * dy + dz * dz <= (double)CoreChamberReach * CoreChamberReach;
+    }
+
     /// <summary>Applies the finale respawn rule (P6): if the ship would respawn the clone inside the Guardian
     /// system and a pre-finale return location was recorded for this player, returns that body instead (and
     /// consumes the record) so the clone re-grows on the world it launched from. Otherwise returns
@@ -149,6 +257,12 @@ public sealed partial class GameServer
 
         // Anti-cheat / correctness: the breach only channels while the player is actually in the Guardian system.
         if (!IsGuardianSystemLocation(session.CurrentLocationId))
+        {
+            return;
+        }
+
+        // Stage 2: you must have REACHED the inner core chamber — down the aperture shaft or by digging to it.
+        if (!IsAtCoreChamber(session))
         {
             return;
         }
@@ -311,6 +425,20 @@ public sealed partial class GameServer
 
     /// <summary>Test hook: resolve the respawn home a player would get, applying the finale return rule.</summary>
     public string ResolveRespawnHomeForTest(string playerId, string shipHome) => ResolveRespawnHome(playerId, shipHome);
+
+    /// <summary>Test hook: load the Guardian core world (stamping its chamber) and return the terminal centre.</summary>
+    public Vector3i LoadGuardianCoreForTest()
+    {
+        EnsureGuardianSystemInGalaxy();
+        LoadWorld(GuardianCorePlanetType(), GuardianCoreBodyId);
+        return _worlds.Active.CoreChamberCenter;
+    }
+
+    /// <summary>Test/inspection: the active world has a stamped Guardian-core chamber.</summary>
+    public bool HasCoreChamberForTest => _worlds.Active.HasCoreChamber;
+
+    /// <summary>Test hook: whether a position is within breach range of the core terminal on the active world.</summary>
+    public bool IsWithinCoreChamberForTest(Vector3f pos) => IsWithinCoreChamber(pos);
 
     /// <summary>Test/inspection: the Stage-1 gauntlet roster (hostile count + the toughest hull) built without a
     /// full flight setup — verifies the finale system fields an elite wave, not the ambient hostile spawn.</summary>

@@ -68,6 +68,13 @@ public sealed partial class GameServer
             });
         }
 
+        // Finale (P6 Stage 2): the Guardian-core aperture is the navigation target on the finale body.
+        if (_worlds.Active.HasCoreChamber)
+        {
+            var c = _worlds.Active.CoreChamberCenter;
+            pois.Add(new NetPoi { Type = "guardian_core", Name = "Guardian Core", X = c.X, Z = c.Z });
+        }
+
         Send(session, new PlanetPoiList { Pois = pois.ToArray() });
     }
 

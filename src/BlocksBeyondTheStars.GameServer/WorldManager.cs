@@ -77,6 +77,12 @@ internal sealed class LoadedWorld
     public bool VaultsStamped { get; set; }
     public List<Vector3i> VaultEntrances { get; } = new();
 
+    // Finale (P6 Stage 2): the buried Guardian-core chamber on the guardian_finale-core body — stamped once,
+    // its terminal centre is where the breach hack is gated (reach it by digging or down the aperture shaft).
+    public bool GuardianCoreStamped { get; set; }
+    public Vector3i CoreChamberCenter { get; set; }
+    public bool HasCoreChamber { get; set; }
+
     // Per-world simulation timers/counters (so each resident world ticks independently). Weather + time
     // stay global for now (all resident worlds share the sky — a temporary limitation, refined in P7).
     public double CreatureSpawnTimer { get; set; }

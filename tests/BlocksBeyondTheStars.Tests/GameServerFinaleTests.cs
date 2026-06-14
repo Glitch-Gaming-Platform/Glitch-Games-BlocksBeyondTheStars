@@ -2,6 +2,7 @@ using BlocksBeyondTheStars.Networking.Transport;
 using BlocksBeyondTheStars.Persistence;
 using BlocksBeyondTheStars.Shared.Configuration;
 using BlocksBeyondTheStars.Shared.Content;
+using BlocksBeyondTheStars.Shared.Geometry;
 using Xunit;
 using SvGameServer = BlocksBeyondTheStars.GameServer.GameServer;
 
@@ -180,6 +181,33 @@ public sealed class GameServerFinaleTests : IDisposable
 
             Assert.True(server.GalaxyHasGuardianSystemForTest);   // now a jump target on the star map
             Assert.True(server.GuardianCoreIsLandableForTest);    // with a landable core body to set down on
+        }
+    }
+
+    [Fact]
+    public void The_finale_body_stamps_a_core_chamber_and_no_random_structures()
+    {
+        var server = Started(out var repo);
+        using (repo)
+        {
+            var center = server.LoadGuardianCoreForTest();
+
+            Assert.True(server.HasCoreChamberForTest);           // the inner core chamber is stamped
+            Assert.Empty(server.VaultEntrances);                 // and NO random vaults/structures on the finale body
+        }
+    }
+
+    [Fact]
+    public void The_breach_only_channels_once_the_player_has_reached_the_core_chamber()
+    {
+        var server = Started(out var repo);
+        using (repo)
+        {
+            var center = server.LoadGuardianCoreForTest();
+
+            // Standing at the terminal → in range; far out on the surface → not.
+            Assert.True(server.IsWithinCoreChamberForTest(new Vector3f(center.X, center.Y, center.Z)));
+            Assert.False(server.IsWithinCoreChamberForTest(new Vector3f(center.X + 40f, center.Y + 24f, center.Z)));
         }
     }
 

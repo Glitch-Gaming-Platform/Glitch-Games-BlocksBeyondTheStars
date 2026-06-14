@@ -162,8 +162,10 @@ Each phase lists **server / data / net / persistence / client / tests / build / 
 - **DoD:** the first storyline is data; adding lines needs no code. **No Unity build.** *(Full corpus =
   workstream W-A.)*
 
-### P2 — Net fragments findable (Layer B) + reader — **M** · ⚙️ Unity
-> **🟦 P2 SERVER COMPLETE (2026-06-14); Unity client remaining.** Landed (server): `StoryFragment` model +
+### P2 — Net fragments findable (Layer B) + reader — **M** · ✅ server + client build-verified
+> **✅ P2 COMPLETE — server + Unity client build-verified (2026-06-14).** *(Optional follow-ups only: a proper
+> re-readable reader panel — today folds into the P3 Story Log tab; structure-placed fragments + pity/budget —
+> combat already de-risks soft-lock.)* Landed (server): `StoryFragment` model +
 > 6 authored fragments (one per lore category, DE+EN) in the pack; `GameServerNetFragments.cs` — a
 > deterministic, **datacube-style surface placement** drawing from the active pack's still-needed pool
 > (weighted), idempotent per resident world, deduped vs the found-set; **pickup**
@@ -193,8 +195,10 @@ Each phase lists **server / data / net / persistence / client / tests / build / 
 - **Tests:** placement determinism, pool draw, dedupe, pity under starved RNG.
 - **DoD:** fragments appear, read as text only, advance the meter. **Needs Unity build.**
 
-### P3 — Beats + progress meter + **new Story Log tab** + milestones — **M** · ⚙️ Unity
-> **🟦 P3 — milestone hooks LANDED (server, 2026-06-14).** `RecordStoryMilestone` is hooked into **mission
+### P3 — Beats + progress meter + **new Story Log tab** + milestones — **M** · ✅ server + client build-verified
+> **✅ P3 COMPLETE — server + Unity client build-verified (2026-06-14).** *(Optional follow-ups only: reader
+> polish — wrapping/scroll height is estimated; the base/station-built milestones.)*
+> Server: `RecordStoryMilestone` is hooked into **mission
 > turn-in** (settlement helped — `GameServerMissions`) and **new system mapped** (`MarkArrivedOnBody` /
 > `MarkSystemKnown`, first discovery per player). Join-time beat catch-up + the meter payload
 > (`StoryStateMessage`) already ship from P0. Test confirms mapping the start system records a milestone.
@@ -220,8 +224,11 @@ Each phase lists **server / data / net / persistence / client / tests / build / 
 - **DoD:** a guided arc + a visible goal + a re-readable Story Log (a new tab, existing Codex/Wiki untouched).
   **This + P0–P2 is the playable MVP.** **Needs Unity build.**
 
-### P4 — Planet machines (three-eyed robots + flying scan-drones) + combat-as-progress + player memories — **M** · ⚙️ Unity
-> **🟦 P4 — combat-as-progress LANDED (2026-06-14).** Defeating a Guardian machine now advances the shared
+### P4 — Planet machines (three-eyed robots + flying scan-drones) + combat-as-progress + player memories — **M** · ✅ server + client build-verified
+> **✅ P4 COMPLETE — server + Unity client build-verified (2026-06-14): three-eyed robot retheme + flying
+> scan-drone + combat-as-progress + player memories.** *(Optional follow-ups only: robotic SFX — the machines
+> still reuse the organic growl; a dedicated memory-reader panel — today a toast + the Story Log tab.)*
+> Server: defeating a Guardian machine now advances the shared
 > story: `RecordStoryMachineKill` is hooked into the **planet-enemy kill**
 > ([GameServerEnemies.cs](../src/BlocksBeyondTheStars.GameServer/GameServerEnemies.cs), the `!isCreature`
 > branch) and the **space hostile destroy** (`GameServerSpaceCombat`, `target.Hostile`); organic fauna is
@@ -355,9 +362,27 @@ Each phase lists **server / data / net / persistence / client / tests / build / 
 > location id + the `FinaleView` singleton; tracks cross-fade between phases and loop in place. Falls back to
 > the matching synth mood if a track file is ever missing. (`music_boss_{approach,gauntlet,hack,dialogue,resolution}.mp3`.)
 >
-> ⏳ **Remaining (⚙️ Unity + world-gen):** the **two physical routes** (fly-in interior vs. land + dig) + the
-> actual in-world core console/encounter on the landable body (today the breach hint shows anywhere on the
-> Guardian Core, server-gated); a **gauntlet HUD**; **boss/core visuals**; robotic SFX.
+> **🟦 P6 — Stage 2 two routes + inner-core chamber COMPLETE (2026-06-14, server + data).** The finale body now
+> has a real **inner core** to reach, two ways (`StampGuardianCoreChamber`, modelled on the vault stamper):
+> - a buried **11×11 iron chamber** ~24 blocks down with a glowing **red core column** at its centre (the
+>   terminal you breach);
+> - **Route A (aperture):** a pre-carved 3×3 open **shaft** from the surface down into the chamber, ringed by
+>   plating so the maw is visible — drop/descend straight in;
+> - **Route B (dig):** mine down through the shell anywhere to reach it (mining is free; no bedrock);
+> - both converge on the chamber. The **breach hack is now proximity-gated** (`IsAtCoreChamber`, within 7 of the
+>   terminal — `_worlds.Active.CoreChamberCenter`), so you must actually get to the core; the surface Guardian
+>   machines provide the "fight your way down". A **`guardian_core` POI** marks the aperture on the planet map.
+> - **Per the design rule, the finale body carries NO procedural structures** — `LoadWorld` skips settlements/
+>   wrecks/vaults/data-cubes/net-fragments on `guardian_finale-core`; the Guardian system itself is hand-built
+>   (only the core body — no random stars/stations). **569 green** (+2: chamber-stamped-no-random-structures,
+>   breach-gated-on-reaching-the-core).
+> - **Note (interpretation):** Route A ships as a *pre-carved descent shaft* on the surface body (unified with
+>   the dig world), not a separate station-boarded interior — both routes share one world + one chamber, which
+>   is simpler and keeps "two ways to the core, player's choice" intact. A true boardable interior remains a
+>   possible future upgrade.
+>
+> ⏳ **Remaining (⚙️ Unity):** a **gauntlet HUD**; **boss/core visuals** (the chamber/core read as plain blocks
+> today); robotic SFX.
 The finale is **staged**, not just another drone fight: a hard gauntlet, a **hack** to open the core, then a
 **dialogue duel** won by exposing the Guardian's contradiction — **weapons cannot destroy the core**.
 - **Server (reveal):** score maxed **and** all `vega` beats seen → `RevealGuardianSystem` →

@@ -322,27 +322,37 @@ public sealed partial class GameServer
             InitCreatures();
             LoadContainers();
 
-            if (_config.PlaceSettlements)
+            if (locationId == GuardianCoreBodyId)
             {
-                StampSettlement();
+                // The finale body is special: ONLY the Guardian-core chamber + its aperture are placed here.
+                // No random settlements / wrecks / vaults / data cubes / net fragments — the procedural
+                // structure generator never touches the finale area (by design), so nothing collides with it.
+                StampGuardianCoreChamber();
             }
-
-            if (_config.PlaceWrecks)
+            else
             {
-                StampWreck();
-            }
+                if (_config.PlaceSettlements)
+                {
+                    StampSettlement();
+                }
 
-            if (_config.PlaceVaults)
-            {
-                StampVaults(); // buried vault ruins ("Welten reicher" W-R3) — 0-2 per world, loot via containers
-            }
+                if (_config.PlaceWrecks)
+                {
+                    StampWreck();
+                }
 
-            if (_config.PlaceDataCubes)
-            {
-                StampDataCubes(); // minigame download cubes — 0-N per world (many bodies get none)
-            }
+                if (_config.PlaceVaults)
+                {
+                    StampVaults(); // buried vault ruins ("Welten reicher" W-R3) — 0-2 per world, loot via containers
+                }
 
-            StampNetFragments(); // story net fragments scattered on the surface (P2; self-skips when story off / Void)
+                if (_config.PlaceDataCubes)
+                {
+                    StampDataCubes(); // minigame download cubes — 0-N per world (many bodies get none)
+                }
+
+                StampNetFragments(); // story net fragments scattered on the surface (P2; self-skips when story off / Void)
+            }
         }
 
         LoadPlayerDoors(); // persisted player-built doors load on every world (void or not, settlement or not)
