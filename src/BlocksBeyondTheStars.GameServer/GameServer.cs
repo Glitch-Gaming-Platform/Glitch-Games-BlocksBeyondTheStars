@@ -1340,6 +1340,8 @@ public sealed partial class GameServer
             case DissolveAllianceIntent allianceDis: HandleDissolveAlliance(session, allianceDis); break;
             case StorySelectIntent storySelect: HandleStorySelect(session, storySelect); break;
             case NetFragmentFoundIntent netFrag: HandleNetFragmentFound(session, netFrag); break;
+            case CoreHackIntent coreHack: HandleCoreHack(session, coreHack); break;
+            case CoreDialogueChoiceIntent coreChoice: HandleCoreDialogueChoice(session, coreChoice); break;
         }
     }
 

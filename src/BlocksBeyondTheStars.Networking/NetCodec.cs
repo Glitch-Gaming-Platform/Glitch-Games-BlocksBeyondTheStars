@@ -223,6 +223,13 @@ public static class NetCodec
         Register(141, typeof(NetFragmentRevealed));    // Server -> Client (the picked-up fragment's archive text)
         Register(142, typeof(PlayerMemoryRevealed));   // Server -> Client (a personal memory unlocked by a machine kill)
         Register(148, typeof(NetFragmentList));        // Server -> Client (net fragments on the current world)
+
+        // Finale (P6): Guardian-system reveal → core hack (channel) → argument duel (defeat by contradiction).
+        Register(143, typeof(GuardianSystemRevealed));   // Server -> Client (finale system placed on the map)
+        Register(144, typeof(CoreDialogueMessage));      // Server -> Client (current duel node: prompt + choices)
+        Register(145, typeof(CoreDialogueChoiceIntent)); // Client -> Server (the player's rebuttal pick)
+        Register(146, typeof(CoreHackIntent));           // Client -> Server (channel the core hack one tick)
+        Register(149, typeof(CoreHackProgress));         // Server -> Client (core-hack channel progress)
     }
 
     private static void Register(byte tag, Type type)

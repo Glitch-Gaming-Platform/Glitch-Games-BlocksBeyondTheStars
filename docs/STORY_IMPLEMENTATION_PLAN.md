@@ -91,9 +91,10 @@ mini-games.
 | 143 | `GuardianSystemRevealed` | S→C | adds the finale system to the star map |
 | 144 | `CoreDialogueMessage` | S→C | the core's assertion + counter-argument options (finale duel) |
 | 145 | `CoreDialogueChoiceIntent` | C→S | the player's chosen counter-argument |
-| 146 | `CoreHackIntent` / `CoreHackProgress` | C↔S | start/advance the core hack; progress bar |
+| 146 | `CoreHackIntent` | C→S | channel one core-hack tick (server owns the increment) |
 | 147 | `StorySelectIntent` | C→S | admin sets the active story (world option / Story tab) |
 | 148 | `NetFragmentList` | S→C | net fragments on the current world (surface, datacube-style) |
+| 149 | `CoreHackProgress` | S→C | core-hack channel progress (0..100) + complete (opens the duel) |
 
 Beat speech reuses `ShipAiLine`. **Every new message must be `Register()`d in NetCodec** or it silently
 no-ops. The Story Log tab reads the player's full found-list from `StoryStateMessage` (or a dedicated
@@ -289,14 +290,33 @@ Each phase lists **server / data / net / persistence / client / tests / build / 
 - **DoD:** wrecks feel dangerous; counts provably unchanged. **No Unity build.**
 
 ### P6 — Finale: Guardian system + multi-stage two-route core confrontation + pacification — **L** · ⚙️ Unity
-> **🟦 P6 — pacification + assets ready ahead of the finale (2026-06-14).** Two pieces landed early: (1) the
-> **boss music** is generated + filed (`music_boss_*.mp3`, see [MUSIC_TRACKS.md](MUSIC_TRACKS.md)); (2) the
-> **pacification gating** works server-side — `MarkGuardianDefeated()` sets the one-way per-save
-> `guardianDefeated` flag, despawns live planet machines, persists + broadcasts; `PlanetEnemiesActive` and
-> the space hostile spawn both gate on it, so **no machine spawns once the core is down** (test:
-> defeat → no planet machines spawn). **557 total green.** ⏳ **Remaining (⚙️ Unity, the bulk of P6):** the
-> Guardian-system generation, the staged encounter (gauntlet → two routes → hack → argument duel), the boss
-> visuals + audio wiring, and triggering `MarkGuardianDefeated` on the duel win.
+> **🟦 P6 — server backbone of the finale flow COMPLETE (2026-06-14).** The whole reveal → hack → duel →
+> pacification chain now runs + persists server-side, fully tested; only the Unity encounter + world-gen remain.
+> Landed:
+> - **Boss music** generated + filed (`music_boss_*.mp3`, see [MUSIC_TRACKS.md](MUSIC_TRACKS.md)).
+> - **Reveal gating** — when the arc completes (every beat revealed), `RevealGuardianSystemIfReady()` flips the
+>   persisted `guardianSystemRevealed` flag **once**, speaks the reveal line to all, and broadcasts
+>   `GuardianSystemRevealed` (143). Wired into `AdvanceStory`.
+> - **Core hack** (stage 3, channel-and-defend) — `CoreHackIntent` (146) accumulates server-authoritative
+>   progress → `CoreHackProgress` (149); reaching 100 opens the duel. Gated on revealed && !defeated.
+> - **Argument duel** (stage 4) — data-driven from the pack's new `coreArguments` (4 authored contradiction
+>   nodes, bilingual): `CoreDialogueMessage` (144) presents the core's claim + rebuttals; `CoreDialogueChoiceIntent`
+>   (145) walks nodes — a **correct (contradiction) pick advances**, a **wrong one is dismissed and re-presents
+>   the node** (the duel can stall but **never be lost** — weapons can't end the core). Clearing the last node
+>   speaks the resolution line and calls `MarkGuardianDefeated` (pacification).
+> - **Pacification gating** (unchanged) — `MarkGuardianDefeated()` sets the one-way `guardianDefeated` flag,
+>   despawns live planet machines, persists + broadcasts; `PlanetEnemiesActive` + the space spawn both gate on it.
+>
+> New files: [GameServerStoryFinale.cs](../src/BlocksBeyondTheStars.GameServer/GameServerStoryFinale.cs),
+> [GameServerFinaleTests.cs](../tests/BlocksBeyondTheStars.Tests/GameServerFinaleTests.cs) (6 tests: reveal-once,
+> no-hack-before-reveal, hack-opens-duel, wrong-stalls, correct-path-wins, no-choice-before-hack). `CoreArgument`/
+> `CoreArgumentChoice` added to [StoryDefinition.cs](../src/BlocksBeyondTheStars.Shared/Story/StoryDefinition.cs).
+> **563 total green.** ⏳ **Remaining (⚙️ Unity + world-gen):** the Guardian-system **generation** (sun + core
+> only, `Selectable=false`, reached via jump generator) + the map marker; the staged **space gauntlet** waves;
+> the **two physical routes** (fly-in interior vs. land + dig) converging on the inner core; the client
+> encounter UI (gauntlet HUD, hack bar, **duel panel**), boss visuals + `ClientMusic` finale contexts; and the
+> **death-in-Guardian-system → respawn-at-prior-world** rule (still server-side, deferred — entangled with
+> respawn + system entry).
 The finale is **staged**, not just another drone fight: a hard gauntlet, a **hack** to open the core, then a
 **dialogue duel** won by exposing the Guardian's contradiction — **weapons cannot destroy the core**.
 - **Server (reveal):** score maxed **and** all `vega` beats seen → `RevealGuardianSystem` →

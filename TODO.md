@@ -6,7 +6,7 @@ plans live under [docs/](docs/) (committed); this file is the high-level status.
 keep it current when controls/features change. Last consolidated 2026-06-04.
 
 **Build:** `scripts/build-client.ps1` (publishes shared libs + bundled server + Unity Windows player).
-**Test:** `dotnet test` — currently **557 passing** (2026-06-14). Locale parity (en/de) is enforced by a test.
+**Test:** `dotnet test` — currently **563 passing** (2026-06-14). Locale parity (en/de) is enforced by a test.
 **Conventions:** English docs/comments; in-game text bilingual DE+EN; commit to `main` with the
 Claude `Co-Authored-By` trailer; OpenAI texture + ElevenLabs sound generation is blanket-approved
 (no per-batch gate).
@@ -42,8 +42,12 @@ finale** vs. the dormant Guardian core. Story is data: `data/stories/<id>/`.
   Suno tracks) integrated into `client/Assets/Resources/music/music_boss_*.mp3`. P5 added the **count-neutral
   machine/wreck coupling** (`GameRules.MachineWreckCoupling`); P4 also added **player memories** (drop on
   machine kills → per-player unlock → `PlayerMemoryRevealed` 142); P6 added the **pacification gating**
-  (`MarkGuardianDefeated` → no machine spawns once the core is down). **All server-side story logic is done
-  and tested — 557 total green, 0 failed.**
+  (`MarkGuardianDefeated` → no machine spawns once the core is down) **plus the full finale server backbone**
+  ([GameServerStoryFinale.cs](src/BlocksBeyondTheStars.GameServer/GameServerStoryFinale.cs)): arc-complete →
+  **reveal** the Guardian system (`GuardianSystemRevealed` 143) → **core hack** channel (`CoreHackIntent` 146 /
+  `CoreHackProgress` 149) → **argument duel** (data-driven `coreArguments`; `CoreDialogueMessage` 144 /
+  `CoreDialogueChoiceIntent` 145; correct contradiction advances, wrong stalls, never lost) → win calls
+  `MarkGuardianDefeated`. **All server-side story logic is done and tested — 563 total green, 0 failed.**
   ⏭ **Client build-verified so far:** P2 fragment objects + pickup · P3 Story Log tab + progress meter ·
   P4 three-eyed-robot retheme **and the flying scan-drone** (`WorldEntities.BuildDrone` — hovering dark pod +
   red scanner eye, branch on `NetCombatEntity.Kind == "ScanDrone"`; server mix is count-neutral inside

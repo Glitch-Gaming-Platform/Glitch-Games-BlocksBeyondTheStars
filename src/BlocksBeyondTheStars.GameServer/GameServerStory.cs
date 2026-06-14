@@ -143,6 +143,8 @@ public sealed partial class GameServer
             RevealBeatToAll(beat);
         }
 
+        RevealGuardianSystemIfReady(); // arc complete → place the finale system on the map (fires once)
+
         PersistStoryState();
         BroadcastStoryState();
     }
@@ -275,6 +277,7 @@ public sealed partial class GameServer
         _storyState.GuardianSystemRevealed = false;
         _storyState.GuardianDefeated = false;
         _storyState.FoundFragmentKeys.Clear();
+        ResetFinaleRuntime();
     }
 
     // ---------------- Finale pacification (P6) ----------------

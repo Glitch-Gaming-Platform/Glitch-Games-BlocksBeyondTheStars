@@ -62,6 +62,44 @@ public sealed class StoryMemory
 }
 
 /// <summary>
+/// One rebuttal the player can offer at a <see cref="CoreArgument"/> node of the finale dialogue duel. The
+/// core is defeated <b>by contradiction, not by weapons</b>: exactly one choice per node is <see cref="Correct"/>
+/// (it exposes a real flaw in the core's logic and advances the duel); the others are dismissed and the player
+/// stays on the node to try again (you cannot lose the duel, only fail to progress). All text is a locale key
+/// (bilingual DE+EN).
+/// </summary>
+public sealed class CoreArgumentChoice
+{
+    /// <summary>Locale key of the player's rebuttal option shown in the duel panel.</summary>
+    public string TextKey { get; set; } = string.Empty;
+
+    /// <summary>True if this rebuttal exposes a real contradiction — it advances the duel toward shutdown.</summary>
+    public bool Correct { get; set; }
+
+    /// <summary>Locale key of the core's reaction to this pick: a concession when <see cref="Correct"/>, a
+    /// dismissal otherwise.</summary>
+    public string ResponseKey { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// One node of the finale's argument duel (story P6, stage 4). The core states its logic
+/// (<see cref="PromptKey"/>); the player answers with one of the <see cref="Choices"/>. The pack's nodes are
+/// walked <b>in order</b>; clearing the last one shuts the core down (pacification). Story-agnostic data, like
+/// the rest of the pack.
+/// </summary>
+public sealed class CoreArgument
+{
+    /// <summary>Stable node id (dev-facing; the duel walks the list in order).</summary>
+    public string Key { get; set; } = string.Empty;
+
+    /// <summary>Locale key of the core's statement/challenge at this node (bilingual DE+EN).</summary>
+    public string PromptKey { get; set; } = string.Empty;
+
+    /// <summary>The player's rebuttal options; exactly one should be the contradiction that advances the duel.</summary>
+    public List<CoreArgumentChoice> Choices { get; set; } = new();
+}
+
+/// <summary>
 /// A story pack: identity + pacing config + the ordered beat arc. The story engine consumes this and is
 /// completely story-agnostic, so further storylines are added as more packs (see the implementation plan
 /// D2–D4). For P0 a pack is code-defined in <see cref="StoryRegistry"/>; a later phase loads it from
@@ -101,4 +139,9 @@ public sealed class StoryDefinition
 
     /// <summary>The pack's personal player memories, unlocked in order by defeating machines (per player).</summary>
     public List<StoryMemory> Memories { get; set; } = new();
+
+    /// <summary>The finale dialogue-duel nodes (P6, stage 4), walked in order at the Guardian core. Each node
+    /// is one of the core's claims with the player's rebuttals; clearing them all shuts the core down. Empty
+    /// when a pack has no scripted finale duel (the finale then falls back to a single concede).</summary>
+    public List<CoreArgument> CoreArguments { get; set; } = new();
 }

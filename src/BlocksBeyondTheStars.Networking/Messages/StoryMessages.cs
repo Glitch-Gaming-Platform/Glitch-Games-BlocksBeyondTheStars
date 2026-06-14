@@ -84,3 +84,60 @@ public sealed class PlayerMemoryRevealed
 {
     public string TextKey { get; set; } = string.Empty;
 }
+
+// ---------------- Finale (P6): Guardian system reveal → core hack → argument duel ----------------
+
+/// <summary>Server → client: the Guardian (finale) system has just been placed on the star map — the story is
+/// complete enough to confront the core. Fired once, when the gate flips. A jump generator is needed to reach
+/// it; the narrator line arrives separately on the VEGA channel.</summary>
+public sealed class GuardianSystemRevealed
+{
+    /// <summary>Optional locale key / id for the map marker label (the client may also just use a fixed label).</summary>
+    public string LabelKey { get; set; } = string.Empty;
+}
+
+/// <summary>Client → server: the player channels the core hack for one tick at the inner core (stage 3,
+/// "channel-and-defend"). The server owns the increment (anti-cheat) and replies with
+/// <see cref="CoreHackProgress"/>; completing it opens the argument duel.</summary>
+public sealed class CoreHackIntent
+{
+}
+
+/// <summary>Server → client: the core-hack channel progress (0..100). When <see cref="Complete"/> the hack is
+/// done and the duel begins (the first <see cref="CoreDialogueMessage"/> follows).</summary>
+public sealed class CoreHackProgress
+{
+    public int Progress { get; set; }
+    public bool Complete { get; set; }
+}
+
+/// <summary>Server → client: the current state of the finale argument duel (stage 4). Carries the core's
+/// statement (<see cref="PromptKey"/>) and the player's rebuttal options (<see cref="ChoiceKeys"/>), plus an
+/// optional <see cref="ResponseKey"/> — the core's reaction to the previous pick. All are locale keys the
+/// client localizes (bilingual DE+EN). When <see cref="Won"/> the core has been argued into shutdown
+/// (pacification) and there are no further choices.</summary>
+public sealed class CoreDialogueMessage
+{
+    /// <summary>Index of the current duel node (for the client's progress display).</summary>
+    public int Node { get; set; }
+
+    /// <summary>Locale key of the core's statement/challenge ("" when <see cref="Won"/>).</summary>
+    public string PromptKey { get; set; } = string.Empty;
+
+    /// <summary>Locale keys of the player's rebuttal options (empty when <see cref="Won"/>).</summary>
+    public string[] ChoiceKeys { get; set; } = System.Array.Empty<string>();
+
+    /// <summary>Locale key of the core's reaction to the previous pick ("" at the opening of the duel).</summary>
+    public string ResponseKey { get; set; } = string.Empty;
+
+    /// <summary>True once the last node is cleared — the core powers down (the galaxy is pacified).</summary>
+    public bool Won { get; set; }
+}
+
+/// <summary>Client → server: the player offers a rebuttal at the current duel node. The server validates the
+/// index against the active node; a correct (contradiction) choice advances the duel, a wrong one is dismissed
+/// and the node is re-presented (the duel cannot be lost, only stalled).</summary>
+public sealed class CoreDialogueChoiceIntent
+{
+    public int ChoiceIndex { get; set; }
+}

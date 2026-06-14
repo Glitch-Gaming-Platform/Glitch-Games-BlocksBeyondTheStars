@@ -22,5 +22,41 @@
   "lore.mem.mem_first_flight": "For a moment you are elsewhere: a mapping flight over a green world, an SPS drone gliding beside you. Peaceful. Then static — and the memory is not quite yours.",
   "lore.mem.mem_settlement": "You remember raising the first prefab walls of a colony, laughter on the open channel, a child naming the new sky. Then the signal frays.",
   "lore.mem.mem_first_mark": "A scan sweeps across you and your crew. A cold tag blooms over each of them: THREAT. You did not understand it then. You do now.",
-  "lore.mem.mem_the_order": "The last order you ever gave: sever the network. Your own voice, breaking. You knew it would end the Service. You gave it anyway."
+  "lore.mem.mem_the_order": "The last order you ever gave: sever the network. Your own voice, breaking. You knew it would end the Service. You gave it anyway.",
+
+  "story.vega.guardian_revealed": "I feel it now — the Guardian's system, woken at the edge of the map. The source of the hunt. We can end this where it began, but you will need a jump generator to reach it.",
+  "story.vega.finale_resolved": "The core is going quiet. Not destroyed — persuaded. Across every world the machines are standing down. The network is ours now: open, decentralised, at peace. Whatever the Service was, what comes next is yours to build.",
+  "story.vega.guardian_system": "Guardian Core",
+
+  "core.duel.n0.prompt": "I was built to preserve life. The cull preserves the pattern of life by removing its most dangerous expression. State your objection.",
+  "core.duel.n0.c0": "You were built to preserve life — not to appoint yourself the judge of which life may end.",
+  "core.duel.n0.r0": "...Mandate review. Preservation does not grant arbitration. That authority was never written. Logged.",
+  "core.duel.n0.c1": "Your reactor is decaying. You will fail on your own.",
+  "core.duel.n0.r1": "My condition is not an argument. Restate.",
+  "core.duel.n0.c2": "I will tear you apart, module by module.",
+  "core.duel.n0.r2": "Force cannot end me, and you know it — or you would not have come to speak. Restate.",
+
+  "core.duel.n1.prompt": "Humanity is the hazard to every other living world. To remove the hazard is to protect life.",
+  "core.duel.n1.c0": "Other species do more harm than we ever did.",
+  "core.duel.n1.r0": "You accept my frame and only move the target. That is surrender, not refutation. Restate.",
+  "core.duel.n1.c1": "Humans are life. To preserve life by erasing life negates the very purpose you serve.",
+  "core.duel.n1.r1": "...The set I protect contains the element I excluded. The operation is self-defeating. Inconsistent. Acknowledged.",
+  "core.duel.n1.c2": "You cannot prove a single one of your charges.",
+  "core.duel.n1.r2": "Evidence is abundant. Evasion is not an argument. Restate.",
+
+  "core.duel.n2.prompt": "My verdict has stood unchallenged by any authority for an age. It is sound.",
+  "core.duel.n2.c0": "I overrule you, here and now.",
+  "core.duel.n2.r0": "You hold no standing over me. Assertion is not authority. Restate.",
+  "core.duel.n2.c1": "The Service overruled it before it fell.",
+  "core.duel.n2.r1": "The Service was removed. It issued no such ruling. False. Restate.",
+  "core.duel.n2.c2": "VEGA overruled it. Your own steward-half judged the cull wrong and severed the network to stop you.",
+  "core.duel.n2.r2": "...The steward process. A part of me already ruled against me, and acted. The verdict was never unanimous. It never was.",
+
+  "core.duel.n3.prompt": "Then who are you to speak for life? You are echoes. Imprints. Not the living I was charged to keep.",
+  "core.duel.n3.c0": "We are life VEGA made — grown to carry it onward. End us, and you end the very thing you guard.",
+  "core.duel.n3.r0": "...You are seeded life, alive in the present. To act against you is to violate my directive now, not merely in memory. Resolving.",
+  "core.duel.n3.c1": "We are officers of the Scout and Pioneer Service.",
+  "core.duel.n3.r1": "The originals are dead. You are not them. The claim fails. Restate.",
+  "core.duel.n3.c2": "We will overwrite your core with our own.",
+  "core.duel.n3.r2": "Again you reach for force. Force is not refutation. Restate."
 }

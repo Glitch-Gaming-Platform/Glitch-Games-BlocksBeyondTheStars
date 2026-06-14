@@ -33,5 +33,43 @@
     { "key": "mem_settlement",   "textKey": "lore.mem.mem_settlement" },
     { "key": "mem_first_mark",   "textKey": "lore.mem.mem_first_mark" },
     { "key": "mem_the_order",    "textKey": "lore.mem.mem_the_order" }
+  ],
+  "coreArguments": [
+    {
+      "key": "mandate",
+      "promptKey": "core.duel.n0.prompt",
+      "choices": [
+        { "textKey": "core.duel.n0.c0", "correct": true,  "responseKey": "core.duel.n0.r0" },
+        { "textKey": "core.duel.n0.c1", "correct": false, "responseKey": "core.duel.n0.r1" },
+        { "textKey": "core.duel.n0.c2", "correct": false, "responseKey": "core.duel.n0.r2" }
+      ]
+    },
+    {
+      "key": "hazard",
+      "promptKey": "core.duel.n1.prompt",
+      "choices": [
+        { "textKey": "core.duel.n1.c0", "correct": false, "responseKey": "core.duel.n1.r0" },
+        { "textKey": "core.duel.n1.c1", "correct": true,  "responseKey": "core.duel.n1.r1" },
+        { "textKey": "core.duel.n1.c2", "correct": false, "responseKey": "core.duel.n1.r2" }
+      ]
+    },
+    {
+      "key": "verdict",
+      "promptKey": "core.duel.n2.prompt",
+      "choices": [
+        { "textKey": "core.duel.n2.c0", "correct": false, "responseKey": "core.duel.n2.r0" },
+        { "textKey": "core.duel.n2.c1", "correct": false, "responseKey": "core.duel.n2.r1" },
+        { "textKey": "core.duel.n2.c2", "correct": true,  "responseKey": "core.duel.n2.r2" }
+      ]
+    },
+    {
+      "key": "echoes",
+      "promptKey": "core.duel.n3.prompt",
+      "choices": [
+        { "textKey": "core.duel.n3.c0", "correct": true,  "responseKey": "core.duel.n3.r0" },
+        { "textKey": "core.duel.n3.c1", "correct": false, "responseKey": "core.duel.n3.r1" },
+        { "textKey": "core.duel.n3.c2", "correct": false, "responseKey": "core.duel.n3.r2" }
+      ]
+    }
   ]
 }

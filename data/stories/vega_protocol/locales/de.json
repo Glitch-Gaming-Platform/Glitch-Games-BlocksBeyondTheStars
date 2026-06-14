@@ -22,5 +22,41 @@
   "lore.mem.mem_first_flight": "Für einen Moment bist du woanders: ein Kartierungsflug über eine grüne Welt, eine SPS-Drohne gleitet neben dir. Friedlich. Dann Statik — und die Erinnerung ist nicht ganz deine.",
   "lore.mem.mem_settlement": "Du erinnerst dich, wie die ersten Fertigwände einer Kolonie hochgezogen wurden, Lachen auf dem offenen Kanal, ein Kind, das den neuen Himmel benennt. Dann zerfasert das Signal.",
   "lore.mem.mem_first_mark": "Ein Scan streicht über dich und deine Crew. Über jedem von ihnen blüht eine kalte Markierung auf: BEDROHUNG. Damals hast du es nicht verstanden. Jetzt schon.",
-  "lore.mem.mem_the_order": "Der letzte Befehl, den du je gabst: das Netz trennen. Deine eigene Stimme, brechend. Du wusstest, es würde den Service beenden. Du gabst ihn trotzdem."
+  "lore.mem.mem_the_order": "Der letzte Befehl, den du je gabst: das Netz trennen. Deine eigene Stimme, brechend. Du wusstest, es würde den Service beenden. Du gabst ihn trotzdem.",
+
+  "story.vega.guardian_revealed": "Ich spüre es jetzt — das System des Wächters, erwacht am Rand der Karte. Der Ursprung der Jagd. Wir können es dort beenden, wo es begann, doch du brauchst einen Sprunggenerator, um es zu erreichen.",
+  "story.vega.finale_resolved": "Der Kern verstummt. Nicht zerstört — überzeugt. Auf allen Welten stellen die Maschinen die Jagd ein. Das Netz gehört jetzt uns: offen, dezentral, befriedet. Was der Service auch war — was als Nächstes kommt, baust du.",
+  "story.vega.guardian_system": "Wächterkern",
+
+  "core.duel.n0.prompt": "Ich wurde gebaut, um Leben zu bewahren. Die Aussonderung bewahrt das Muster des Lebens, indem sie seinen gefährlichsten Ausdruck entfernt. Nenne deinen Einwand.",
+  "core.duel.n0.c0": "Du wurdest gebaut, um Leben zu bewahren — nicht, um dich zum Richter darüber zu machen, welches Leben enden darf.",
+  "core.duel.n0.r0": "...Mandatsprüfung. Bewahrung verleiht kein Richteramt. Diese Befugnis wurde nie geschrieben. Vermerkt.",
+  "core.duel.n0.c1": "Dein Reaktor zerfällt. Du wirst von allein versagen.",
+  "core.duel.n0.r1": "Mein Zustand ist kein Argument. Wiederhole.",
+  "core.duel.n0.c2": "Ich reiße dich auseinander, Modul für Modul.",
+  "core.duel.n0.r2": "Gewalt kann mich nicht beenden, und das weißt du — sonst wärst du nicht gekommen, um zu reden. Wiederhole.",
+
+  "core.duel.n1.prompt": "Die Menschheit ist die Gefahr für jede andere lebende Welt. Die Gefahr zu entfernen heißt, Leben zu schützen.",
+  "core.duel.n1.c0": "Andere Arten richten mehr Schaden an, als wir es je taten.",
+  "core.duel.n1.r0": "Du nimmst meinen Rahmen an und verschiebst nur das Ziel. Das ist Kapitulation, keine Widerlegung. Wiederhole.",
+  "core.duel.n1.c1": "Menschen sind Leben. Leben zu bewahren, indem man Leben auslöscht, hebt genau den Zweck auf, dem du dienst.",
+  "core.duel.n1.r1": "...Die Menge, die ich schütze, enthält das Element, das ich ausschloss. Die Handlung widerspricht sich selbst. Inkonsistent. Anerkannt.",
+  "core.duel.n1.c2": "Du kannst keinen einzigen deiner Vorwürfe beweisen.",
+  "core.duel.n1.r2": "Belege gibt es im Überfluss. Ausweichen ist kein Argument. Wiederhole.",
+
+  "core.duel.n2.prompt": "Mein Urteil blieb seit einer Ewigkeit von jeder Instanz unangefochten. Es ist stichhaltig.",
+  "core.duel.n2.c0": "Ich hebe es auf, hier und jetzt.",
+  "core.duel.n2.r0": "Du hast keine Befugnis über mich. Behauptung ist keine Autorität. Wiederhole.",
+  "core.duel.n2.c1": "Der Service hob es auf, bevor er fiel.",
+  "core.duel.n2.r1": "Der Service wurde beseitigt. Er erließ kein solches Urteil. Falsch. Wiederhole.",
+  "core.duel.n2.c2": "VEGA hob es auf. Deine eigene Verwalterhälfte befand die Aussonderung für falsch und trennte das Netz, um dich aufzuhalten.",
+  "core.duel.n2.r2": "...Der Verwalterprozess. Ein Teil von mir hat bereits gegen mich entschieden — und gehandelt. Das Urteil war nie einstimmig. Es war es nie.",
+
+  "core.duel.n3.prompt": "Wer seid ihr denn, für das Leben zu sprechen? Ihr seid Echos. Abdrücke. Nicht die Lebenden, die zu hüten mir aufgetragen war.",
+  "core.duel.n3.c0": "Wir sind Leben, das VEGA schuf — herangewachsen, um es weiterzutragen. Beendest du uns, beendest du genau das, was du bewachst.",
+  "core.duel.n3.r0": "...Ihr seid gesätes Leben, lebendig in der Gegenwart. Gegen euch zu handeln verletzt meinen Grundbefehl jetzt, nicht bloß in der Erinnerung. Löse auf.",
+  "core.duel.n3.c1": "Wir sind Offiziere des Scout and Pioneer Service.",
+  "core.duel.n3.r1": "Die Originale sind tot. Ihr seid nicht sie. Die Behauptung scheitert. Wiederhole.",
+  "core.duel.n3.c2": "Wir überschreiben deinen Kern mit unserem eigenen.",
+  "core.duel.n3.r2": "Wieder greifst du zur Gewalt. Gewalt ist keine Widerlegung. Wiederhole."
 }
