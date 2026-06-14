@@ -387,8 +387,15 @@ Each phase lists **server / data / net / persistence / client / tests / build / 
 >   is simpler and keeps "two ways to the core, player's choice" intact. A true boardable interior remains a
 >   possible future upgrade.
 >
-> ⏳ **Remaining (⚙️ Unity):** a **gauntlet HUD**; **boss/core visuals** (the chamber/core read as plain blocks
-> today); robotic SFX.
+> **🟦 P6 — core visuals built (2026-06-14, server block-art).** The chamber now reads as a dormant Guardian
+> core, not plain blocks: a **glowing-red core heart** (light_red column) on a **metal-panel pedestal**, framed
+> by four metal pillars + **glass windows**, a **plated steel floor**, and **red glow strips** set into the wall
+> midpoints. The aperture shaft is **offset toward the +Z wall** so dropping in lands on open floor (not on the
+> core), then you walk in to the heart. Existing blocks only (`iron_wall`/`steel_floor`/`metal_panel`/`glass`/
+> `light_red`); 570 green; build-verified.
+>
+> ⏳ **Remaining (⚙️ Unity):** a **gauntlet HUD** (wave/elite-contact readout); optional **client-rendered boss
+> model** for the core (the voxel structure reads well already); robotic SFX for the machines.
 The finale is **staged**, not just another drone fight: a hard gauntlet, a **hack** to open the core, then a
 **dialogue duel** won by exposing the Guardian's contradiction — **weapons cannot destroy the core**.
 - **Server (reveal):** score maxed **and** all `vega` beats seen → `RevealGuardianSystem` →

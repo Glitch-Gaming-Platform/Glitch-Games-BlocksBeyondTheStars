@@ -150,6 +150,9 @@ public sealed partial class GameServer
 
         var shell = (_content.GetBlock("iron_wall") ?? _content.GetBlock("deepslate") ?? _content.GetBlock("stone"))!.NumericId;
         var core = _content.GetBlock("light_red")?.NumericId ?? BlockId.Air;
+        var floorBlk = _content.GetBlock("steel_floor")?.NumericId ?? shell;
+        var frame = _content.GetBlock("metal_panel")?.NumericId ?? shell;
+        var window = _content.GetBlock("glass")?.NumericId ?? BlockId.Air;
 
         int ax = WorldConstants.WrapX(48, _world.Circumference);
         int az = 24;
@@ -163,32 +166,81 @@ public sealed partial class GameServer
         aw.CoreChamberCenter = new Vector3i(ax, floorY + 1, az);
         aw.HasCoreChamber = true;
 
-        // Chamber: an 11×11 outer shell (9×9 inside), 6 air high — the inner core, walled in iron.
+        // Chamber: an 11×11 outer shell (9×9 inside), 6 air high — the inner core, walled in iron with a
+        // plated floor.
         const int R = 5;
         for (int dx = -R; dx <= R; dx++)
         for (int dz = -R; dz <= R; dz++)
         for (int dy = -1; dy <= 6; dy++)
         {
             var p = new Vector3i(WorldConstants.WrapX(ax + dx, _world.Circumference), floorY + dy, az + dz);
-            bool isShell = dx == -R || dx == R || dz == -R || dz == R || dy == -1 || dy == 6;
-            _world.SetBlock(p, isShell ? shell : BlockId.Air);
+            bool wall = dx == -R || dx == R || dz == -R || dz == R;
+            if (dy == -1)
+            {
+                _world.SetBlock(p, floorBlk); // plated walkable floor
+            }
+            else if (dy == 6 || wall)
+            {
+                _world.SetBlock(p, shell);
+            }
+            else
+            {
+                _world.SetBlock(p, BlockId.Air);
+            }
         }
 
-        // The glowing red core column at the centre — the terminal the player breaches.
+        // Glow strips: red lights set into the middle of each wall at eye level.
         if (!core.IsAir)
         {
-            for (int dy = 0; dy <= 3; dy++)
+            foreach (var (wx, wz) in new[] { (-R, 0), (R, 0), (0, -R), (0, R) })
+            {
+                _world.SetBlock(new Vector3i(WorldConstants.WrapX(ax + wx, _world.Circumference), floorY + 2, az + wz), core);
+            }
+        }
+
+        // The dormant core: a glowing red heart on a plated pedestal, framed by four metal pillars and glass
+        // windows — the terminal the player breaches (centre of the chamber).
+        for (int dx = -1; dx <= 1; dx++)
+        for (int dz = -1; dz <= 1; dz++)
+        {
+            _world.SetBlock(new Vector3i(WorldConstants.WrapX(ax + dx, _world.Circumference), floorY, az + dz), frame);
+        }
+
+        if (!core.IsAir)
+        {
+            for (int dy = 1; dy <= 4; dy++)
             {
                 _world.SetBlock(new Vector3i(ax, floorY + dy, az), core);
             }
         }
 
-        // Route A — the aperture: a 3×3 open shaft from the surface down into the chamber ceiling.
+        foreach (var (cx, cz) in new[] { (-1, -1), (-1, 1), (1, -1), (1, 1) })
+        {
+            for (int dy = 1; dy <= 5; dy++)
+            {
+                _world.SetBlock(new Vector3i(WorldConstants.WrapX(ax + cx, _world.Circumference), floorY + dy, az + cz), frame);
+            }
+        }
+
+        if (!window.IsAir)
+        {
+            foreach (var (ex, ez) in new[] { (-1, 0), (1, 0), (0, -1), (0, 1) })
+            {
+                for (int dy = 2; dy <= 3; dy++)
+                {
+                    _world.SetBlock(new Vector3i(WorldConstants.WrapX(ax + ex, _world.Circumference), floorY + dy, az + ez), window);
+                }
+            }
+        }
+
+        // Route A — the aperture: a 3×3 open shaft from the surface down into the chamber, offset toward the
+        // +Z wall so you drop onto open floor (not onto the core) and walk in to the heart.
+        int shaftZ = az + 3;
         for (int dy = floorY + 6; dy <= surfaceY + 1; dy++)
         for (int dx = -1; dx <= 1; dx++)
         for (int dz = -1; dz <= 1; dz++)
         {
-            _world.SetBlock(new Vector3i(WorldConstants.WrapX(ax + dx, _world.Circumference), dy, az + dz), BlockId.Air);
+            _world.SetBlock(new Vector3i(WorldConstants.WrapX(ax + dx, _world.Circumference), dy, shaftZ + dz), BlockId.Air);
         }
 
         // A low ring of plating around the shaft mouth so the opening reads as the core's maw from the surface.
@@ -201,9 +253,9 @@ public sealed partial class GameServer
             }
 
             int rx = WorldConstants.WrapX(ax + dx, _world.Circumference);
-            int ry = _generator.SurfaceHeight(planet, rx, az + dz);
-            _world.SetBlock(new Vector3i(rx, ry + 1, az + dz), shell);
-            _world.SetBlock(new Vector3i(rx, ry + 2, az + dz), shell);
+            int ry = _generator.SurfaceHeight(planet, rx, shaftZ + dz);
+            _world.SetBlock(new Vector3i(rx, ry + 1, shaftZ + dz), shell);
+            _world.SetBlock(new Vector3i(rx, ry + 2, shaftZ + dz), shell);
         }
 
         _log.Info($"Stamped the Guardian core chamber on '{_world.LocationId}' at ({ax},{floorY},{az}).");
