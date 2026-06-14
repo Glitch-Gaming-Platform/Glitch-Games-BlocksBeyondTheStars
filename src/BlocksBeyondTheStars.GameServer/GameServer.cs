@@ -169,6 +169,7 @@ public sealed partial class GameServer
         LoadPlayerStations(); // item 20 S4: restore persisted player stations onto the star map + registry
         LoadAllBases();       // restore player-founded planet bases (Grundstein) server-wide for the travel screen
         LoadAllAlliances();   // restore the player alliance graph server-wide (shared station/base access)
+        LoadStoryState();     // restore the per-save story progress + active story pack (server-wide, P0)
 
         // Ships are per-player now: each player loads/creates their own on join (no global ship at start).
         BuildMissions();
@@ -332,6 +333,8 @@ public sealed partial class GameServer
             {
                 StampDataCubes(); // minigame download cubes — 0-N per world (many bodies get none)
             }
+
+            StampNetFragments(); // story net fragments scattered on the surface (P2; self-skips when story off / Void)
         }
 
         LoadPlayerDoors(); // persisted player-built doors load on every world (void or not, settlement or not)
@@ -516,6 +519,7 @@ public sealed partial class GameServer
         SendCreatures(session);
         SendDoors(session);
         SendDataCubes(session); // minigame download cubes on this body
+        SendNetFragments(session); // story net fragments on this body (P2)
         SendBeacons(session);
         SendBeams(session); // placed beam blocks (teleporter pads) on this body
         SendBases(session); // player-founded bases on this body (Grundstein markers)
@@ -1334,6 +1338,8 @@ public sealed partial class GameServer
             case RequestAllianceIntent allianceReq: HandleRequestAlliance(session, allianceReq); break;
             case AllianceResponseIntent allianceResp: HandleAllianceResponse(session, allianceResp); break;
             case DissolveAllianceIntent allianceDis: HandleDissolveAlliance(session, allianceDis); break;
+            case StorySelectIntent storySelect: HandleStorySelect(session, storySelect); break;
+            case NetFragmentFoundIntent netFrag: HandleNetFragmentFound(session, netFrag); break;
         }
     }
 
@@ -1458,11 +1464,13 @@ public sealed partial class GameServer
         SendCreatures(session);
         SendDoors(session);
         SendDataCubes(session);   // minigame download cubes on the join world
+        SendNetFragments(session); // story net fragments on the join world (P2)
         SendGameUnlocks(session); // the player's downloaded-games collection (per-player, persisted)
         SendBeacons(session);
         SendBeams(session); // placed beam blocks (teleporter pads) on the join world
         SendBases(session); // player-founded bases on the join world (Grundstein markers)
         SendAllianceList(session); // the player's alliance roster (shared station/base access + Funk tab)
+        SendStoryStateOnJoin(session); // story meter + per-player beat catch-up (P0)
         SendLandingPads(session);
         SendContainers(session);
         SendExistingPresences(session); // show already-online players to the newcomer
@@ -2760,9 +2768,9 @@ public sealed partial class GameServer
         }
 
         session.State.LandedBodies.Add(body.Id);
-        if (!string.IsNullOrEmpty(body.SystemId))
+        if (!string.IsNullOrEmpty(body.SystemId) && session.State.KnownSystems.Add(body.SystemId))
         {
-            session.State.KnownSystems.Add(body.SystemId);
+            RecordStoryMilestone(); // a new star system mapped → story milestone (P3)
         }
     }
 
@@ -2770,9 +2778,9 @@ public sealed partial class GameServer
     /// the system's bodies + mini map on the travel screen, without marking any body landed. Persisted.</summary>
     private void MarkSystemKnown(PlayerSession session, string systemId)
     {
-        if (!string.IsNullOrEmpty(systemId))
+        if (!string.IsNullOrEmpty(systemId) && session.State.KnownSystems.Add(systemId))
         {
-            session.State.KnownSystems.Add(systemId);
+            RecordStoryMilestone(); // a new star system mapped → story milestone (P3)
         }
     }
 

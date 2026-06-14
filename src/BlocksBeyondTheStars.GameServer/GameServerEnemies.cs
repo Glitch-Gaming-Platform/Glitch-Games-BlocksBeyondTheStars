@@ -23,8 +23,11 @@ public sealed partial class GameServer
     /// <summary>Hostile creatures currently active on the surface.</summary>
     public IReadOnlyList<CombatEntity> PlanetEnemies => _planetEnemies;
 
-    /// <summary>Whether hostile planet enemies may exist given the active rules.</summary>
-    private bool PlanetEnemiesActive => Rules.PlanetEnemies != AlienActivity.Off && Rules.GameMode == GameMode.Survival;
+    /// <summary>Whether hostile planet enemies may exist given the active rules. Once the Guardian core is
+    /// destroyed (P6 pacification) no machine spawns anywhere — the galaxy is at peace.</summary>
+    private bool PlanetEnemiesActive => Rules.PlanetEnemies != AlienActivity.Off
+        && Rules.GameMode == GameMode.Survival
+        && !_storyState.GuardianDefeated;
 
     private void TickEnemies(double dt)
     {
@@ -191,6 +194,30 @@ public sealed partial class GameServer
         float dist = 35f + (n % 4) * 5f; // 35..50 blocks out — beyond EnemyHuntRange
         int ex = (int)System.Math.Round(player.Position.X + System.Math.Cos(ang) * dist);
         int ez = (int)System.Math.Round(player.Position.Z + System.Math.Sin(ang) * dist);
+
+        // Count-neutral wreck coupling (P5): when a wreck is near the player, bias THIS spawn's position to
+        // cluster at the wreck (the count + cadence are unchanged — only where it appears), and make a
+        // wreck-spawned machine hit harder. Crashed network tech becomes a danger zone you learn to read.
+        bool atWreck = false;
+        if (Rules.MachineWreckCoupling && _worlds.Active.WreckStamped && _worlds.Active.WreckMarkers.Count > 0)
+        {
+            var markers = _worlds.Active.WreckMarkers;
+            float cx = (float)markers.Average(m => m.Pos.X);
+            float cz = (float)markers.Average(m => m.Pos.Z);
+            float wdx = (float)WorldConstants.WrapDeltaX(cx - player.Position.X, _world.Circumference);
+            float wdz = cz - player.Position.Z;
+            if (wdx * wdx + wdz * wdz <= WreckCouplingRange * WreckCouplingRange)
+            {
+                double wang = n * 2.39996323;
+                float wr = 4f + (n % 4) * 3f; // 4..13 blocks around the wreck centroid
+                // Leave ex unwrapped (like the golden-angle path) so it stays in the same coordinate space as
+                // the wreck markers; SurfaceHeight wraps internally.
+                ex = (int)System.Math.Round(cx + System.Math.Cos(wang) * wr);
+                ez = (int)System.Math.Round(cz + System.Math.Sin(wang) * wr);
+                atWreck = true;
+            }
+        }
+
         int ey = _generator.SurfaceHeight(_world.Planet, ex, ez) + 1; // stand on the ground, not in it
 
         _planetEnemies.Add(new CombatEntity
@@ -201,10 +228,12 @@ public sealed partial class GameServer
             Hull = tougher ? 60f : 30f,
             HullMax = tougher ? 60f : 30f,
             Position = new Vector3f(ex, ey, ez),
-            DamagePerSecond = tougher ? 6f : 4f,
+            DamagePerSecond = (tougher ? 6f : 4f) * (atWreck ? 1.5f : 1f), // wreck machines are angrier
             Loot = { new ItemAmount("carbon", 2) },
         });
     }
+
+    private const float WreckCouplingRange = 64f; // bias spawns to a wreck within this of the player (P5)
 
     /// <summary>Player attacks a planet enemy or creature with the held tool/weapon. Server resolves the hit.</summary>
     public void AttackEntity(string playerId, string entityId)
@@ -318,6 +347,8 @@ public sealed partial class GameServer
         else
         {
             BroadcastToWorld(new PlanetEnemyDefeated { Id = target.Id });
+            RecordStoryMachineKill(); // planet machine destroyed → advances the story (P4: combat-as-progress)
+            TryDropPlayerMemory(session); // a chance to release a personal memory (P4)
             BroadcastPlanetEnemies();
         }
     }

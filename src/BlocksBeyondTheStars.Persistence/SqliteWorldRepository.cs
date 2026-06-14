@@ -73,6 +73,7 @@ public sealed class SqliteWorldRepository : IWorldRepository
                 name TEXT NOT NULL, owner TEXT NOT NULL, PRIMARY KEY (planet, x, y, z));
             CREATE TABLE IF NOT EXISTS alliance (
                 a TEXT NOT NULL, b TEXT NOT NULL, formed TEXT NOT NULL, PRIMARY KEY (a, b));
+            CREATE TABLE IF NOT EXISTS story_state (story_id TEXT PRIMARY KEY, json TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS location_status (id TEXT PRIMARY KEY, status TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS mission (id TEXT PRIMARY KEY, json TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS space_structure (
@@ -734,6 +735,41 @@ public sealed class SqliteWorldRepository : IWorldRepository
     /// <summary>Orders a player-id pair so each alliance is stored under exactly one (a, b) key.</summary>
     private static (string A, string B) NormalizePair(string x, string y)
         => string.CompareOrdinal(x, y) <= 0 ? (x, y) : (y, x);
+
+    // --- Story state (per active story pack, server-wide) ---
+
+    public void SaveStoryState(StoredStoryState state)
+    {
+        lock (_gate)
+        {
+            using var cmd = Connection.CreateCommand();
+            cmd.CommandText = "INSERT INTO story_state (story_id, json) VALUES ($id, $json) " +
+                              "ON CONFLICT(story_id) DO UPDATE SET json = excluded.json;";
+            cmd.Parameters.AddWithValue("$id", state.StoryId);
+            cmd.Parameters.AddWithValue("$json", JsonSerializer.Serialize(state, JsonOptions));
+            cmd.ExecuteNonQuery();
+        }
+    }
+
+    public IReadOnlyList<StoredStoryState> ListStoryStates()
+    {
+        var result = new List<StoredStoryState>();
+        lock (_gate)
+        {
+            using var cmd = Connection.CreateCommand();
+            cmd.CommandText = "SELECT json FROM story_state;";
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                if (JsonSerializer.Deserialize<StoredStoryState>(reader.GetString(0), JsonOptions) is { } s)
+                {
+                    result.Add(s);
+                }
+            }
+        }
+
+        return result;
+    }
 
     // --- Location status ---
 

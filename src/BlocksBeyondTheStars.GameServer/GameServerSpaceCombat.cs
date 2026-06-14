@@ -439,9 +439,10 @@ public sealed partial class GameServer
         AddStationContacts(instance);
         AddPersistedStations(instance); // item 20 S4: re-create player-built stations floating in this instance
 
-        // Hostile NPC drones only when space combat is enabled and NPC enemies are switched on.
+        // Hostile NPC drones only when space combat is enabled and NPC enemies are switched on — and never
+        // once the Guardian core is destroyed (P6 pacification: the galaxy is at peace).
         bool combatEnabled = Rules.SpaceCombat is SpaceCombatMode.PvE or SpaceCombatMode.Both;
-        if (combatEnabled)
+        if (combatEnabled && !_storyState.GuardianDefeated)
         {
             // Spawn hostiles FAR from the launch point (well beyond ShipEngageRange) so launching/docking is
             // safe and combat is opt-in — you choose to fly out to them. They used to spawn ~25u away and
@@ -544,6 +545,15 @@ public sealed partial class GameServer
         // Destroyed. A large/medium asteroid splits into smaller chunks instead of dropping loot;
         // only the smallest asteroids (and other entities) yield resources.
         instance.Entities.Remove(target);
+        if (target.Hostile)
+        {
+            RecordStoryMachineKill(); // space machine (drone/UFO) destroyed → advances the story (P4)
+            if (session is not null)
+            {
+                TryDropPlayerMemory(session); // a chance to release a personal memory (P4)
+            }
+        }
+
         if (target.Kind == CombatEntityKind.Asteroid && instance.Structures.ContainsKey(target.Id))
         {
             RemoveAsteroidStructure(instance, target.Id); // S3: drop the voxel body too (loot handled below)

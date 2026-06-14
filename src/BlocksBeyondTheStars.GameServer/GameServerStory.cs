@@ -1,0 +1,380 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using BlocksBeyondTheStars.Networking.Messages;
+using BlocksBeyondTheStars.Persistence;
+using BlocksBeyondTheStars.Shared.Story;
+
+namespace BlocksBeyondTheStars.GameServer;
+
+/// <summary>
+/// The story engine wiring (implementation plan P0). A server-wide, per-save story state driven by the
+/// active <see cref="StoryDefinition"/> pack — the engine itself is story-agnostic (see
+/// <see cref="StoryEngine"/>/<see cref="StoryRegistry"/>), so further storylines are added as packs, not
+/// engine code. Gameplay events feed the counters (<see cref="RecordStoryFragment"/> /
+/// <see cref="RecordStoryMachineKill"/> / <see cref="RecordStoryMilestone"/>); crossing a beat threshold
+/// reveals the next narrator beat to every player who hasn't heard it (spoken via the existing VEGA
+/// <c>ShipAiLine</c> channel, tracked per-player in <c>PlayerState.Milestones</c> as
+/// <c>story:&lt;id&gt;:beat:N</c> so multiplayer latecomers catch up without spoilers). The aggregate state
+/// is persisted server-wide (mirrors the alliance graph) and restored at start. The active story is
+/// selectable by an admin, with a "none" sandbox option.
+/// </summary>
+public sealed partial class GameServer
+{
+    /// <summary>The active story pack, or null when the story is disabled ("none" sandbox).</summary>
+    private StoryDefinition? _story;
+
+    /// <summary>Server-wide, per-save runtime story state for the active pack.</summary>
+    private readonly StoryState _storyState = new();
+
+    /// <summary>True while a story pack is active.</summary>
+    private bool StoryActive => _story is not null;
+
+    /// <summary>Test/inspection snapshot of the story progress.</summary>
+    public (string StoryId, int Fragments, int Kills, int Milestones, int BeatsRevealed, bool Defeated) StorySnapshot
+        => (_storyState.StoryId, _storyState.FragmentsFound, _storyState.MachineKills,
+            _storyState.Milestones, _storyState.BeatsRevealed, _storyState.GuardianDefeated);
+
+    /// <summary>Restores the persisted story state at server start (server-wide, like the alliance graph).
+    /// A fresh world starts the default pack; an unknown stored pack also falls back to the default.</summary>
+    private void LoadStoryState()
+    {
+        var stored = _repo.ListStoryStates().FirstOrDefault();
+
+        if (stored is not null && string.Equals(stored.StoryId, StoryRegistry.NoneStoryId, StringComparison.OrdinalIgnoreCase))
+        {
+            _story = null; // the save chose the sandbox (no story)
+            _storyState.StoryId = StoryRegistry.NoneStoryId;
+            return;
+        }
+
+        if (stored is not null && _content.TryGetStory(stored.StoryId, out var def))
+        {
+            _story = def;
+            _storyState.StoryId = stored.StoryId;
+            _storyState.FragmentsFound = stored.FragmentsFound;
+            _storyState.MachineKills = stored.MachineKills;
+            _storyState.Milestones = stored.Milestones;
+            _storyState.BeatsRevealed = stored.BeatsRevealed;
+            _storyState.GuardianSystemRevealed = stored.GuardianSystemRevealed;
+            _storyState.GuardianDefeated = stored.GuardianDefeated;
+            _storyState.FoundFragmentKeys = new HashSet<string>(stored.FoundFragmentKeys ?? new List<string>(), StringComparer.Ordinal);
+        }
+        else
+        {
+            _story = _content.DefaultStory;
+            _storyState.StoryId = _story.Id;
+        }
+
+        // Mark any already-crossed beats as revealed (reveals B0 on a fresh world; idempotent on a restored
+        // one). No players are joined yet, so this only advances the shared state; per-player reveal happens
+        // on join via catch-up.
+        AdvanceStory();
+    }
+
+    private void PersistStoryState()
+        => _repo.SaveStoryState(new StoredStoryState
+        {
+            StoryId = _storyState.StoryId,
+            FragmentsFound = _storyState.FragmentsFound,
+            MachineKills = _storyState.MachineKills,
+            Milestones = _storyState.Milestones,
+            BeatsRevealed = _storyState.BeatsRevealed,
+            GuardianSystemRevealed = _storyState.GuardianSystemRevealed,
+            GuardianDefeated = _storyState.GuardianDefeated,
+            FoundFragmentKeys = _storyState.FoundFragmentKeys.ToList(),
+        });
+
+    // ---------------- Event hooks (called from gameplay) ----------------
+
+    /// <summary>Records a net fragment found (text-only story find). Deduped by key, then advances the arc.</summary>
+    public void RecordStoryFragment(string fragmentKey)
+    {
+        if (!StoryActive)
+        {
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(fragmentKey) && !_storyState.FoundFragmentKeys.Add(fragmentKey))
+        {
+            return; // already found — never count the same fragment twice
+        }
+
+        _storyState.FragmentsFound++;
+        AdvanceStory();
+    }
+
+    /// <summary>Records a Guardian-machine kill (space UFO / ground robot / scan-drone). Advances the arc; the
+    /// contribution is capped in <see cref="StoryEngine"/> so combat can't be farmed past the fragments.</summary>
+    public void RecordStoryMachineKill()
+    {
+        if (!StoryActive)
+        {
+            return;
+        }
+
+        _storyState.MachineKills++;
+        AdvanceStory();
+    }
+
+    /// <summary>Records a story milestone (system mapped / settlement helped / first base or station built).</summary>
+    public void RecordStoryMilestone()
+    {
+        if (!StoryActive)
+        {
+            return;
+        }
+
+        _storyState.Milestones++;
+        AdvanceStory();
+    }
+
+    /// <summary>Reveals any beats the current progress newly crossed (to every online player who hasn't heard
+    /// them), persists the state and broadcasts the updated meter.</summary>
+    private void AdvanceStory()
+    {
+        if (_story is null)
+        {
+            return;
+        }
+
+        foreach (var beat in StoryEngine.AdvanceBeats(_story, _storyState))
+        {
+            RevealBeatToAll(beat);
+        }
+
+        PersistStoryState();
+        BroadcastStoryState();
+    }
+
+    private string BeatMilestoneKey(StoryBeat beat) => "story:" + _storyState.StoryId + ":beat:" + beat.Index;
+
+    private void RevealBeatToAll(StoryBeat beat)
+    {
+        foreach (var session in _sessions.Values.Where(s => s.Joined))
+        {
+            RevealBeatTo(session, beat);
+        }
+    }
+
+    /// <summary>Speaks a beat to one player if they haven't heard it (tracked per-player, persisted), granting
+    /// its one-time knowledge reward.</summary>
+    private void RevealBeatTo(PlayerSession session, StoryBeat beat)
+    {
+        if (!session.State.Milestones.Add(BeatMilestoneKey(beat)))
+        {
+            return; // this player already heard this beat
+        }
+
+        if (beat.KnowledgeReward > 0)
+        {
+            session.State.KnowledgePoints += beat.KnowledgeReward;
+            SendInventory(session); // carries the new KnowledgePoints to the client
+        }
+
+        if (!string.IsNullOrEmpty(beat.TextKey))
+        {
+            SendVegaLine(session, beat.TextKey, 2); // ShipAiLine kind 2 = memory/story
+        }
+    }
+
+    /// <summary>On join: send the story meter and catch the player up on beats already revealed world-wide
+    /// that they personally haven't heard (so latecomers are current without being spoiled beyond the shared
+    /// progress).</summary>
+    private void SendStoryStateOnJoin(PlayerSession session)
+    {
+        SendStoryState(session);
+
+        if (_story is null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < _storyState.BeatsRevealed && i < _story.Beats.Count; i++)
+        {
+            RevealBeatTo(session, _story.Beats[i]);
+        }
+    }
+
+    private void SendStoryState(PlayerSession session) => Send(session, BuildStoryState());
+
+    private void BroadcastStoryState()
+    {
+        var msg = BuildStoryState();
+        foreach (var session in _sessions.Values.Where(s => s.Joined))
+        {
+            Send(session, msg);
+        }
+    }
+
+    private StoryStateMessage BuildStoryState()
+    {
+        int target = _story is { Beats.Count: > 0 } d ? d.Beats[d.Beats.Count - 1].Threshold : 0;
+        return new StoryStateMessage
+        {
+            StoryId = _storyState.StoryId,
+            Active = StoryActive,
+            Progress = _story is null ? 0 : StoryEngine.Progress(_story, _storyState),
+            ProgressTarget = target,
+            FragmentsFound = _storyState.FragmentsFound,
+            MachineKills = _storyState.MachineKills,
+            Milestones = _storyState.Milestones,
+            BeatsRevealed = _storyState.BeatsRevealed,
+            GuardianSystemRevealed = _storyState.GuardianSystemRevealed,
+            GuardianDefeated = _storyState.GuardianDefeated,
+        };
+    }
+
+    // ---------------- Active-story selection (admin) ----------------
+
+    private void HandleStorySelect(PlayerSession session, StorySelectIntent intent)
+    {
+        if (!session.State.IsAdmin)
+        {
+            Reject(session, "story", "Only an admin can change the active story.");
+            return;
+        }
+
+        SetActiveStory(intent.StoryId);
+    }
+
+    /// <summary>Switches the save's active story pack (admin / world option). "none" disables the story; an
+    /// unknown id is ignored. Switching resets the per-save progress to a fresh state for the chosen pack.</summary>
+    public void SetActiveStory(string storyId)
+    {
+        if (string.Equals(storyId, StoryRegistry.NoneStoryId, StringComparison.OrdinalIgnoreCase))
+        {
+            _story = null;
+            ResetStoryState(StoryRegistry.NoneStoryId);
+        }
+        else if (_content.TryGetStory(storyId, out var def))
+        {
+            _story = def;
+            ResetStoryState(def.Id);
+        }
+        else
+        {
+            return; // unknown pack — leave the active story unchanged
+        }
+
+        AdvanceStory();           // persists + broadcasts (and reveals B0 for a real pack)
+        if (_story is null)
+        {
+            PersistStoryState();  // AdvanceStory no-ops when disabled — persist the "none" choice here
+            BroadcastStoryState();
+        }
+    }
+
+    private void ResetStoryState(string storyId)
+    {
+        _storyState.StoryId = storyId;
+        _storyState.FragmentsFound = 0;
+        _storyState.MachineKills = 0;
+        _storyState.Milestones = 0;
+        _storyState.BeatsRevealed = 0;
+        _storyState.GuardianSystemRevealed = false;
+        _storyState.GuardianDefeated = false;
+        _storyState.FoundFragmentKeys.Clear();
+    }
+
+    // ---------------- Finale pacification (P6) ----------------
+
+    /// <summary>Finale win: the Guardian core is shut down — pacify the galaxy. One-way per-save: gates the
+    /// pack's planet + space machine spawns off (see <c>PlanetEnemiesActive</c> + the space spawn), despawns
+    /// live planet machines on the active world, persists, and broadcasts. The game continues afterwards.</summary>
+    private void MarkGuardianDefeated()
+    {
+        if (!StoryActive || _storyState.GuardianDefeated)
+        {
+            return;
+        }
+
+        _storyState.GuardianDefeated = true;
+        _planetEnemies.Clear();   // despawn live planet machines on the active world
+        BroadcastPlanetEnemies();
+        PersistStoryState();
+        BroadcastStoryState();
+    }
+
+    // ---------------- Player memories (P4: personal, unlocked by defeating machines) ----------------
+
+    private const double PlayerMemoryDropChance = 0.34; // chance per machine kill to release the next memory
+    private readonly System.Random _memoryRng = new(9173);
+
+    private string MemoryMilestoneKey(StoryMemory mem) => "story:mem:" + mem.Key;
+
+    /// <summary>On a machine kill, a chance to release a damaged memory remnant → the killer's next unfound
+    /// personal memory (in order). Per-player; non-contradictory in MP (each player is a different imprint).</summary>
+    private void TryDropPlayerMemory(PlayerSession session)
+    {
+        if (!StoryActive || _story is null || _story.Memories.Count == 0)
+        {
+            return;
+        }
+
+        if (_memoryRng.NextDouble() < PlayerMemoryDropChance)
+        {
+            UnlockNextPlayerMemory(session);
+        }
+    }
+
+    /// <summary>Unlocks the player's next unfound memory (in pack order), if any. False once all are unlocked.</summary>
+    private bool UnlockNextPlayerMemory(PlayerSession session)
+    {
+        if (_story is null)
+        {
+            return false;
+        }
+
+        foreach (var mem in _story.Memories)
+        {
+            if (session.State.Milestones.Add(MemoryMilestoneKey(mem)))
+            {
+                if (!string.IsNullOrEmpty(mem.TextKey))
+                {
+                    Send(session, new PlayerMemoryRevealed { TextKey = mem.TextKey });
+                }
+
+                return true;
+            }
+        }
+
+        return false; // all memories already unlocked for this player
+    }
+
+    /// <summary>How many personal memories a player has unlocked (for the Story Log + tests).</summary>
+    public int PlayerMemoryCount(string playerId)
+    {
+        var session = FindSessionByPlayerId(playerId);
+        if (session is null || _story is null)
+        {
+            return 0;
+        }
+
+        return _story.Memories.Count(m => session.State.Milestones.Contains(MemoryMilestoneKey(m)));
+    }
+
+    // ---------------- Test hooks ----------------
+
+    /// <summary>Test hook: record a net fragment find (mirrors the gameplay event).</summary>
+    public void RecordStoryFragmentForTest(string fragmentKey) => RecordStoryFragment(fragmentKey);
+
+    /// <summary>Test hook: record a Guardian-machine kill (mirrors the gameplay event).</summary>
+    public void RecordStoryMachineKillForTest() => RecordStoryMachineKill();
+
+    /// <summary>Test hook: record a story milestone (mirrors the gameplay event).</summary>
+    public void RecordStoryMilestoneForTest() => RecordStoryMilestone();
+
+    /// <summary>Test hook: switch the active story pack (mirrors the admin intent).</summary>
+    public void SetActiveStoryForTest(string storyId) => SetActiveStory(storyId);
+
+    /// <summary>Test hook: unconditionally unlock a player's next personal memory (mirrors a lucky drop).</summary>
+    public bool GrantNextPlayerMemoryForTest(string playerId)
+    {
+        var session = FindSessionByPlayerId(playerId);
+        return session is not null && UnlockNextPlayerMemory(session);
+    }
+
+    /// <summary>Test hook: win the finale (pacify the galaxy — stops all machine spawns).</summary>
+    public void MarkGuardianDefeatedForTest() => MarkGuardianDefeated();
+}

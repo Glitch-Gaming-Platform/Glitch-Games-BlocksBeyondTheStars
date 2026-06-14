@@ -73,6 +73,23 @@ public sealed class StoredAlliance
     public string FormedUtc { get; set; } = string.Empty;
 }
 
+/// <summary>The persisted per-save state of one active story pack (server-wide, like the alliance graph —
+/// not per-world): the progress counters, how far the ordered beat arc has been revealed, the finale flags,
+/// and the set of net fragments already found (dedupe). Stored as one JSON-blob row keyed by
+/// <see cref="StoryId"/>, mirroring the player/ship/metadata blobs. Per-player "seen beats" live in the
+/// player blob, not here.</summary>
+public sealed class StoredStoryState
+{
+    public string StoryId { get; set; } = string.Empty;
+    public int FragmentsFound { get; set; }
+    public int MachineKills { get; set; }
+    public int Milestones { get; set; }
+    public int BeatsRevealed { get; set; }
+    public bool GuardianSystemRevealed { get; set; }
+    public bool GuardianDefeated { get; set; }
+    public List<string> FoundFragmentKeys { get; set; } = new();
+}
+
 /// <summary>A persisted player-built space station (item 20 S4): its voxel cells + registry row (owner, name,
 /// the body it orbits, flight-scene position). Reappears on the star map + boardable across sessions.</summary>
 public sealed class StoredSpaceStructure
@@ -188,6 +205,12 @@ public interface IWorldRepository : IDisposable
 
     /// <summary>Removes the alliance between the two players (order-independent).</summary>
     void DeleteAlliance(string playerA, string playerB);
+
+    /// <summary>Stores (inserts or replaces) the per-save state of one story pack, keyed by its story id.</summary>
+    void SaveStoryState(StoredStoryState state);
+
+    /// <summary>Lists every persisted story-pack state (restored once at server start).</summary>
+    IReadOnlyList<StoredStoryState> ListStoryStates();
 
     /// <summary>Stores (inserts or replaces) a player-built space station (item 20 S4).</summary>
     void SaveSpaceStructure(StoredSpaceStructure structure);

@@ -12,7 +12,8 @@ The director ([`ClientMusic`](../client/Assets/BlocksBeyondTheStars/Scripts/Clie
 shell phase and — in-game — the world state to a **context**, then cross-fades (~2.5 s). When a
 context has several fitting tracks the choice is **random**, and a long stay **re-rolls** to another
 track at the loop seam so nothing repeats forever. **Combat** intentionally stays on the tense synth
-mood — the whole library is calm by design.
+mood — the whole library is calm by design. (The separate **finale / boss** set — see the last section —
+is the deliberate dramatic exception, reserved for the story finale.)
 
 ## Context → track mapping
 
@@ -182,3 +183,22 @@ Calm planetary night, the counterpart to the sunrise track. Quiet, starlit, gent
 ```text
 Instrumental calm sci-fi night ambience for an alien planet after dark. Soft starlit synth pads, gentle low bass, sparse twinkling tones, quiet nocturnal mood, peaceful and slightly melancholic, feeling of a clear alien night sky. Seamless loop, no vocals, no lyrics, no combat, no dramatic climax.
 ```
+
+## Finale / boss music (story "The VEGA Protocol", plan P6)
+
+**The deliberate exception to the calm-by-design library.** Five **dramatic** instrumental tracks for the
+multi-stage finale against the dormant Guardian core (see
+[STORY_IMPLEMENTATION_PLAN.md](STORY_IMPLEMENTATION_PLAN.md) §P6). Generated in Suno by the project owner and
+stored in `client/Assets/Resources/music/`. **Not yet wired** — `ClientMusic` gets the finale contexts when
+P6 lands; until then nothing triggers them. (New `.mp3`s import on the next Unity open.)
+
+| Track key | Finale phase | Mood |
+|---|---|---|
+| `music_boss_approach` | arrival at the Guardian system (only a sun + the core) | ominous, vast, foreboding calm |
+| `music_boss_gauntlet` | Stage 1 — the drone gauntlet (hardest space combat) | epic, driving, intense |
+| `music_boss_hack` | Stage 3 — hack the core (channel-and-defend) | tense, ticking, rising suspense |
+| `music_boss_dialogue` | Stage 4 — the argument duel with the core | eerie, cerebral, escalating |
+| `music_boss_resolution` | the core powers down / galaxy pacified | hopeful, cathartic, uplifting |
+
+The Suno style prompts that produced these are in
+[STORY_IMPLEMENTATION_PLAN.md](STORY_IMPLEMENTATION_PLAN.md) Appendix A.

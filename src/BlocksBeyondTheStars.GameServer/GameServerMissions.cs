@@ -216,6 +216,7 @@ public sealed partial class GameServer
 
         _repo.SavePlayer(session.State);
         Send(session, new MissionResult { Success = true, MissionId = missionId });
+        RecordStoryMilestone(); // settlement helped (mission completed) → story milestone (P3)
         SendInventory(session);
         SendMissionList(session);
         _log.Info($"Player '{session.State.Name}' turned in mission '{missionId}'.");

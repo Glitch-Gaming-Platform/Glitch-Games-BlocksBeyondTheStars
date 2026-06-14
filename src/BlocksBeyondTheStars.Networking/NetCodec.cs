@@ -212,6 +212,17 @@ public static class NetCodec
         Register(136, typeof(BeamTeleportIntent)); // Client -> Server (beam from the pad I'm at to a chosen pad)
         Register(137, typeof(BeamTeleported));    // Server -> Client (my arrival position — snap + arrival fx)
         Register(138, typeof(BeamFx));            // Server -> Client (beam column VFX at both pads, for everyone)
+
+        // Story system (pluggable story packs): the active story's shared per-save progress + narrator beats.
+        // Beats arrive on the existing ShipAiLine channel; this carries the aggregate meter/state.
+        Register(139, typeof(StoryStateMessage)); // Server -> Client (active story progress + flags)
+        Register(147, typeof(StorySelectIntent)); // Client -> Server (admin: choose the active story / "none")
+
+        // Net fragments: text-only story finds scattered in the world (surface, datacube-style, + structures).
+        Register(140, typeof(NetFragmentFoundIntent)); // Client -> Server (pick up the fragment I'm standing at)
+        Register(141, typeof(NetFragmentRevealed));    // Server -> Client (the picked-up fragment's archive text)
+        Register(142, typeof(PlayerMemoryRevealed));   // Server -> Client (a personal memory unlocked by a machine kill)
+        Register(148, typeof(NetFragmentList));        // Server -> Client (net fragments on the current world)
     }
 
     private static void Register(byte tag, Type type)

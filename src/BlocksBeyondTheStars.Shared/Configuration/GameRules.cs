@@ -134,6 +134,11 @@ public sealed class GameRules
     public bool NeutralNpcShips { get; set; } = true;
     public AlienActivity AlienUfos { get; set; } = AlienActivity.Off;
     public AlienActivity PlanetEnemies { get; set; } = AlienActivity.Normal;
+
+    /// <summary>Count-neutral machine/wreck coupling (story P5): when on, planet machines bias their spawn
+    /// position toward a nearby wreck (clustering there) and hit harder there — without changing HOW MANY
+    /// spawn (the frequency sliders + cap are untouched). Off restores uniform spawning. Live-editable.</summary>
+    public bool MachineWreckCoupling { get; set; } = true;
     public AsteroidDestructionMode AsteroidDestruction { get; set; } = AsteroidDestructionMode.MiningOnly;
     public DockingMode ShipDocking { get; set; } = DockingMode.RequestRequired;
     public bool PersonalLandingZones { get; set; } = true;

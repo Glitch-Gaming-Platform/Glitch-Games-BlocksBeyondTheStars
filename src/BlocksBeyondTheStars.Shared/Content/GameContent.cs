@@ -3,6 +3,7 @@ using BlocksBeyondTheStars.Shared.Localization;
 using BlocksBeyondTheStars.Shared.Missions;
 using BlocksBeyondTheStars.Shared.Primitives;
 using BlocksBeyondTheStars.Shared.State;
+using BlocksBeyondTheStars.Shared.Story;
 
 namespace BlocksBeyondTheStars.Shared.Content;
 
@@ -48,6 +49,55 @@ public sealed class GameContent
     {
         StationTemplates = stations ?? System.Array.Empty<StructureTemplate>();
         SettlementTemplates = settlements ?? System.Array.Empty<StructureTemplate>();
+    }
+
+    // --- Pluggable story packs (loaded from data/stories/<id>/story.json by the content loader) ---
+
+    private IReadOnlyDictionary<string, StoryDefinition> _stories =
+        new Dictionary<string, StoryDefinition>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Installed story packs, keyed by id (e.g. "vega_protocol"). The active story per save is one of
+    /// these (or "none"); the engine is story-agnostic, so adding a storyline is adding a pack.</summary>
+    public IReadOnlyDictionary<string, StoryDefinition> Stories => _stories;
+
+    /// <summary>Installs the story packs (called by the content loader). Falls back to the built-in default
+    /// pack if the data defines none, so the story still works without the data files present.</summary>
+    public void SetStories(IEnumerable<StoryDefinition> stories)
+    {
+        var dict = new Dictionary<string, StoryDefinition>(StringComparer.OrdinalIgnoreCase);
+        foreach (var s in stories ?? Enumerable.Empty<StoryDefinition>())
+        {
+            if (!string.IsNullOrEmpty(s.Id))
+            {
+                dict[s.Id] = s;
+            }
+        }
+
+        if (dict.Count == 0)
+        {
+            dict[StoryRegistry.Default.Id] = StoryRegistry.Default;
+        }
+
+        _stories = dict;
+    }
+
+    /// <summary>The default story pack ("vega_protocol" if installed, else the first, else the built-in).</summary>
+    public StoryDefinition DefaultStory
+        => _stories.TryGetValue(StoryRegistry.DefaultStoryId, out var d)
+            ? d
+            : (_stories.Values.FirstOrDefault() ?? StoryRegistry.Default);
+
+    /// <summary>Looks up a story pack by id; returns false (and the default pack) for empty/unknown ids.</summary>
+    public bool TryGetStory(string? id, out StoryDefinition def)
+    {
+        if (!string.IsNullOrEmpty(id) && _stories.TryGetValue(id!, out var d))
+        {
+            def = d;
+            return true;
+        }
+
+        def = DefaultStory;
+        return false;
     }
 
     public GameContent(

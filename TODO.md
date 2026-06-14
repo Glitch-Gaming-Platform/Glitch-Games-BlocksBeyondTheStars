@@ -6,7 +6,7 @@ plans live under [docs/](docs/) (committed); this file is the high-level status.
 keep it current when controls/features change. Last consolidated 2026-06-04.
 
 **Build:** `scripts/build-client.ps1` (publishes shared libs + bundled server + Unity Windows player).
-**Test:** `dotnet test` — currently **521 passing** (2026-06-14). Locale parity (en/de) is enforced by a test.
+**Test:** `dotnet test` — currently **557 passing** (2026-06-14). Locale parity (en/de) is enforced by a test.
 **Conventions:** English docs/comments; in-game text bilingual DE+EN; commit to `main` with the
 Claude `Co-Authored-By` trailer; OpenAI texture + ElevenLabs sound generation is blanket-approved
 (no per-batch gate).
@@ -16,6 +16,39 @@ code (no scene authoring). One shared world; contractless MessagePack networking
 world-gen; SQLite persistence.
 
 ---
+
+### ★ Story system ("The VEGA Protocol") — 🚧 server-side COMPLETE; only the Unity client remains (2026-06-14)
+**Plans:** [docs/STORY_IMPLEMENTATION_PLAN.md](docs/STORY_IMPLEMENTATION_PLAN.md) (engineering, phased P0–P8 +
+Suno appendix), [docs/STORY_VEGA_PROTOCOL_CONCEPT.md](docs/STORY_VEGA_PROTOCOL_CONCEPT.md) (design rationale),
+[docs/LORE_STRUCTURE.md](docs/LORE_STRUCTURE.md) (authoritative canon + content-generation agenda).
+A **pluggable, story-agnostic engine** drives swappable **story packs** (the active story is selectable
+in-game); the first pack is *The VEGA Protocol* — SPS grundstory, clone twist, three Guardian machine types
+(space UFO + planet three-eyed robots + planet scan-drones), text-only **net fragments** + **player memories**,
+a **new Story Log tab** (separate from the existing Codex/Wiki), and a multi-stage two-route **dialogue-duel
+finale** vs. the dormant Guardian core. Story is data: `data/stories/<id>/`.
+- **Status:** **P0–P1 ✅ complete (2026-06-14)** — story-agnostic pacing **engine**
+  (`src/BlocksBeyondTheStars.Shared/Story/`), per-save `story_state` **persistence**, `GameServerStory.cs`
+  wiring (Record fragment/kill/milestone → threshold beat reveal via `ShipAiLine`, per-player catch-up on
+  join, admin story selection + "none"), and `StoryStateMessage`/`StorySelectIntent` networking (tags
+  139/147). P1 added the **pluggable story-pack data format + loader** — `data/stories/vega_protocol/`
+  (`story.json` + bilingual `locales/{en,de}.json`, the B0–B12 arc authored DE+EN) → `GameContent.Stories`,
+  plus the `tools/merge_story.py` validator. P2 (server) added **net fragments**: 6 authored fragments per
+  lore category (DE+EN) + `GameServerNetFragments.cs` — deterministic **datacube-style surface placement**
+  (weighted, still-needed pool, deduped vs found-set), reach-checked **pickup** → archive text reader +
+  `RecordStoryFragment`; tags 140/141/148. P4 (server) added **combat-as-progress**: defeating Guardian
+  machines (planet enemies + space drones/UFOs) advances the story (`RecordStoryMachineKill` hooked into both
+  kill paths; fauna excluded), with an end-to-end kill→story test. P3 (server) added **milestone hooks**:
+  mission turn-in (settlement helped) + new-system-mapped → `RecordStoryMilestone`. **Boss soundtracks** (5
+  Suno tracks) integrated into `client/Assets/Resources/music/music_boss_*.mp3`. P5 added the **count-neutral
+  machine/wreck coupling** (`GameRules.MachineWreckCoupling`); P4 also added **player memories** (drop on
+  machine kills → per-player unlock → `PlayerMemoryRevealed` 142); P6 added the **pacification gating**
+  (`MarkGuardianDefeated` → no machine spawns once the core is down). **All server-side story logic is done
+  and tested — 557 total green, 0 failed.**
+  ⏭ **Only the Unity client remains** (needs a build + playtests): P2 fragment objects + Fragment Reader ·
+  P3 Story Log tab + progress meter · P4 three-eyed-robot retheme + flying scan-drone + memory reader ·
+  P6 finale (Guardian system, gauntlet → two routes → hack → argument duel, boss visuals; trigger
+  `MarkGuardianDefeated` on the duel win) · P8 story-selection world-option UI.
+  See [docs/STORY_IMPLEMENTATION_PLAN.md](docs/STORY_IMPLEMENTATION_PLAN.md) §P0–P8.
 
 ### ★ Flora variety — per-biome themes, lush patchy undergrowth, multi-layer plants, tree archetypes — ✅ IMPLEMENTED (2026-06-14)
 **Goal:** every biome reads as its own ecosystem — a forest is not "trees on bare ground" but a carpeted, layered,

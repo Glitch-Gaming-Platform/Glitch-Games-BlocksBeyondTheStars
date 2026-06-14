@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using BlocksBeyondTheStars.Shared.Definitions;
 using BlocksBeyondTheStars.Shared.Localization;
+using BlocksBeyondTheStars.Shared.Story;
 
 namespace BlocksBeyondTheStars.Shared.Content;
 
@@ -56,12 +57,17 @@ public static class ContentLoader
             }
         }
 
+        // Pluggable story packs: data/stories/<id>/story.json + each pack's optional locale files (merged
+        // into the shared locale tables BEFORE the content is built so the beat text localizes normally).
+        var stories = LoadStoryPacks(Path.Combine(dataDir, "stories"), locales);
+
         var content = new GameContent(blocks, items, recipes, blueprints, modules, locales, planets, missions, ships, shipLayouts);
 
         // Optional hand-designed structure template pools (empty when the files are absent).
         var stationTemplates = LoadArray<StructureTemplate>(Path.Combine(dataDir, "station_templates.json"));
         var settlementTemplates = LoadArray<StructureTemplate>(Path.Combine(dataDir, "settlement_templates.json"));
         content.SetStructureTemplates(stationTemplates, settlementTemplates);
+        content.SetStories(stories);
 
         content.Validate();
         return content;
@@ -105,5 +111,61 @@ public static class ContentLoader
         var json = File.ReadAllText(path);
         return JsonSerializer.Deserialize<Dictionary<string, string>>(json, JsonOptions)
                ?? new Dictionary<string, string>();
+    }
+
+    /// <summary>Loads pluggable story packs from <c>data/stories/&lt;id&gt;/story.json</c> and merges each
+    /// pack's optional <c>locales/&lt;code&gt;.json</c> into the shared locale tables. An absent directory
+    /// yields no packs (the content then falls back to the built-in default pack).</summary>
+    private static List<StoryDefinition> LoadStoryPacks(string storiesDir, Dictionary<GameLocale, Dictionary<string, string>> locales)
+    {
+        var result = new List<StoryDefinition>();
+        if (!Directory.Exists(storiesDir))
+        {
+            return result;
+        }
+
+        foreach (var dir in Directory.GetDirectories(storiesDir))
+        {
+            var storyFile = Path.Combine(dir, "story.json");
+            if (!File.Exists(storyFile))
+            {
+                continue;
+            }
+
+            var def = JsonSerializer.Deserialize<StoryDefinition>(File.ReadAllText(storyFile), JsonOptions);
+            if (def is null || string.IsNullOrEmpty(def.Id))
+            {
+                continue;
+            }
+
+            result.Add(def);
+
+            var packLocaleDir = Path.Combine(dir, "locales");
+            if (!Directory.Exists(packLocaleDir))
+            {
+                continue;
+            }
+
+            foreach (GameLocale locale in Enum.GetValues(typeof(GameLocale)))
+            {
+                var file = Path.Combine(packLocaleDir, locale.Code() + ".json");
+                if (!File.Exists(file))
+                {
+                    continue;
+                }
+
+                if (!locales.TryGetValue(locale, out var map))
+                {
+                    locales[locale] = map = new Dictionary<string, string>();
+                }
+
+                foreach (var kv in LoadObject(file))
+                {
+                    map[kv.Key] = kv.Value;
+                }
+            }
+        }
+
+        return result;
     }
 }

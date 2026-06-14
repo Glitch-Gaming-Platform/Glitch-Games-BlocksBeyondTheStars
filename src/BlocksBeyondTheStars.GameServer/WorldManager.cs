@@ -28,6 +28,7 @@ internal sealed class LoadedWorld
     public List<GameServer.ServerDataCube> DataCubes { get; } = new(); // minigame download cubes scattered on the surface
     public List<GameServer.ServerBeacon> Beacons { get; } = new(); // placed radio beacons (item 37)
     public List<GameServer.ServerBeam> Beams { get; } = new(); // placed beam blocks (teleporter pads)
+    public List<GameServer.ServerNetFragment> NetFragments { get; } = new(); // story net fragments scattered on the surface (P2)
     public List<(string Type, Vector3f Pos)> SettlementMarkers { get; } = new();
     public HashSet<string> SettlementMissionIds { get; } = new();
     public List<(string Type, Vector3f Pos)> WreckMarkers { get; } = new();
@@ -91,6 +92,7 @@ internal sealed class LoadedWorld
     public int NextDataCubeId { get; set; } = 1;
     public int NextBeaconId { get; set; } = 1;
     public int NextBeamId { get; set; } = 1;
+    public int NextNetFragmentId { get; set; } = 1;
 
     // Per-world weather/environment (TickWeather + BroadcastEnvironment are per-planet: day length, storm
     // chance, atmosphere/oxygen, clouds, weather RNG). time-of-day fraction included; admin time/weather
