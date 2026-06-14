@@ -79,19 +79,43 @@ public sealed class GameServerFinaleTests : IDisposable
         }
     }
 
+    /// <summary>Reveals the finale, places the player on the Guardian Core, and channels the hack open.</summary>
+    private static void ReachAndHackTheCore(SvGameServer server, BlocksBeyondTheStars.GameServer.PlayerSession pilot)
+    {
+        CompleteTheArc(server);
+        pilot.CurrentLocationId = SvGameServer.GuardianCoreBodyId; // landed on the core (the hack is location-gated)
+        for (int i = 0; i < 20 && !server.IsCoreHackedForTest; i++)
+        {
+            server.CoreHackTickForTest("Pilot");
+        }
+    }
+
+    [Fact]
+    public void The_hack_only_channels_while_the_player_is_at_the_core()
+    {
+        var server = Started(out var repo);
+        using (repo)
+        {
+            server.AddLocalPlayer("Pilot"); // still on the home world, not the Guardian Core
+            CompleteTheArc(server);
+
+            for (int i = 0; i < 20; i++)
+            {
+                server.CoreHackTickForTest("Pilot");
+            }
+
+            Assert.False(server.IsCoreHackedForTest); // ticks off-core do nothing
+        }
+    }
+
     [Fact]
     public void Channelling_the_hack_opens_the_core_then_the_duel_can_begin()
     {
         var server = Started(out var repo);
         using (repo)
         {
-            server.AddLocalPlayer("Pilot");
-            CompleteTheArc(server);
-
-            for (int i = 0; i < 20 && !server.IsCoreHackedForTest; i++)
-            {
-                server.CoreHackTickForTest("Pilot");
-            }
+            var pilot = server.AddLocalPlayer("Pilot");
+            ReachAndHackTheCore(server, pilot);
 
             Assert.True(server.IsCoreHackedForTest);
             Assert.Equal(0, server.DuelNodeForTest);          // the duel opened at the first node
@@ -105,12 +129,8 @@ public sealed class GameServerFinaleTests : IDisposable
         var server = Started(out var repo);
         using (repo)
         {
-            server.AddLocalPlayer("Pilot");
-            CompleteTheArc(server);
-            for (int i = 0; i < 20 && !server.IsCoreHackedForTest; i++)
-            {
-                server.CoreHackTickForTest("Pilot");
-            }
+            var pilot = server.AddLocalPlayer("Pilot");
+            ReachAndHackTheCore(server, pilot);
             Assert.True(server.IsCoreHackedForTest);
 
             // node 0's correct rebuttal is index 0; pick a wrong one repeatedly.
@@ -128,12 +148,8 @@ public sealed class GameServerFinaleTests : IDisposable
         var server = Started(out var repo);
         using (repo)
         {
-            server.AddLocalPlayer("Pilot");
-            CompleteTheArc(server);
-            for (int i = 0; i < 20 && !server.IsCoreHackedForTest; i++)
-            {
-                server.CoreHackTickForTest("Pilot");
-            }
+            var pilot = server.AddLocalPlayer("Pilot");
+            ReachAndHackTheCore(server, pilot);
             Assert.True(server.IsCoreHackedForTest);
 
             // The authored correct (contradiction) rebuttals, in order: node0=0, node1=1, node2=2, node3=0.

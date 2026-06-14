@@ -334,10 +334,23 @@ Each phase lists **server / data / net / persistence / client / tests / build / 
 > engage range so the approach is opt-in. Gated on combat-enabled && !defeated; each kill still feeds the story.
 > **566 total green** (+1: gauntlet is an elite wave with a cruiser anchor).
 >
+> **🟦 P6 — Stages 3–4 client encounter UI LANDED (2026-06-14, ⚙️ Unity build-verified).** The hack + duel are
+> now playable on the client, driven entirely by the server messages:
+> - **NetworkClient wiring** — events `GuardianSystemRevealedReceived` (143), `CoreHackProgressReceived` (149),
+>   `CoreDialogueReceived` (144) + sends `SendCoreHackTick` (146), `SendCoreDialogueChoice` (145), with dispatch.
+> - **`FinaleView`** (new, IMGUI overlay, mounted by `WorldRig`; keyboard-driven so it never fights the FPS
+>   cursor lock): on the Guardian Core, **hold `F`** to channel the breach (throttled `CoreHackIntent` ticks) →
+>   a **hack bar** fills from `CoreHackProgress`; at 100% the **duel panel** opens — the core's claim + numbered
+>   rebuttals, **press `1`/`2`/`3`** → `CoreDialogueChoiceIntent`; a correct contradiction advances, wrong ones
+>   re-present the node; the win shows a resolution banner. Bilingual `ui.finale.*` keys (DE+EN).
+> - **Server location gate** — `HandleCoreHack` now also requires the player to be in the Guardian system
+>   (`IsGuardianSystemLocation(session.CurrentLocationId)`), so the breach only channels at the core. **567 green**
+>   (+1: hack-only-at-core).
+>
 > ⏳ **Remaining (⚙️ Unity + world-gen):** the **two physical routes** (fly-in interior vs. land + dig) + the
-> actual core encounter on the landable body; the **core console** that begins the hack at the inner core; the
-> client encounter UI (gauntlet HUD, hack bar, **duel panel**, map marker), boss visuals + `ClientMusic` finale
-> contexts; robotic SFX.
+> actual in-world core console/encounter on the landable body (today the breach hint shows anywhere on the
+> Guardian Core, server-gated); a **gauntlet HUD**; **boss visuals** + `ClientMusic` finale contexts (5 staged
+> tracks); robotic SFX.
 The finale is **staged**, not just another drone fight: a hard gauntlet, a **hack** to open the core, then a
 **dialogue duel** won by exposing the Guardian's contradiction — **weapons cannot destroy the core**.
 - **Server (reveal):** score maxed **and** all `vega` beats seen → `RevealGuardianSystem` →

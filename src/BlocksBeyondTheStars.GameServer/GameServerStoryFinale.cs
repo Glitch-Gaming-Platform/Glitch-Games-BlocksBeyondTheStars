@@ -147,6 +147,12 @@ public sealed partial class GameServer
             return;
         }
 
+        // Anti-cheat / correctness: the breach only channels while the player is actually in the Guardian system.
+        if (!IsGuardianSystemLocation(session.CurrentLocationId))
+        {
+            return;
+        }
+
         _coreHackProgress = System.Math.Min(100, _coreHackProgress + CoreHackTickAmount);
         bool complete = _coreHackProgress >= 100;
         BroadcastToJoined(new CoreHackProgress { Progress = _coreHackProgress, Complete = complete });

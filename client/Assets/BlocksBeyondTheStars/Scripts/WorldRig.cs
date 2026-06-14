@@ -176,6 +176,10 @@ namespace BlocksBeyondTheStars.Client
             var netFragments = root.AddComponent<NetFragmentView>();
             netFragments.Game = boot;
 
+            // Finale (P6): the core-hack channel bar + the argument-duel panel at the Guardian core.
+            var finale = root.AddComponent<FinaleView>();
+            finale.Game = boot;
+
             // Death feedback: red flash + sound on planet death, explosion glare on ship destruction.
             var deathFx = root.AddComponent<DeathFx>();
             deathFx.Game = boot;

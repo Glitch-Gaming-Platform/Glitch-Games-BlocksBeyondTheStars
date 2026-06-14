@@ -6,7 +6,7 @@ plans live under [docs/](docs/) (committed); this file is the high-level status.
 keep it current when controls/features change. Last consolidated 2026-06-04.
 
 **Build:** `scripts/build-client.ps1` (publishes shared libs + bundled server + Unity Windows player).
-**Test:** `dotnet test` — currently **566 passing** (2026-06-14). Locale parity (en/de) is enforced by a test.
+**Test:** `dotnet test` — currently **567 passing** (2026-06-14). Locale parity (en/de) is enforced by a test.
 **Conventions:** English docs/comments; in-game text bilingual DE+EN; commit to `main` with the
 Claude `Co-Authored-By` trailer; OpenAI texture + ElevenLabs sound generation is blanket-approved
 (no per-batch gate).
@@ -49,15 +49,19 @@ finale** vs. the dormant Guardian core. Story is data: `data/stories/<id>/`.
   `CoreDialogueChoiceIntent` 145; correct contradiction advances, wrong stalls, never lost) → win calls
   `MarkGuardianDefeated`. P6 also added the **Guardian-system generation** (lazily append a lone landable
   `guardian_finale` core to the galaxy on reveal → appears as a `jump_generator` target; re-appended on restart
-  for revealed saves) and the **respawn-at-prior-world** rule (a death in the boss system returns the clone to
-  the world it launched from — no death-loop). **All server-side story logic is done and tested — 565 total
-  green, 0 failed.**
+  for revealed saves), the **respawn-at-prior-world** rule (a death in the boss system returns the clone to the
+  world it launched from — no death-loop), and the **Stage 1 elite space gauntlet** (`SpawnGuardianGauntlet` —
+  a heavy cruiser + elite UFOs + a reinforced drone swarm only in the finale system). **All server-side story
+  logic is done and tested — 567 total green, 0 failed.**
   ⏭ **Client build-verified so far:** P2 fragment objects + pickup · P3 Story Log tab + progress meter ·
   P4 three-eyed-robot retheme **and the flying scan-drone** (`WorldEntities.BuildDrone` — hovering dark pod +
   red scanner eye, branch on `NetCombatEntity.Kind == "ScanDrone"`; server mix is count-neutral inside
-  `PlanetEnemies`, toggled by `GameRules.PlanetDrones`). ⏭ **Still open (Unity + playtests):** P4 robotic SFX +
-  a proper Fragment/Memory **reader panel** · P6 finale (Guardian system, gauntlet → two routes → hack →
-  argument duel, boss visuals; trigger `MarkGuardianDefeated` on the duel win) · P8 story-selection world-option UI.
+  `PlanetEnemies`, toggled by `GameRules.PlanetDrones`) · **P6 finale encounter UI** (`FinaleView` — hold-`F`
+  hack bar + the number-key **argument-duel panel**, driven by 143/144/149 + sends 145/146; bilingual). ⏭ **Still
+  open (Unity + world-gen + playtests):** P6 **two physical routes** (fly-in interior vs. land+dig) + the in-world
+  core console, gauntlet HUD, **boss visuals** + `ClientMusic` finale music, robotic SFX · P4 robotic SFX +
+  a proper Fragment/Memory **reader panel** · P8 story-selection world-option UI + story-density slider · P7
+  flavour-line pool + mission threading.
   See [docs/STORY_IMPLEMENTATION_PLAN.md](docs/STORY_IMPLEMENTATION_PLAN.md) §P0–P8.
 
 ### ★ Flora variety — per-biome themes, lush patchy undergrowth, multi-layer plants, tree archetypes — ✅ IMPLEMENTED (2026-06-14)
