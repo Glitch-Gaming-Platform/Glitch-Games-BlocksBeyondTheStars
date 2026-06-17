@@ -44,10 +44,10 @@ namespace BlocksBeyondTheStars.Client
         // Graphics
         public QualityPreset Preset = QualityPreset.Medium;
 
-        /// <summary>How the window is presented (windowed / borderless / exclusive). Default windowed so the
-        /// window can be dragged to another monitor and maximized; switch to Borderless/Exclusive for a
-        /// fullscreen experience on whichever monitor the window currently sits on.</summary>
-        public WindowMode Window = WindowMode.Windowed;
+        /// <summary>How the window is presented (windowed / borderless / exclusive). Default borderless so the
+        /// game opens fullscreen on whichever monitor it launches on; switch to Windowed (in the settings menu)
+        /// for a draggable, maximizable window, or to Exclusive for true exclusive fullscreen.</summary>
+        public WindowMode Window = WindowMode.Borderless;
 
         /// <summary>Windowed-mode size, persisted so toggling back from fullscreen restores it. Default fits a
         /// 1080p display with room for the title bar; clamped to the display in <see cref="Apply"/>.</summary>
