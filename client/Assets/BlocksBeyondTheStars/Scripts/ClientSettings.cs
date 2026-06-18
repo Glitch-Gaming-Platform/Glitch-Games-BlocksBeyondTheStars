@@ -253,6 +253,11 @@ namespace BlocksBeyondTheStars.Client
                 bool wantsScreenSpace = Preset >= QualityPreset.Medium;
                 urp.supportsCameraDepthTexture = wantsScreenSpace;
                 urp.supportsCameraOpaqueTexture = wantsScreenSpace;
+
+                // Tell the shaders whether the depth/opaque textures exist this preset. The water shader uses it to
+                // fall back to the simple alpha look on Potato/Low (otherwise its depth colour / refraction / SSR
+                // would sample unbound textures and render wrong/black).
+                UnityEngine.Shader.SetGlobalFloat("_Sc_ScreenFx", wantsScreenSpace ? 1f : 0f);
             }
         }
 

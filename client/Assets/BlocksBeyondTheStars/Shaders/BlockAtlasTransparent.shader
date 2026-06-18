@@ -45,6 +45,7 @@ Shader "BlocksBeyondTheStars/BlockAtlasTransparent"
             float4 _Sc_Light;
             float4 _Sc_SunDir;
             float4 _Sc_Sky;   // sky colour (set by Sky.cs) — water SSR sky fallback
+            float _Sc_ScreenFx; // 1 when the depth+opaque textures exist (Medium+); 0 on Low → water uses the simple look
             float _BaseAlpha;
 
             struct Attributes
@@ -161,10 +162,14 @@ Shader "BlocksBeyondTheStars/BlockAtlasTransparent"
                         col += light * 0.03 * (0.5 + 0.5 * sin(t * 0.6 + i.wp.x * 0.8 + i.wp.z * 1.1));
                     }
 
+                    // Screen-space water (depth colour, refraction, SSR) needs the depth + opaque textures, which
+                    // Potato/Low switch off — gate the whole block so on those presets the water keeps the simple
+                    // alpha look above (no sampling of unbound textures → never black/garbage).
+                    if (_Sc_ScreenFx > 0.5)
+                    {
                     // Depth-based water body: read how much water sits between the surface and the bed/object
                     // behind this pixel, then darken+blue with depth (you can't see the bottom of a deep sea)
                     // and froth a bright foam line where geometry breaks the surface (shores, rocks, swimmers).
-                    // Degrades to the old flat look if no depth texture is bound.
                     float2 screenUV = GetNormalizedScreenSpaceUV(i.positionCS);
                     float sceneEye = LinearEyeDepth(SampleSceneDepth(screenUV), _ZBufferParams);
                     float fragEye = -TransformWorldToView(i.wp).z;
@@ -224,6 +229,7 @@ Shader "BlocksBeyondTheStars/BlockAtlasTransparent"
                     col = lerp(col, reflCol, saturate(fres) * 0.7);
 
                     alpha = 1.0; // bed + reflection composited here → opaque output, no hardware double-blend
+                    } // _Sc_ScreenFx (depth/opaque available)
                 }
                 else
                 {
