@@ -70,6 +70,12 @@ public sealed partial class GameServer
     public string Weather => _weatherState;
     public int SunColor => _sunColor;
 
+    /// <summary>This world's cloud cover 0..1 (0 = airless/clear) — test seam.</summary>
+    public float CloudDensityForTest => _cloudDensity;
+
+    /// <summary>This world's weather mode ("dynamic"/"clear"/"overcast") — test seam.</summary>
+    public string WeatherModeForTest => _planetWeatherMode;
+
     /// <summary>This world's daytime sky/atmosphere base hue (0xRRGGBB) — seeded per world (atmosphere worlds).</summary>
     public int SkyColor => _skyColor;
 
@@ -93,18 +99,21 @@ public sealed partial class GameServer
         var planet = _content.GetPlanet(_worlds.Active.PlanetType);
         _dayLength = planet?.DayLengthSeconds ?? 600.0;
         _stormChance = planet?.StormChance ?? 0.35;
-        _planetWeatherMode = string.IsNullOrEmpty(planet?.Weather) ? "dynamic" : planet!.Weather;
         _breathable = string.Equals(planet?.Atmosphere, "breathable", System.StringComparison.OrdinalIgnoreCase);
         _spaceSky = planet?.SpaceSky ?? false;
+        // Clouds + weather + fog require an actual atmosphere — gate on the atmosphere type, NOT just the space
+        // sky. A body with atmosphere "none" (lava/crystal historically, asteroids) gets no clouds, no changing
+        // weather (no rain/storm) and no fog haze; only worlds with air (breathable/toxic) have weather.
+        bool airless = (planet?.IsAirless ?? true) || _spaceSky;
+        _planetWeatherMode = airless ? "clear" : (string.IsNullOrEmpty(planet?.Weather) ? "dynamic" : planet!.Weather);
         _cloudColor = planet?.CloudColor ?? 0xEDEFF2;
-        // Airless bodies (space sky) never have clouds.
-        _cloudDensity = _spaceSky ? 0f : (float)System.Math.Clamp(planet?.CloudDensity ?? 0.45, 0.0, 1.0);
+        _cloudDensity = airless ? 0f : (float)System.Math.Clamp(planet?.CloudDensity ?? 0.45, 0.0, 1.0);
         _biome = string.IsNullOrEmpty(_worlds.Active.PlanetType) ? "rock" : _worlds.Active.PlanetType;
         _oxygenExtractability = System.Math.Clamp(planet?.OxygenExtractability ?? 0.0, 0.0, 1.0);
         _atmosphereHeight = planet?.AtmosphereHeight ?? 0.0;
         // Per-world air thickness (drives fog density + fog-weather chance): airless bodies are clear-vacuum (0);
         // otherwise the planet's explicit value, or a seeded 0.2..0.8 so worlds range from crisp to hazy.
-        _atmosphereDensity = _spaceSky ? 0.0
+        _atmosphereDensity = airless ? 0.0
             : planet?.AtmosphereDensity is { } ad ? System.Math.Clamp(ad, 0.0, 1.0)
             : 0.2 + ((((uint)StableStringHash(_world.LocationId) ^ (uint)_meta.Seed) & 0xFFFFu) / 65535.0) * 0.6;
         _envRng = new System.Random((int)_meta.Seed);

@@ -57,7 +57,7 @@
       { "block": "titanium_ore", "rarity": 0.05, "minDepth": 12, "maxDepth": 256 },
       { "block": "carbon",       "rarity": 0.05, "minDepth": 6,  "maxDepth": 256 }
     ],
-    "weather": "dynamic", "stormChance": 0.2, "dayLengthSeconds": 520, "worldRadius": 700, "floraDensity": 0.06, "creatureAbundance": "few", "atmosphere": "none", "oxygenExtractability": 0.0, "spawnWeight": 6
+    "weather": "dynamic", "stormChance": 0.2, "dayLengthSeconds": 520, "worldRadius": 700, "floraDensity": 0.06, "waterAbundance": 0.0, "creatureAbundance": "few", "atmosphere": "toxic", "oxygenExtractability": 0.2, "spawnWeight": 6
   },
   {
     "key": "desert", "floraTheme": "desert", "baseTemperature": 44, "nameKey": "planet.desert.name", "atmosphereHeight": 190, "cloudColor": 15260080, "cloudDensity": 0.3,

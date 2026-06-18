@@ -8,6 +8,22 @@ using BlocksBeyondTheStars.WorldGeneration;
 
 namespace BlocksBeyondTheStars.GameServer;
 
+/// <summary>One procedurally placed settlement on a world: its world-space bounds, tier, whether it is a ruin,
+/// its inhabitant kind, its interaction markers (in world coords) and its mission-board id window. A world can
+/// hold several (see <see cref="LoadedWorld.Settlements"/>), each re-derived deterministically from the seed.</summary>
+internal sealed class SettlementInstance
+{
+    public Vector3i Min { get; set; }
+    public Vector3i Max { get; set; }
+    public bool Ruined { get; set; }
+    public string Tier { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string Inhabitant { get; set; } = string.Empty;
+    public bool OnIsland { get; set; } // stands on a floating sky island rather than the terrain surface
+    public List<(string Type, Vector3f Pos)> Markers { get; } = new();
+    public HashSet<string> MissionIds { get; } = new();
+}
+
 /// <summary>
 /// One loaded voxel world for a celestial body: the <see cref="ServerWorld"/>, the ids that identify it,
 /// and its per-world runtime state (fauna, enemies, NPCs, flora, fluids, containers, stamped structures,
@@ -30,8 +46,8 @@ internal sealed class LoadedWorld
     public List<GameServer.ServerBeam> Beams { get; } = new(); // placed beam blocks (teleporter pads)
     public List<GameServer.ServerSpeeder> Speeders { get; } = new(); // deployed hover speeders (materialised per present owner)
     public List<GameServer.ServerNetFragment> NetFragments { get; } = new(); // story net fragments scattered on the surface (P2)
-    public List<(string Type, Vector3f Pos)> SettlementMarkers { get; } = new();
-    public HashSet<string> SettlementMissionIds { get; } = new();
+    public List<(string Type, Vector3f Pos)> SettlementMarkers { get; } = new(); // union of EVERY settlement's markers (doors + proximity)
+    public List<SettlementInstance> Settlements { get; } = new();                 // 0..N settlements on this world
     public List<(string Type, Vector3f Pos)> WreckMarkers { get; } = new();
     public Dictionary<Vector3i, (ushort FloraId, double Timer)> FloraRegrow { get; } = new();
     public Dictionary<Vector3i, byte> FluidLevel { get; } = new();
@@ -58,14 +74,6 @@ internal sealed class LoadedWorld
 
         return ship;
     }
-
-    // Settlement stamp state.
-    public bool SettlementStamped { get; set; }
-    public Vector3i SettlementMin { get; set; }
-    public Vector3i SettlementMax { get; set; }
-    public bool SettlementRuined { get; set; }
-    public string SettlementName { get; set; } = string.Empty;
-    public string SettlementInhabitant { get; set; } = string.Empty;
 
     // Wreck stamp state.
     public bool WreckStamped { get; set; }

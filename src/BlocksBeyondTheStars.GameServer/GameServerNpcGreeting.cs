@@ -72,7 +72,7 @@ public sealed partial class GameServer
         // The stable NPC key — settlement board vs. boarded-station board — matches the relationship memory key.
         string locationKey = NearSpaceStationVendor(player) && _boardedStation.TryGetValue(player.PlayerId, out var st)
             ? StationLocationKey(st)
-            : SettlementLocationKey();
+            : SettlementLocationKey(npc.Settlement);
         string npcKey = NpcKey(locationKey, npc.Role);
 
         var rel = player.NpcMemory.TryGetValue(npcKey, out var r) ? r : null;
@@ -86,7 +86,7 @@ public sealed partial class GameServer
             Role = npc.Role,
             Theme = npc.Theme,
             IsRobot = npc.IsRobot,
-            Settlement = _settlementName,
+            Settlement = string.IsNullOrEmpty(npc.Settlement) ? _settlementName : npc.Settlement,
             PlayerName = player.Name,
             Relationship = relValue,
             PastInteractions = interactions,

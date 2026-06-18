@@ -38,6 +38,7 @@ public sealed partial class GameServer
         public int Id;
         public string Role = string.Empty;
         public string Theme = string.Empty;
+        public string Settlement = string.Empty; // name of the settlement this NPC belongs to (memory/greeting key)
         public string NameKey = string.Empty;
         public string Name = string.Empty; // coined personal name (item 12)
         public Vector3f Home;
@@ -74,50 +75,58 @@ public sealed partial class GameServer
         _npcBroadcastTimer = 0;
         _nextNpcId = 1;
 
-        if (!_settlementStamped || _settlementRuined)
+        // Every inhabited settlement on this world gets its own residents (ruins are abandoned).
+        foreach (var settlement in _settlements)
         {
-            return; // abandoned ruins have no inhabitants
-        }
-
-        // Each settlement has a deterministic trade profession (miners/traders/researchers/settlers) — it drives
-        // the residents' outfits + work gestures AND which goods the vendor posts, so different settlements offer
-        // different trades (the old per-NPC theme was the human/alien look, which the trade UI couldn't use).
-        string settlementTheme = SettlementTradeFor(_settlementName);
-        int vendorIndex = 0;
-
-        foreach (var (type, pos) in _settlementMarkers)
-        {
-            string? role = type switch
+            if (settlement.Ruined)
             {
-                "vendor" => "vendor",
-                "mission_board" => "quartermaster",
-                "npc" => "settler",
-                _ => null,
-            };
-
-            if (role is null)
-            {
-                continue; // loot markers etc. don't get an NPC
+                continue;
             }
 
-            // Vendors each get their own profession (B55) so multiple vendors at one settlement sell different
-            // goods; settlers/the quartermaster keep the settlement's own theme (its identity).
-            string npcTheme = role == "vendor" ? VendorThemeFor(_settlementName, vendorIndex++, settlementTheme) : settlementTheme;
-            bool robotic = npcTheme == "researchers"; // research staff are service androids
+            // Each settlement has a deterministic trade profession (miners/traders/researchers/settlers) — it
+            // drives the residents' outfits + work gestures AND which goods the vendor posts, so different
+            // settlements offer different trades (the old per-NPC theme was the human/alien look).
+            string settlementTheme = SettlementTradeFor(settlement.Name);
+            int vendorIndex = 0;
 
-            // NPCs have no physics, so place their feet exactly on top of the settlement floor block
-            // (the marker Y sits inside it) — otherwise they render sunk into the ground.
-            var standing = new Vector3f(pos.X, _settlementMin.Y + 1f, pos.Z);
-            var npc = MakeNpc(role, npcTheme, robotic, standing, rng);
-            if (role == "quartermaster")
+            foreach (var (type, pos) in settlement.Markers)
             {
-                npc.Name = CoinGiverName(_settlementName); // the mission-giver's name matches its missions (item 13)
-            }
+                string? role = type switch
+                {
+                    "vendor" => "vendor",
+                    "mission_board" => "quartermaster",
+                    "npc" => "settler",
+                    _ => null,
+                };
 
-            _npcs.Add(npc);
+                if (role is null)
+                {
+                    continue; // loot markers etc. don't get an NPC
+                }
+
+                // Vendors each get their own profession (B55) so multiple vendors at one settlement sell different
+                // goods; settlers/the quartermaster keep the settlement's own theme (its identity).
+                string npcTheme = role == "vendor" ? VendorThemeFor(settlement.Name, vendorIndex++, settlementTheme) : settlementTheme;
+                bool robotic = npcTheme == "researchers"; // research staff are service androids
+
+                // NPCs have no physics, so place their feet exactly on top of the settlement floor block
+                // (the marker Y sits inside it) — otherwise they render sunk into the ground.
+                var standing = new Vector3f(pos.X, settlement.Min.Y + 1f, pos.Z);
+                var npc = MakeNpc(role, npcTheme, robotic, standing, rng);
+                npc.Settlement = settlement.Name;
+                if (role == "quartermaster")
+                {
+                    npc.Name = CoinGiverName(settlement.Name); // the mission-giver's name matches its missions (item 13)
+                }
+
+                _npcs.Add(npc);
+            }
         }
 
-        _log.Info($"Spawned {_npcs.Count} NPCs at settlement '{_settlementName}'.");
+        if (_npcs.Count > 0)
+        {
+            _log.Info($"Spawned {_npcs.Count} NPCs across {_settlements.Count(s => !s.Ruined)} inhabited settlement(s).");
+        }
     }
 
     private ServerNpc MakeNpc(string role, string theme, bool robotic, Vector3f home, System.Random rng)

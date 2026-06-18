@@ -225,6 +225,38 @@ public sealed class WorldGenerator
         return planet.BaseHeight + (int)System.Math.Round(h * planet.Amplitude * amp * drama);
     }
 
+    /// <summary>The vertical band [<paramref name="bottom"/>..<paramref name="top"/>] of a floating sky island at
+    /// this column (item 21 V5), or <c>false</c> if no island covers it. The single source of truth for the
+    /// island mask — used by chunk generation AND by settlement placement, so both agree on island heights.</summary>
+    public bool FloatingIslandBand(PlanetType planet, int worldX, int worldZ, out int top, out int bottom)
+    {
+        top = int.MinValue;
+        bottom = int.MaxValue;
+        if (!planet.FloatingIslands)
+        {
+            return false;
+        }
+
+        long seed = PlanetSeed(planet);
+        double im = FbmT(seed + 0x15A4D, worldX, worldZ, planet.TerrainScale * 1.4, octaves: 3);
+        if (im <= 0.60) // matches the chunk-gen coverage threshold
+        {
+            return false;
+        }
+
+        double t = (im - 0.60) / 0.40;       // 0..1 toward an island's centre
+        double alt = FbmT(seed + 0x15A4E, worldX, worldZ, planet.TerrainScale * 3.0, octaves: 2);
+        int center = planet.BaseHeight + 28 + (int)((alt - 0.5) * 24.0);
+        int half = 2 + (int)(t * 8.0);       // 2..10 thick
+        top = center + half;
+        bottom = center - half - (int)(t * 6.0); // tapered rocky underside
+        return true;
+    }
+
+    /// <summary>The TOP world-Y of a floating sky island at this column, or <see cref="int.MinValue"/> if none.</summary>
+    public int FloatingIslandTop(PlanetType planet, int worldX, int worldZ)
+        => FloatingIslandBand(planet, worldX, worldZ, out int top, out _) ? top : int.MinValue;
+
     /// <summary>Height offset (blocks, added to BaseHeight) for a planet with an explicit <see cref="PlanetType.TerrainStyle"/>
     /// (item 21 V2). <paramref name="h"/> is the base FBM swell in [-1,1]. Each style reshapes it into a distinct
     /// landform so worlds look structurally different. Deterministic + seam-safe (all noise wraps on X).</summary>
@@ -776,22 +808,12 @@ public sealed class WorldGenerator
             var subSurfaceId = biome.Sub;
 
             // Floating islands (item 21 V5): a per-column sky-island slab high above the surface — a grass-topped
-            // deck on a tapered rocky underbelly, scattered by a region mask, drifting in the air.
+            // deck on a tapered rocky underbelly, scattered by a region mask, drifting in the air. The band is
+            // resolved by the shared helper so settlement placement can query the same island tops.
             int islandTop = int.MinValue, islandBottom = int.MaxValue;
             if (floatingIslands)
             {
-                double im = FbmT(seed + 0x15A4D, worldX, worldZ, planet.TerrainScale * 1.4, octaves: 3);
-                if (im > 0.60) // a little more island coverage — these worlds are ABOUT the sky islands
-                {
-                    double t = (im - 0.60) / 0.40;       // 0..1 toward an island's centre
-                    // Per-island altitude varies ±12 on a broad band, so the sky reads as layered drifting
-                    // islands instead of one flat shelf at a single height.
-                    double alt = FbmT(seed + 0x15A4E, worldX, worldZ, planet.TerrainScale * 3.0, octaves: 2);
-                    int center = planet.BaseHeight + 28 + (int)((alt - 0.5) * 24.0);
-                    int half = 2 + (int)(t * 8.0);       // 2..10 thick
-                    islandTop = center + half;
-                    islandBottom = center - half - (int)(t * 6.0); // tapered rocky underside
-                }
+                FloatingIslandBand(planet, worldX, worldZ, out islandTop, out islandBottom);
             }
 
             // Crater-floor metal clumps (item 33): on a cratered world, the top cells of a metal-bearing deep

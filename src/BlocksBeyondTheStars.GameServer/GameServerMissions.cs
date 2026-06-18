@@ -518,16 +518,27 @@ public sealed partial class GameServer
         }
     }
 
-    /// <summary>Keeps the current settlement's mission board stocked for this player.</summary>
+    /// <summary>Keeps the mission board(s) the player is standing at stocked — each inhabited settlement on the
+    /// world has its own board, so only the one(s) in reach refill + offer their missions.</summary>
     private void EnsureSettlementWindow(PlayerState player, HashSet<string> currentBoardIds)
     {
-        if (!_settlementStamped || _settlementRuined || string.IsNullOrEmpty(_settlementName))
+        foreach (var s in _settlements)
         {
-            return;
-        }
+            if (s.Ruined || string.IsNullOrEmpty(s.Name) || !s.Markers.Any(m => m.Type == "mission_board"))
+            {
+                continue;
+            }
 
-        string prefix = $"settle_{(uint)WorldGenerator.StableHash(_settlementName) % 100000u}_";
-        EnsureBoardWindow(player, prefix, _settlementName, _settlementMissionIds, CoinGiverName(_settlementName), currentBoardIds);
+            // Only the settlement the player is currently in refills + offers its board missions (so settlement
+            // B's jobs don't show while you're standing in settlement A).
+            if (!PlayerInSettlement(player, s))
+            {
+                continue;
+            }
+
+            string prefix = $"settle_{(uint)WorldGenerator.StableHash(s.Name) % 100000u}_";
+            EnsureBoardWindow(player, prefix, s.Name, s.MissionIds, CoinGiverName(s.Name), currentBoardIds);
+        }
     }
 
     /// <summary>Keeps the boarded station's mission board stocked for this player.</summary>

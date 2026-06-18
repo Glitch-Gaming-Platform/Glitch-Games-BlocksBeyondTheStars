@@ -26,7 +26,7 @@ public sealed class RespawnTests : IDisposable
         var link = new LoopbackLink();
         var st = new LoopbackServerTransport(link);
         var client = new LoopbackClientTransport(link);
-        var config = new ServerConfig { WorldName = world, Seed = 1, AutoSaveIntervalMinutes = 9999, Rules = rules, PlaceStarterShip = false };
+        var config = new ServerConfig { WorldName = world, Seed = 1, AutoSaveIntervalMinutes = 9999, Rules = rules, PlaceStarterShip = false, PlaceSettlements = false, PlaceWrecks = false, PlaceVaults = false };
         var server = new SvGameServer(config, _content, st, repo);
         server.Start();
         client.Connect("loopback", 0);

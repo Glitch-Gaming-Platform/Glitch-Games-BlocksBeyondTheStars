@@ -41,8 +41,9 @@ public sealed class FloraTests : IDisposable
     [Fact]
     public void AirlessBodies_HaveNoFloraOrFauna()
     {
-        // Landable asteroids + airless moons/planets are barren: no flora, no fauna.
-        foreach (var key in new[] { "asteroid", "lava", "crystal" })
+        // Landable asteroids + airless moons/planets are barren: no flora, no fauna. (lava now carries a toxic
+        // atmosphere — sparse hardy life + ash weather — so it is no longer part of the airless set.)
+        foreach (var key in new[] { "asteroid", "crystal" })
         {
             var planet = _content.GetPlanet(key);
             Assert.NotNull(planet);

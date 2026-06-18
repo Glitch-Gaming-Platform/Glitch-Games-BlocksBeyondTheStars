@@ -6,7 +6,7 @@ plans live under [docs/](docs/) (committed); this file is the high-level status.
 keep it current when controls/features change. Last consolidated 2026-06-04.
 
 **Build:** `scripts/build-client.ps1` (publishes shared libs + bundled server + Unity Windows player).
-**Test:** `dotnet test` — currently **663 passing** (2026-06-19). Locale parity (en/de) is enforced by a test.
+**Test:** `dotnet test` — currently **670 passing** (2026-06-19). Locale parity (en/de) is enforced by a test.
 **Conventions:** English docs/comments; in-game text bilingual DE+EN; commit to `main` with the
 Claude `Co-Authored-By` trailer; OpenAI texture + ElevenLabs sound generation is blanket-approved
 (no per-batch gate).
@@ -14,6 +14,35 @@ Claude `Co-Authored-By` trailer; OpenAI texture + ElevenLabs sound generation is
 Architecture: Unity 6 (URP since 2026-06-10) client + authoritative .NET 8 server, everything built in
 code (no scene authoring). One shared world; contractless MessagePack networking; deterministic seed
 world-gen; SQLite persistence.
+
+---
+
+### ★ Settlements overhauled: many per world, hospitality/size-scaled, collision-free + weather gated on atmosphere — ✅ server (2026-06-19, libs synced; client build only needed for the new lava look)
+Villages/cities were near-invisible: exactly **one** settlement per planet, anchored at a fixed pad offset with no
+water/flatness check and no terrain carve (so it sank into hills / drowned), and compounded gating made cities ~5%/planet.
+Reworked end-to-end (server + shared + worldgen + data):
+- **0..N settlements per world** — `WorldManager.SettlementInstance` list replaces the single-settlement fields;
+  every consumer (NPCs, doors, missions, NPC-memory keys, greetings, map POIs, mine-protection) now iterates the
+  list. Single-settlement public API kept as "primary (first inhabited)" shims for back-compat.
+- **Count = hospitability × world size × base density × frequency × per-world character roll** (`GameServerSettlements`):
+  only worlds **with an atmosphere** (airless ⇒ 0); a `Hospitability()` score (atmosphere/fauna/climate/water); a
+  `sizeFactor` from circumference (a big planet holds more than a small moon); and an overdispersed character
+  multiplier (lonely ×0 … boom ×2.6) for **high variance** — some worlds empty, some crowded.
+- **Harsher worlds ⇒ more ruins** — per-settlement ruin chance scales `0.15 + (1−H)·0.7`; tier roll skews to
+  town/city on liveable worlds, hamlet/village on harsh ones.
+- **Collision-free placement** — a candidate-scan allocator keeps every settlement clear of all **landing pads**,
+  the **ship-wreck** zone, **vaults**, **data cubes** and **each other** (wrap-aware footprint reservation); wreck/
+  vault/cube stampers also avoid settlements (`OverlapsAnySettlement`).
+- **No more burial/drowning** — each settlement is placed on a **dry, reasonably flat** spot, its footprint is
+  **carved clear** above the foundation, then a flat foundation slab is laid.
+- **Floating-island settlements** — on `FloatingIslands` worlds a share of settlements sit on the **sky islands**
+  (new shared `WorldGenerator.FloatingIslandBand/Top`, single source for chunk-gen + placement).
+- **Weather gated on atmosphere** (`InitWeather`) — clouds/changing-weather/fog now require an atmosphere, not just
+  a non-space sky. **lava** was retyped `atmosphere: "toxic"` (keeps its ash storms, `waterAbundance: 0` so it still
+  pools lava) and **crystal** (airless) now correctly gets no clouds/weather/fog.
+- New `SettlementOverhaulTests` (multi-settlement, pad/inter-settlement no-overlap, ruin skew, island, weather gating)
+  + retargeted loot/door/respawn/flora tests. **670/670 green.** Server/shared/worldgen only; client libs synced.
+  A Unity build is only needed for the new lava (toxic) sky/weather visuals.
 
 ---
 

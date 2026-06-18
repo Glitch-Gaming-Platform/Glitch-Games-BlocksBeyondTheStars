@@ -49,7 +49,13 @@ public sealed partial class GameServer
             // A deterministic spot away from the spawn/landing area, each vault in its own direction.
             int ax = (120 + rng.Next(320)) * (rng.Next(2) == 0 ? 1 : -1);
             int az = (90 + rng.Next(280)) * (rng.Next(2) == 0 ? 1 : -1);
-            StampVault(WorldConstants.WrapX(ax, _world.Circumference), az, rng);
+            int wx = WorldConstants.WrapX(ax, _world.Circumference);
+            if (OverlapsAnySettlement(wx, az, 6))
+            {
+                continue; // don't drop a vault entrance inside a settlement footprint
+            }
+
+            StampVault(wx, az, rng);
         }
 
         if (_vaultEntrances.Count > 0)

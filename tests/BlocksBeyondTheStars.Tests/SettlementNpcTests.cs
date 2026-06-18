@@ -26,13 +26,13 @@ public sealed class SettlementNpcTests : IDisposable
         _content = ContentLoader.LoadFromDirectory(TestPaths.DataDir());
     }
 
-    private SvGameServer Start(long seed, out SqliteWorldRepository repo)
+    private SvGameServer Start(long seed, out SqliteWorldRepository repo, string planet = "jungle")
     {
-        repo = new SqliteWorldRepository(new SaveGamePaths(_root, "npc_" + seed));
+        repo = new SqliteWorldRepository(new SaveGamePaths(_root, planet + "_npc_" + seed));
         var st = new LoopbackServerTransport(new LoopbackLink());
         var config = new ServerConfig
         {
-            WorldName = "npc_" + seed, Seed = seed, StartPlanet = "jungle",
+            WorldName = "npc_" + seed, Seed = seed, StartPlanet = planet,
             AutoSaveIntervalMinutes = 9999, PlaceStarterShip = false,
             PlaceSettlements = true, PlaceWrecks = false,
         };
@@ -101,12 +101,14 @@ public sealed class SettlementNpcTests : IDisposable
     [Fact]
     public void RuinedSettlement_IsAbandoned_NoNpcs()
     {
-        for (long seed = 1; seed <= 80; seed++)
+        // A harsh world (toxic, cold) is mostly ruins, so an all-ruin world is easy to find. When every
+        // settlement on the world is a ruin, there are no inhabitants at all.
+        for (long seed = 1; seed <= 160; seed++)
         {
-            var server = Start(seed, out var repo);
+            var server = Start(seed, out var repo, planet: "ice");
             using (repo)
             {
-                if (server.HasSettlement && server.SettlementRuined)
+                if (server.HasSettlement && server.InhabitedSettlementCount == 0)
                 {
                     Assert.Equal(0, server.NpcCount);
                     return;
@@ -114,7 +116,7 @@ public sealed class SettlementNpcTests : IDisposable
             }
         }
 
-        throw new Xunit.Sdk.XunitException("No ruined settlement found across 80 seeds.");
+        throw new Xunit.Sdk.XunitException("No all-ruin world found across 160 seeds.");
     }
 
     [Fact]

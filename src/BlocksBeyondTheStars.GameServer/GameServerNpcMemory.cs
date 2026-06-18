@@ -24,8 +24,9 @@ public sealed partial class GameServer
     /// is recognised across reloads even though the runtime <c>ServerNpc.Id</c> is not stable.</summary>
     private static string NpcKey(string locationKey, string role) => locationKey + ":" + role;
 
-    /// <summary>The settlement board's stable location id (matches the settle_&lt;hash&gt; mission prefix).</summary>
-    private string SettlementLocationKey() => $"settle_{(uint)WorldGenerator.StableHash(_settlementName) % 100000u}";
+    /// <summary>A settlement board's stable location id (matches the settle_&lt;hash&gt; mission prefix), keyed by
+    /// the settlement's name so each settlement on a world keeps its own NPC memory.</summary>
+    private static string SettlementLocationKey(string settlementName) => $"settle_{(uint)WorldGenerator.StableHash(settlementName) % 100000u}";
 
     private static string StationLocationKey(string stationId) => $"station_{(uint)WorldGenerator.StableHash(stationId) % 100000u}";
 
@@ -77,9 +78,10 @@ public sealed partial class GameServer
     private void RecordVendorTrade(PlayerState player)
     {
         string locationKey;
+        var vendor = NearestNpc(player, "vendor");
         if (NearSettlementVendor(player))
         {
-            locationKey = SettlementLocationKey();
+            locationKey = SettlementLocationKey(vendor?.Settlement ?? string.Empty);
         }
         else if (NearSpaceStationVendor(player) && _boardedStation.TryGetValue(player.PlayerId, out var stationId))
         {
@@ -90,7 +92,6 @@ public sealed partial class GameServer
             return; // traded at the ship's own console — not an NPC vendor
         }
 
-        var vendor = NearestNpc(player, "vendor");
         RecordNpcInteraction(player, NpcKey(locationKey, "vendor"), vendor?.Name ?? string.Empty, "vendor", NpcInteractionKind.Trade);
     }
 

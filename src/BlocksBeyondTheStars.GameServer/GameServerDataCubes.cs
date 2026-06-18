@@ -77,6 +77,11 @@ public sealed partial class GameServer
             // A deterministic spot away from the spawn/landing area, each cube in its own direction (mirrors vaults).
             int ax = WorldConstants.WrapX((60 + rng.Next(360)) * (rng.Next(2) == 0 ? 1 : -1), _world.Circumference);
             int az = (60 + rng.Next(360)) * (rng.Next(2) == 0 ? 1 : -1);
+            if (OverlapsAnySettlement(ax, az))
+            {
+                continue; // don't bury a cube inside a settlement
+            }
+
             int surfaceY = _generator.SurfaceHeight(planet, ax, az);
 
             _dataCubes.Add(new ServerDataCube

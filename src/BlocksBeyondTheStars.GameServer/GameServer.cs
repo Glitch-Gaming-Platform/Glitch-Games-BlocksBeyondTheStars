@@ -400,8 +400,8 @@ public sealed partial class GameServer
         _npcs.Clear();
         _doors.Clear();
         _dataCubes.Clear();
+        _settlements.Clear();
         _settlementMarkers.Clear();
-        _settlementMissionIds.Clear();
         _wreckMarkers.Clear();
         _floraRegrow.Clear();
         _fluidLevel.Clear();

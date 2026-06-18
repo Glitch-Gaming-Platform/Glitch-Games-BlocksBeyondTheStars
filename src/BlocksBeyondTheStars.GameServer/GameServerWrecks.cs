@@ -84,13 +84,19 @@ public sealed partial class GameServer
         var design = designs[rng.Next(designs.Count)];
         var structure = WreckGenerator.Generate(design, wSeed, _content);
 
-        // Anchor offset from the first landing pad — and offset differently from settlements so the two
-        // don't overlap on the same world (item 38).
+        // Anchor offset from the first landing pad — its zone is reserved during settlement placement so the
+        // two never overlap. If a settlement still sits here (e.g. a hand-placed one), nudge the wreck outward.
         int ax = -56, az = 56;
         if (_landingPads.Count > 0)
         {
             ax = _landingPads[0].CenterX - 56;
             az = _landingPads[0].CenterZ + 56;
+        }
+
+        for (int nudge = 0; nudge < 12 && OverlapsAnySettlement(ax, az, System.Math.Max(structure.Width, structure.Length) / 2); nudge++)
+        {
+            ax = WorldConstants.WrapX(ax - 24, _world.Circumference);
+            az += 16;
         }
 
         int groundY = _generator.SurfaceHeight(planet, ax, az);

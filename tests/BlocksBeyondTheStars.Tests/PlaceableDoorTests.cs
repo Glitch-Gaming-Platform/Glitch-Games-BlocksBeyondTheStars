@@ -30,7 +30,7 @@ public sealed class PlaceableDoorTests : IDisposable
     {
         repo = new SqliteWorldRepository(new SaveGamePaths(_root, "door"));
         var st = new LoopbackServerTransport(new LoopbackLink());
-        var config = new ServerConfig { WorldName = "door", Seed = 1, AutoSaveIntervalMinutes = 9999, PlaceStarterShip = false };
+        var config = new ServerConfig { WorldName = "door", Seed = 1, AutoSaveIntervalMinutes = 9999, PlaceStarterShip = false, PlaceSettlements = false };
         var server = new SvGameServer(config, _content, st, repo);
         server.Start();
         return server;
