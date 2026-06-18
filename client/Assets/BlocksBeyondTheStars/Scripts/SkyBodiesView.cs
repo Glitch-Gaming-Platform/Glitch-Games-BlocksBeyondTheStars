@@ -25,7 +25,9 @@ namespace BlocksBeyondTheStars.Client
             public Color Tint;
             public float CyclesPerDay;  // own sky cycle: how many times it crosses per local day
             public float Phase;         // 0..1 cycle offset
-            public float Azimuth;       // orbital path bearing (deg) — each body rises somewhere else
+            public float BaseAz;        // compass bearing from the body's REAL relative system position (deg)
+            public float Peak;          // max elevation of its daily arc (deg) — never the zenith, so paths spread
+            public float Sweep;         // azimuth travel across the visible arc (deg) — an east→up→west drift
             public float Size;          // world-space sphere scale at the fixed sky distance
         }
 
@@ -108,11 +110,18 @@ namespace BlocksBeyondTheStars.Client
                     continue;
                 }
 
-                // The body's own sky cycle: its angle advances with the LOCAL day at its own rate + phase,
-                // on its own tilted path — the same maths family as the sun's arc, but per body. Uses the
-                // smoothed continuous clock so motion is glide, not server-update steps.
-                float t = _tod * b.CyclesPerDay + b.Phase;
-                var dir = -(Quaternion.Euler(t * 360f - 90f, b.Azimuth, 0f) * Vector3.forward);
+                // The body's own sky cycle: a tilted arc, NOT a great circle through the zenith (which made
+                // every body climb straight overhead and stack vertically). Elevation rides a sine — up over
+                // the first half of the cycle, below the horizon (hidden) the second — capped at the body's
+                // own Peak so it never reaches the zenith. Azimuth drifts across the sky during the visible
+                // arc, centred on the body's REAL bearing at its peak. Uses the smoothed continuous clock so
+                // motion is a glide, not server-update steps.
+                float c = Mathf.Repeat(_tod * b.CyclesPerDay + b.Phase, 1f);
+                float el = b.Peak * Mathf.Sin(c * Mathf.PI * 2f);
+                float az = b.BaseAz + (c - 0.25f) * b.Sweep;
+                float elRad = el * Mathf.Deg2Rad, azRad = az * Mathf.Deg2Rad;
+                float cosEl = Mathf.Cos(elRad);
+                var dir = new Vector3(cosEl * Mathf.Sin(azRad), Mathf.Sin(elRad), cosEl * Mathf.Cos(azRad));
 
                 bool up = dir.y > -0.04f;
                 if (b.Go.activeSelf != up)
@@ -251,7 +260,23 @@ namespace BlocksBeyondTheStars.Client
                     dist = Mathf.Sqrt(dx * dx + dy * dy + dz * dz);
                 }
 
-                float apparent = Mathf.Clamp(250f * radius / Mathf.Max(dist, 40f), 2.5f, 120f);
+                float apparent = Mathf.Clamp(250f * radius / Mathf.Max(dist, 40f), 4f, 120f);
+
+                // Where in the sky it sits: the compass bearing of its REAL position relative to us, so each
+                // body genuinely hangs in its own direction (this is what kills the vertical-line stacking the
+                // old raw-hash azimuth caused). A small hashed jitter separates any two near-co-directional
+                // bodies; a fallback bearing covers missing coords.
+                float baseAz;
+                if (current != null)
+                {
+                    float adx = body.SystemX - current.SystemX;
+                    float adz = body.SystemZ - current.SystemZ;
+                    baseAz = Mathf.Atan2(adx, adz) * Mathf.Rad2Deg + ((h % 37) - 18);
+                }
+                else
+                {
+                    baseAz = (h >> 3) % 360;
+                }
 
                 _bodies.Add(new SkyBody
                 {
@@ -266,7 +291,9 @@ namespace BlocksBeyondTheStars.Client
                         _ => 0.15f + (h % 80) / 80f * 0.45f,                                       // 0.15..0.6
                     },
                     Phase = (h >> 7) % 1000 / 1000f,
-                    Azimuth = (h >> 3) % 360,
+                    BaseAz = baseAz,
+                    Peak = 28f + (h % 47),          // 28..74° — well below the zenith, so arcs spread out
+                    Sweep = 150f + (h % 5) * 12f,   // 150..198° east→up→west drift across the sky
                     Size = apparent,
                 });
             }
