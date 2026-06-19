@@ -238,7 +238,7 @@ public static class NetCodec
         Register(151, typeof(RepairShipIntent));         // Client -> Server
         Register(152, typeof(ShipRepairStatus));         // Server -> Client
 
-        // Creature taming + companions (design: docs/CREATURE_TAMING_PLAN.md). The translator gadget starts the
+        // Creature taming + companions (design: docs/developer/CREATURE_TAMING.md). The translator gadget starts the
         // ritual via the existing UseGadgetIntent; these carry the responses, progress + companion roster.
         Register(153, typeof(TameRespondIntent));        // Client -> Server (a response in the taming ritual)
         Register(154, typeof(TameProgress));             // Server -> Client (decoded mood + need + trust)

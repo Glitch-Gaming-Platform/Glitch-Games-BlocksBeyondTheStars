@@ -10,7 +10,7 @@ using UnityEngine.UI;
 namespace BlocksBeyondTheStars.Client
 {
     /// <summary>
-    /// Standalone ship-type editor (M27+ tooling; see docs/SHIP_TYPE_EDITOR_PLAN.md). An empty build
+    /// Standalone ship-type editor (M27+ tooling; see docs/developer/SHIP_TYPE_EDITOR.md). An empty build
     /// room you fly through (hold RMB to look, WASD/QE to move) and place blocks into: hull, viewports,
     /// all ship stations, a hatch, lights and an engine. A side panel sets the design's name, stats and
     /// blueprint/craft costs. Save writes a ship-type bundle (ship.json + layout.json) that a developer

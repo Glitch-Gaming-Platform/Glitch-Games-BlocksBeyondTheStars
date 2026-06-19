@@ -44,7 +44,7 @@ Remove-Item $temp -Recurse -Force -ErrorAction SilentlyContinue
 Copy-Item (Join-Path $repo 'data/*') $streaming -Recurse -Force
 
 # Copy the embedded-browser web content (in-game wiki + arcade minigames) into StreamingAssets. Source of
-# truth is web/; StreamingAssets is generated (gitignored), like data/. See docs/MINIGAMES_AND_WIKI.md.
+# truth is web/; StreamingAssets is generated (gitignored), like data/. See docs/developer/MINIGAMES_AND_WIKI.md.
 $streamingRoot = Join-Path $repo 'client/Assets/StreamingAssets'
 $web = Join-Path $repo 'web'
 if (Test-Path $web) {

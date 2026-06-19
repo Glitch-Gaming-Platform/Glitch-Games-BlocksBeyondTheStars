@@ -186,7 +186,7 @@ namespace BlocksBeyondTheStars.Client
             }
         }
 
-        /// <summary>Shows a floating name label above a tamed companion (design: docs/CREATURE_TAMING_PLAN.md) so
+        /// <summary>Shows a floating name label above a tamed companion (design: docs/developer/CREATURE_TAMING.md) so
         /// the player can pick their pet out of the wild fauna. Built lazily; billboarded to face the camera and
         /// kept under the game root (not the rotating creature rig) so the text stays upright + readable.</summary>
         private void UpdateNameplate(Entry e, NetCreature c)

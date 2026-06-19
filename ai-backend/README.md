@@ -1,7 +1,7 @@
 # Blocks Beyond the Stars — AI Backend (optional)
 
 A **separate, optional** Python service for the game server (see
-[docs/AI_MISSION_BACKEND.md](../docs/AI_MISSION_BACKEND.md)). The C#/.NET game server stays
+[docs/developer/AI_MISSION_BACKEND.md](../docs/developer/AI_MISSION_BACKEND.md)). The C#/.NET game server stays
 authoritative: it validates whatever this service returns, only ever shows greeting lines as
 flavour, and works fine when the service is off or unreachable.
 

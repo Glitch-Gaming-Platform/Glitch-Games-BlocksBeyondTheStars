@@ -8,7 +8,7 @@ using BlocksBeyondTheStars.Shared.State;
 namespace BlocksBeyondTheStars.GameServer;
 
 /// <summary>
-/// Creature taming + companions (design: <c>docs/CREATURE_TAMING_PLAN.md</c>). A <b>Creature Translator</b>
+/// Creature taming + companions (design: <c>docs/developer/CREATURE_TAMING.md</c>). A <b>Creature Translator</b>
 /// gadget starts a short bonding ritual on a wild creature: decode its mood/need, respond the right way
 /// (bait / calm / approach / give space) to earn hidden <b>trust</b>; reach the threshold and it becomes a
 /// named <b>companion</b> bound to the world it was tamed on. Difficulty scales with the species'

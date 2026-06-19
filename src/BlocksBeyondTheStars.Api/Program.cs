@@ -83,7 +83,7 @@ app.MapGet("/play", () => Results.Content(
     "<body style=\"font-family:system-ui;background:#0b0f1a;color:#dfe6f3;padding:40px\">" +
     "<h1>Browser client</h1><p>The WebGL build will be served here. The server exposes a WebSocket " +
     "gateway on the gameplay port so the browser client uses the same protocol. " +
-    "See docs/WEBCLIENT_FEASIBILITY.md.</p></body></html>", "text/html"));
+    "See docs/developer/WEBCLIENT_FEASIBILITY.md.</p></body></html>", "text/html"));
 
 app.MapGet("/api/status", (AdminService a) => Results.Json(a.GetStatus()));
 

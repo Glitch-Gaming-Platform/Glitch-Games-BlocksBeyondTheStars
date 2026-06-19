@@ -6,7 +6,7 @@
   Builds a self-contained, single-file BlocksBeyondTheStars.GameServer and places it in
   client/Assets/StreamingAssets/server/. On "Singleplayer" the client launches this
   executable as a child process bound to loopback (see LocalServerLauncher.cs and
-  docs/CLIENT_COMPLETION_PLAN.md). The server reuses the client's synced data/ content
+  docs/developer/CLIENT_COMPLETION.md). The server reuses the client's synced data/ content
   (passed via --data) and writes saves under the user's persistent data path, so no
   content is duplicated here.
 

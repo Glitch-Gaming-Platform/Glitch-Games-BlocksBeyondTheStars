@@ -95,4 +95,4 @@ Everything under `Assets/StreamingAssets/` (data + the published server) is bund
 Real textures (blocks use placeholder colours), 3D models, audio/music, an animated menu
 background, and full uGUI/UI Toolkit inventory/crafting/star-map screens. The shell uses IMGUI
 like the HUD. The networking, world streaming, localization, the front-end shell flow and the
-authoritative-action flow are wired and working. See `docs/CLIENT_SHELL_AND_ASSETS.md`.
+authoritative-action flow are wired and working. See `docs/developer/CLIENT_SHELL_AND_ASSETS.md`.

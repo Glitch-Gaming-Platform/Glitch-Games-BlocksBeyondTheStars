@@ -8,7 +8,7 @@ using BlocksBeyondTheStars.Shared.Primitives;
 namespace BlocksBeyondTheStars.GameServer;
 
 /// <summary>
-/// Own-ship repair (docs/SHIP_REPAIR_PLAN.md). Unifies the two kinds of ship integrity the player
+/// Own-ship repair (docs/developer/SHIP_REPAIR.md). Unifies the two kinds of ship integrity the player
 /// can lose but could not restore: the numeric <see cref="ShipState.Hull"/> (dented by combat, never
 /// regenerates) and missing design voxel cells of the ship hull (holes carved by EVA mining). Both are
 /// expressed as one material cost against the ship's <b>design reference</b> — the same idea the wreck

@@ -1826,7 +1826,7 @@ namespace BlocksBeyondTheStars.Client
 
         private static string AllianceName(string name, string id) => string.IsNullOrEmpty(name) ? id : name;
 
-        // --- Companions tab (tamed creatures): roster with rename + release; design docs/CREATURE_TAMING_PLAN.md ---
+        // --- Companions tab (tamed creatures): roster with rename + release; design docs/developer/CREATURE_TAMING.md ---
 
         /// <summary>Per-companion in-progress rename text (keyed by companion id), so typing survives a rebuild.</summary>
         private readonly System.Collections.Generic.Dictionary<string, string> _companionDraft = new();

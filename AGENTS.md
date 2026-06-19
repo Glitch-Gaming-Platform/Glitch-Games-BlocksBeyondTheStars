@@ -9,7 +9,7 @@ all use `BlocksBeyondTheStars`). Read it before making changes.
 A block-based 3D space crafting game for Windows. The player starts with a small
 spaceship, explores procedurally generated planets, mines resources, crafts gear,
 researches blueprints, and grows the ship. The current status (Done/Open) lives in
-[TODO.md](TODO.md); player-facing operation in [docs/USER_MANUAL.md](docs/USER_MANUAL.md).
+[TODO.md](TODO.md); player-facing operation in [docs/user/USER_MANUAL.md](docs/user/USER_MANUAL.md).
 (The original German requirement specs under `plans/` were consolidated and removed.)
 
 ## Golden architecture rule
@@ -48,7 +48,8 @@ ai-backend/                     optional Python LLM service (missions, NPC/ship-
 tools/                          editor-export merge tools + AI asset generation (tools/ai-assets)
 data/                           data-driven JSON definitions (blocks, items, recipes, ...)
 data/locales/                   localization resource files (en.json, de.json)
-docs/                           user manual, self-hosting guide, design/plan docs, ADRs
+docs/user/                      player-facing manual (USER_MANUAL.md)
+docs/developer/                 ARCHITECTURE.md + design/how-it-works docs + ADRs (docs/developer/adr/); see docs/developer/README.md index
 scripts/                        build-client.ps1 + publish scripts
 ```
 
@@ -86,7 +87,7 @@ dotnet run --project src/BlocksBeyondTheStars.GameServer   # start a local serve
 To confirm a client rebuild actually happened, check the `BlocksBeyondTheStars.Client.dll` timestamp in the
 build output (the `.exe` timestamp is not reliable). The full build guide — pipeline details,
 freshness verification and the known "works in the Editor, broken in the build" pitfalls — is in
-[docs/DEVELOPER.md](docs/DEVELOPER.md).
+[docs/developer/DEVELOPER.md](docs/developer/DEVELOPER.md).
 
 ## Project conventions
 
@@ -94,6 +95,29 @@ freshness verification and the known "works in the Editor, broken in the build" 
   (see `.editorconfig`). Records/`init` work on netstandard2.1 via the
   `IsExternalInit` polyfill in `BlocksBeyondTheStars.Shared/Compatibility`.
 - The author is JAM Software; follow sensible, consistent C# conventions.
+
+## Before every commit and push (mandatory)
+
+Documentation must never drift behind the code. Before *every* commit, and again before *every* push,
+run through this checklist:
+
+1. **Update [TODO.md](TODO.md) — always.** It is the single source of truth for Done/Open. Before
+   committing, reflect the current state there: mark finished work ✅ (with the date and, once pushed,
+   the commit hash), add anything newly discovered to the backlog, and correct any status that the change
+   makes stale. A commit that changes behaviour but leaves TODO.md untouched is incomplete.
+2. **Decide whether the docs in [docs/](docs/) need to change — decide this yourself.** Ask: does this
+   change alter *how something works* in a way an existing doc describes (e.g. [docs/user/USER_MANUAL.md](docs/user/USER_MANUAL.md),
+   [docs/developer/DEVELOPER.md](docs/developer/DEVELOPER.md), [docs/developer/SELF_HOSTING.md](docs/developer/SELF_HOSTING.md), a concept/design
+   doc, or an ADR)? If yes, update that doc in the same commit. Player-facing controls/mechanics/commands
+   changes **must** update `USER_MANUAL.md`.
+3. **Decide whether a new doc is warranted.** If the change introduces a whole subsystem or a non-obvious
+   "how it is done" that no existing doc covers, add a new doc under `docs/`. Keep `docs/` to *documentation
+   and design/how-it-works notes* — not throwaway pre-implementation checklists (their status lives in
+   TODO.md). When you add a new doc, **also update the root [README.md](README.md)** if it lists or links
+   the docs, so the new doc is discoverable.
+4. **When in doubt, ask the user.** If it is unclear whether a doc should be updated, rewritten, or newly
+   created — or whether a stale plan should be archived — surface it and ask before committing, rather than
+   guessing.
 
 ## Roadmap
 

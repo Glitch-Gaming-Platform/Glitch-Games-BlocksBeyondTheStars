@@ -11,7 +11,7 @@ using SvGameServer = BlocksBeyondTheStars.GameServer.GameServer;
 namespace BlocksBeyondTheStars.Tests;
 
 /// <summary>
-/// Creature taming + companions (design: docs/CREATURE_TAMING_PLAN.md): the Creature Translator ritual
+/// Creature taming + companions (design: docs/developer/CREATURE_TAMING.md): the Creature Translator ritual
 /// (decode mood → respond → trust), difficulty by temperament, per-species first-tame knowledge, and
 /// companions that are bound to their home world, persist, and respect the per-world cap.
 /// </summary>

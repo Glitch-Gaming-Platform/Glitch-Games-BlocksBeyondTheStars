@@ -84,7 +84,7 @@ public sealed class CombatEntity
     /// been raised. Cleared again when it loses the ship, so re-engaging warns afresh. Server-only.</summary>
     public bool Spotted { get; set; }
 
-    // --- Tamed companion (design: docs/CREATURE_TAMING_PLAN.md) ---
+    // --- Tamed companion (design: docs/developer/CREATURE_TAMING.md) ---
 
     /// <summary>Owner player id if this is a tamed companion (empty = wild fauna). Owned creatures follow their
     /// owner, never harm anyone, are excluded from the wild population cap + far-prune, and are spawned/
@@ -160,7 +160,7 @@ public readonly record struct SpacePlayerPose(Vector3f Pos, float Yaw, bool Eva)
 
 /// <summary>
 /// Free space flight and ship combat (technical requirements / `anf_space_flight.md` §6-11).
-/// A small, fully server-authoritative PvE slice (see `docs/SPACE_COMBAT_CONCEPT.md`): local
+/// A small, fully server-authoritative PvE slice (see `docs/developer/SPACE_COMBAT_CONCEPT.md`): local
 /// space instances, shield/hull, rule-gated ship weapons, simple NPC drones and destructible
 /// asteroids, and ship recovery (no permanent loss) when the hull is depleted. Also hosts the
 /// ship-module build flow, since ship weapons are built modules.

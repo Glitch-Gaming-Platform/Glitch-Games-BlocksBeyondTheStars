@@ -6,7 +6,7 @@ namespace BlocksBeyondTheStars.Shared.Story;
 /// <summary>
 /// The installed story packs. The engine is story-agnostic; packs are added here (and later loaded from
 /// <c>data/stories/&lt;id&gt;/</c>). The first pack is <b>"The VEGA Protocol"</b> — the SPS grundstory whose
-/// canon + beat agenda live in <c>docs/LORE_STRUCTURE.md</c>. The beat <see cref="StoryBeat.TextKey"/>s are the
+/// canon + beat agenda live in <c>docs/developer/LORE_STRUCTURE.md</c>. The beat <see cref="StoryBeat.TextKey"/>s are the
 /// B0–B12 arc from that doc; their bilingual text is authored later (workstream W-A). Thresholds are tunable
 /// (plan §9 numeric tuning) but must stay monotonic.
 /// </summary>

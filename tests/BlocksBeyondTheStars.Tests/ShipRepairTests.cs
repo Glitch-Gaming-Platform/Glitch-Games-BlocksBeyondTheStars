@@ -10,7 +10,7 @@ using SvGameServer = BlocksBeyondTheStars.GameServer.GameServer;
 namespace BlocksBeyondTheStars.Tests;
 
 /// <summary>
-/// Own-ship repair (docs/SHIP_REPAIR_PLAN.md): the numeric hull is bought back with a metal plating item,
+/// Own-ship repair (docs/developer/SHIP_REPAIR.md): the numeric hull is bought back with a metal plating item,
 /// and EVA-carved hull cells are refilled with their design block. Material-only, partial when short.
 /// </summary>
 public sealed class ShipRepairTests : IDisposable

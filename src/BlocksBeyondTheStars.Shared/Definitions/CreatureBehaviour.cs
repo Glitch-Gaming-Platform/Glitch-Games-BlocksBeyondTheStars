@@ -74,7 +74,7 @@ public static class CreatureBehaviour
     }
 
     /// <summary>
-    /// A tamed companion's movement (design: <c>docs/CREATURE_TAMING_PLAN.md</c>): walk toward its owner
+    /// A tamed companion's movement (design: <c>docs/developer/CREATURE_TAMING.md</c>): walk toward its owner
     /// when farther than <paramref name="followDistance"/> (hurrying when it has fallen well behind),
     /// otherwise mill gently nearby so it doesn't stand frozen. Horizontal only (the caller keeps Y for
     /// terrain/water/flight), mirroring <see cref="Step"/>.

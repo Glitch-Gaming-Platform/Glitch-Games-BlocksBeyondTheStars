@@ -132,7 +132,7 @@ public sealed class PlayerState
     public HashSet<string> UnlockedGames { get; set; } = new();
 
     /// <summary>Creatures the player has tamed — named companions bound to the world they were tamed on
-    /// (design: <c>docs/CREATURE_TAMING_PLAN.md</c>). Present as followers only while the owner is on that
+    /// (design: <c>docs/developer/CREATURE_TAMING.md</c>). Present as followers only while the owner is on that
     /// body; otherwise stored. Server-authoritative, persisted in the player blob.</summary>
     public List<TamedCreature> TamedCreatures { get; set; } = new();
 

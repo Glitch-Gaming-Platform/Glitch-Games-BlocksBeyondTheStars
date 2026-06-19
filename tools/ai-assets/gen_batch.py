@@ -5,7 +5,7 @@ invoked explicitly and the user has approved the whole set. Each entry is still 
 the run is **resumable** (existing non-empty out/<id>.mp3 files are skipped) and tolerant of single
 failures (they are retried once, then recorded and skipped so the batch completes).
 
-The catalogue mirrors docs/SOUND_DESIGN.md. Outputs land in out/ (git-ignored); chosen files are
+The catalogue mirrors docs/developer/SOUND_DESIGN.md. Outputs land in out/ (git-ignored); chosen files are
 moved into the Unity client and logged in NOTICES.md afterwards.
 
 Usage:

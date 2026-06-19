@@ -3,7 +3,7 @@ using System.Collections.Generic;
 namespace BlocksBeyondTheStars.Shared.Definitions;
 
 /// <summary>
-/// A voxel ship blueprint produced by the in-game ship editor (see docs/SHIP_TYPE_EDITOR_PLAN.md),
+/// A voxel ship blueprint produced by the in-game ship editor (see docs/developer/SHIP_TYPE_EDITOR.md),
 /// loaded from <c>data/ship_layouts/&lt;key&gt;.json</c>. A <see cref="ShipDefinition"/> may reference one
 /// via <see cref="ShipDefinition.Layout"/>; when present the server stamps this exact design (hull,
 /// viewports, stations, hatch, lights, engine) instead of the parametric box.

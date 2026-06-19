@@ -65,9 +65,11 @@ We're hoping for community support! Get involved and join in — your name could
 *(This is the same credit shown in the game's Credits screen — `ui.credits.body`.)*
 
 > **Status & docs:** [TODO.md](TODO.md) is the single Done/Open status doc; player operation is in
-> [docs/USER_MANUAL.md](docs/USER_MANUAL.md); building and verifying builds is in
-> [docs/DEVELOPER.md](docs/DEVELOPER.md); deeper design notes are under [docs/](docs/). (The
-> original German requirement specs under `plans/` were consolidated and removed.)
+> [docs/user/USER_MANUAL.md](docs/user/USER_MANUAL.md); building and verifying builds is in
+> [docs/developer/DEVELOPER.md](docs/developer/DEVELOPER.md); the system overview is in
+> [docs/developer/ARCHITECTURE.md](docs/developer/ARCHITECTURE.md) and every developer doc is indexed in
+> [docs/developer/README.md](docs/developer/README.md). (The original German requirement specs under `plans/`
+> were consolidated and removed.)
 > Docs and code comments are **English**. In-game text is **bilingual (German + English)**.
 
 ## Guiding principle
@@ -105,7 +107,8 @@ ai-backend/                     optional Python LLM service (mission/NPC/ship-AI
 tools/                          editor-export merge tools (Python) + AI asset generation (tools/ai-assets)
 data/                           data-driven content (blocks, items, recipes, blueprints, modules, planets)
 data/locales/                   localization (en.json, de.json)
-docs/                           user manual, self-hosting guide, design/plan docs, ADRs
+docs/user/                      player-facing manual (USER_MANUAL.md)
+docs/developer/                 architecture, design/how-it-works docs, ADRs (docs/developer/adr/) — see its README.md index
 scripts/                        build-client.ps1 + publish scripts for self-hosting packages
 ```
 
@@ -122,11 +125,11 @@ dotnet run --project src/BlocksBeyondTheStars.Api          # start the admin UI 
 
 The playable Windows client is built with `scripts/build-client.ps1` (publishes the shared libs +
 the bundled server and runs a Unity batch build; requires the Unity Editor). See
-[docs/DEVELOPER.md](docs/DEVELOPER.md) for the full build guide, how to verify a build is
+[docs/developer/DEVELOPER.md](docs/developer/DEVELOPER.md) for the full build guide, how to verify a build is
 fresh, and known build pitfalls.
 
 Server configuration lives in `config/server.json` (created on first run) and is editable
-via the admin UI. See [docs/SELF_HOSTING.md](docs/SELF_HOSTING.md).
+via the admin UI. See [docs/developer/SELF_HOSTING.md](docs/developer/SELF_HOSTING.md).
 
 ### Admin dashboard
 
@@ -136,7 +139,7 @@ status, config editing, backups, log tail and mission/content tools — optional
 an admin password. Start it with `dotnet run --project src/BlocksBeyondTheStars.Api`, or in a
 server package run `BlocksBeyondTheStars.Api(.exe)` from the install folder (next to the game
 server, so both share `config/server.json`). URL, auth and the full HTTP API are documented
-in [docs/SELF_HOSTING.md](docs/SELF_HOSTING.md) §5.
+in [docs/developer/SELF_HOSTING.md](docs/developer/SELF_HOSTING.md) §5.
 
 ### Tools CLI
 
@@ -153,7 +156,7 @@ provider-agnostic via the OpenAI-compatible chat API — LM Studio / OpenAI / Cl
 that writes mission texts and NPC/ship-AI dialogue. The game is fully playable without it — every
 AI text has a scripted, localized fallback, and the C# server validates everything the service
 returns. See [ai-backend/README.md](ai-backend/README.md) and
-[docs/AI_MISSION_BACKEND.md](docs/AI_MISSION_BACKEND.md).
+[docs/developer/AI_MISSION_BACKEND.md](docs/developer/AI_MISSION_BACKEND.md).
 
 ### Self-hosting packages
 
@@ -166,7 +169,7 @@ Produces self-contained, single-file packages (no .NET install needed on the hos
 Players can also download and install the Windows client **from the running server's own web page**:
 `scripts/publish-client-installer.ps1` builds a [Velopack](https://velopack.io) installer + auto-update
 feed, the admin host serves it at `/download` + `/updates`, and the `/portal` page links it. See
-[docs/SELF_HOSTING.md](docs/SELF_HOSTING.md) §9.
+[docs/developer/SELF_HOSTING.md](docs/developer/SELF_HOSTING.md) §9.
 
 ## Adding content (data-driven)
 
@@ -193,5 +196,5 @@ for dynamic dialogue/mission text. Self-hostable dedicated server (Raspberry Pi 
 Currently 584 xUnit tests pass.
 
 See [TODO.md](TODO.md) for the current Done/Open status, the
-[user manual](docs/USER_MANUAL.md) for controls/mechanics/commands, and [AGENTS.md](AGENTS.md)
+[user manual](docs/user/USER_MANUAL.md) for controls/mechanics/commands, and [AGENTS.md](AGENTS.md)
 for contributor rules.

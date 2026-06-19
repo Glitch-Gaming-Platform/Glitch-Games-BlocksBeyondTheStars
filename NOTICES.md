@@ -17,13 +17,13 @@ the ship-AI radio chirp `ai_blip` (VEGA companion), the water-body ambient loops
 `beam_teleport` (jump whoosh) + `beam_idle` (pad idle hum loop))
 are **AI-generated** with the
 **ElevenLabs** text-to-sound-effects API by the project owner — see `tools/ai-assets/gen_batch.py`
-for the exact prompts and `docs/SOUND_DESIGN.md` for the catalogue. They are AI-synthesised audio
+for the exact prompts and `docs/developer/SOUND_DESIGN.md` for the catalogue. They are AI-synthesised audio
 (not third-party copyrighted recordings); use is governed by the **ElevenLabs Terms of Service**
 for the generating account's plan. Background **music** comes in two player-selectable sets: (1) four AI-generated ambient loops
 (`music_menu`/`music_planet`/`music_space`/`music_combat`, same ElevenLabs API + terms) with
 code-synthesized fallbacks; and (2) a **Suno**-generated track library of 23 instrumental ambient
 tracks (`client/Assets/Resources/music/*.mp3`) composed with the **Suno** text-to-music service by
-the project owner — see `docs/MUSIC_TRACKS.md` for every track's prompt and in-game context. These
+the project owner — see `docs/developer/MUSIC_TRACKS.md` for every track's prompt and in-game context. These
 are AI-synthesised instrumental audio (not third-party recordings); use is governed by the **Suno
 Terms of Service** for the generating account's plan. The remaining UI/feedback cues stay
 **generated procedurally in code** (`ClientMusic`, `ClientAudio`).
@@ -62,7 +62,7 @@ tileable 64px tiles that the avatar/creatures tint by colour — see `tools/ai-a
 
 **No third-party models** are bundled — the rest of the visuals remain runtime-generated
 (vertex/atlas block colours, code-built avatars + logo, procedural UI panels). See
-`docs/CLIENT_SHELL_AND_ASSETS.md` for the placeholder strategy and asset folder layout.
+`docs/developer/CLIENT_SHELL_AND_ASSETS.md` for the placeholder strategy and asset folder layout.
 
 When real assets are added, list each here as:
 

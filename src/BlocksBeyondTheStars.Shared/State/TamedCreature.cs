@@ -3,7 +3,7 @@ using BlocksBeyondTheStars.Shared.Definitions;
 namespace BlocksBeyondTheStars.Shared.State;
 
 /// <summary>
-/// A creature the player has tamed (design: <c>docs/CREATURE_TAMING_PLAN.md</c>). Wild fauna is
+/// A creature the player has tamed (design: <c>docs/developer/CREATURE_TAMING.md</c>). Wild fauna is
 /// transient and per-world (regenerated from the seed on every visit), so a companion cannot be a saved
 /// wild entity — it is its own piece of <b>per-player</b> state. It is bound to the body it was tamed on
 /// and re-appears as a follower whenever the owner returns to that world. It carries a full

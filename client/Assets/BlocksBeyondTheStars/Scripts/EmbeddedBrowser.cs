@@ -13,7 +13,7 @@ namespace BlocksBeyondTheStars.Client
     /// The browser is UnityWebBrowser (UWB), wrapped behind the <c>BBS_UWB</c> scripting define so the project
     /// compiles and runs before the package is installed — then <see cref="Available"/> is false and the
     /// screens show a "browser not installed" placeholder while collection/highscores/downloads keep working.
-    /// Enable it per <c>docs/MINIGAMES_AND_WIKI.md</c> (VoltUPR registry + UWB packages + the BBS_UWB define).
+    /// Enable it per <c>docs/developer/MINIGAMES_AND_WIKI.md</c> (VoltUPR registry + UWB packages + the BBS_UWB define).
     /// The <c>#if BBS_UWB</c> block below is the single integration point to validate against the UWB version.
     /// </summary>
     public sealed class EmbeddedBrowser : MonoBehaviour

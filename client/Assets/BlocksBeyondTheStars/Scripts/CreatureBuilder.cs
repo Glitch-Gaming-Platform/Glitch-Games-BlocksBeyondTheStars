@@ -48,7 +48,7 @@ namespace BlocksBeyondTheStars.Client
             }
 
             // Tamed companions read with a gentle friendly green-cyan cast (never the hostile red) so you can
-            // tell your pet apart from wild fauna at a glance (design: docs/CREATURE_TAMING_PLAN.md).
+            // tell your pet apart from wild fauna at a glance (design: docs/developer/CREATURE_TAMING.md).
             if (!string.IsNullOrEmpty(c.OwnerId))
             {
                 baseColor = Color.Lerp(baseColor, new Color(0.35f, 0.85f, 0.65f), 0.18f);
