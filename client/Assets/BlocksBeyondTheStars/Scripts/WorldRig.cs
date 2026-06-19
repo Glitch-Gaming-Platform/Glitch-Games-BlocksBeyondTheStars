@@ -246,6 +246,13 @@ namespace BlocksBeyondTheStars.Client
             ambientDust.Camera = cam;
             ambientDust.ReducedEffects = shell.Settings.ReducedEffects;
 
+            // Tiny cosmetic micro-fauna ("Kleinstlebewesen") — fluttering / crawling / swimming critters + cave
+            // glow-worms that make planets feel alive. Client-only, biome + day/night gated, never attack.
+            var microFauna = root.AddComponent<MicroFaunaView>();
+            microFauna.Game = boot;
+            microFauna.Camera = cam;
+            microFauna.ReducedEffects = shell.Settings.ReducedEffects;
+
             // Twinkling stars behind the world (space, airless skies, station windows, planet nights).
             var starfield = root.AddComponent<Starfield>();
             starfield.Game = boot;

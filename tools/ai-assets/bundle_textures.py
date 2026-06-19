@@ -33,13 +33,19 @@ def main() -> None:
     ap.add_argument("--from-out", action="store_true", help="source out/textures/*.png instead of Resources/*.bytes")
     ap.add_argument("--avatar", action="store_true", help="bundle out/avatar/*.png as Resources/textures/avatar_<key>.bytes")
     ap.add_argument("--creatures", action="store_true", help="bundle out/creatures/*.png as Resources/textures/creature_<key>.bytes")
+    ap.add_argument("--microfauna", action="store_true", help="bundle out/microfauna/*.png as Resources/textures/microfauna_<key>.bytes")
     args = ap.parse_args()
 
     RES.mkdir(parents=True, exist_ok=True)
     count = 0
 
-    if args.avatar or args.creatures:
-        sub, prefix = ("out/avatar", "avatar_") if args.avatar else ("out/creatures", "creature_")
+    if args.avatar or args.creatures or args.microfauna:
+        if args.avatar:
+            sub, prefix = "out/avatar", "avatar_"
+        elif args.creatures:
+            sub, prefix = "out/creatures", "creature_"
+        else:
+            sub, prefix = "out/microfauna", "microfauna_"
         for png in sorted(Path(sub).glob("*.png")):
             (RES / f"{prefix}{png.stem}.bytes").write_bytes(to_raw(Image.open(png)))
             count += 1

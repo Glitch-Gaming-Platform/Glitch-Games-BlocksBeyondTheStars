@@ -17,6 +17,26 @@ world-gen; SQLite persistence.
 
 ---
 
+### ★ Micro-fauna ("Kleinstlebewesen"): tiny ambient critters that make planets feel alive — ✅ client + art (2026-06-20, NEEDS Unity build)
+A new category of *tiny, purely-cosmetic* creatures populates planets: fluttering **butterflies / moths /
+fireflies / bees / dragonflies / flies**, crawling **beetles / ants / caterpillars / worms / snails / spiders**,
+schooling **small fish / tadpoles / water-beetles / water-striders**, and **glow-worms** clinging to cave
+ceilings. They never attack and are entirely **client-side** — no server, netcode, save or test impact (the same
+philosophy as the ambient dust motes); each client renders its own and nothing is synced. No sound (by design).
+- **Render** — `MicroFaunaView` (rigged beside `AmbientParticles` in `WorldRig`) keeps a pooled set of
+  camera-facing sprite billboards around the player on one shared atlas material (cheap batching). Sprites come
+  from one runtime atlas (`MicroFaunaAtlas`) built from generated `microfauna_*.bytes`, with a procedurally
+  painted silhouette fallback so it works even without art. Alpha-blended for most kinds, additive glow for
+  fireflies / glow-worms (a sprite glow, **not** a real light). Per-instance colour tint for variety.
+- **Behaviour** — three light motion models: airborne flutter (bob + weave + perch), surface crawl
+  (ground-height following, foraging pauses, turns at ledges) and in-water schooling (cohesion, stays inside the
+  water volume). Grouped kinds spawn as swarms/schools that cohere; others appear singly.
+- **Gating** — biome richness + day/night (fireflies/moths by night, butterflies/bees by day) + habitat
+  (surface vs. nearby water vs. cave) drive what spawns where. Suppressed in space / stations / airless worlds;
+  thinned out under reduced-effects. Underground shows cave **glow-worms** instead of surface critters.
+- **Art** — 17 transparent pixel-art sprites via new `tools/ai-assets/gen_microfauna.py` +
+  `bundle_textures.py --microfauna`. Client-only feature; .NET tests unaffected (683 green). NEEDS Unity build.
+
 ### ★ "Du bist gestorben" / "Das Schiff wurde zerstört" confirmation screen before respawn — ✅ client + locale (2026-06-19, NEEDS Unity build)
 After dying on a planet (or having the ship destroyed in space), the death/explosion animation now plays first,
 then a dark overlay with a title and a single **Weiter** button appears; the player / ship only re-appears once
