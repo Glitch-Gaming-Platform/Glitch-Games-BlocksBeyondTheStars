@@ -6,7 +6,7 @@ plans live under [docs/](docs/) (committed); this file is the high-level status.
 keep it current when controls/features change. Last consolidated 2026-06-04.
 
 **Build:** `scripts/build-client.ps1` (publishes shared libs + bundled server + Unity Windows player).
-**Test:** `dotnet test` — currently **674 passing** (2026-06-19). Locale parity (en/de) is enforced by a test.
+**Test:** `dotnet test` — currently **678 passing** (2026-06-19). Locale parity (en/de) is enforced by a test.
 **Conventions:** English docs/comments; in-game text bilingual DE+EN; commit to `main` with the
 Claude `Co-Authored-By` trailer; OpenAI texture + ElevenLabs sound generation is blanket-approved
 (no per-batch gate).
@@ -16,6 +16,24 @@ code (no scene authoring). One shared world; contractless MessagePack networking
 world-gen; SQLite persistence.
 
 ---
+
+### ★ Tree-trunk bark colour: per-world random, guaranteed darker than the leaves — ✅ client (2026-06-19, libs synced, NEEDS Unity build)
+Trunks (`wood_log`) were never tinted — they always showed the plain bark texture while leaves recolour per
+(species × world), so a brown/amber leaf could read close to the bark. Now the trunk also gets a **per-world
+random** colour, but one that can never be confused with the foliage:
+- **`FloraTints.ForWood(seed, location)`** (Shared, pure fn like `For`) — full-circle random hue, but forced
+  into a **DARK band** (sat 0.35–0.70, **val 0.30–0.58**). Leaves always sit bright (val 0.85–1.15), so the
+  trunk is guaranteed clearly darker than **any** leaf species on the world regardless of hue (one bark colour
+  must contrast up to three crown blocks at once → brightness separation, not hue pairing). Orbit/other bodies
+  agree with zero traffic; no server/codec/`WorldEnvironment` change.
+- **Client wiring** — `GameBootstrap.RebuildFloraTints` adds `wood_log` (→ `ForWood`) to the per-block tint map
+  **and** closes a pre-existing gap: `pine_needles`/`palm_frond` now get a per-species leaf hue too (were
+  falling back to the planet's uniform hue). `ChunkMesher` adds `IsWoodBlock` + tint **mode 4** (cube + shaped
+  paths); `BlockAtlas.shader` gets a bark branch checked **before** the dye branch (mode 4 > the dye `>2.5`
+  cutoff) with a gentler blend than leaves so the bark grain survives; black tint (ship mesh / no resolver) →
+  natural bark.
+- New `WoodTintTests` (determinism, per-world variety, dark-band, and the "bark always clearly darker than
+  every leaf on the same world" guarantee). 678 tests green.
 
 ### ★ Backlog reconciled against the memory audit — deferred plans + missing entries logged (2026-06-19)
 A full pass over the project memory notes against this file surfaced work that had been analysed/decided or

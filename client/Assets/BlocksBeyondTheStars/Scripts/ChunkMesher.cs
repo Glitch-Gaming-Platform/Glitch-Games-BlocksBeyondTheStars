@@ -205,9 +205,14 @@ namespace BlocksBeyondTheStars.Client
                 float emission = atlas != null ? BlockEmission(content, id) : 0f;
                 // Flora flag (TEXCOORD1.y): the block shader desaturates + re-tints these. With a tint
                 // resolver every SPECIES rolls its own per-world colour (TEXCOORD2.yzw); without one the
-                // shader falls back to the planet's uniform flora hue. Tree trunks keep their bark colour.
+                // shader falls back to the planet's uniform flora hue. Tree trunks (wood_log) take their own
+                // per-world DARK bark hue (mode 4) so they read clearly darker than the leaves.
                 bool isFlora = IsFloraBlock(content, id);
-                Color speciesTint = isFlora && floraTint != null ? floraTint(id) : Color.black;
+                // Tree trunk: a per-world DARK bark hue (resolved like flora, mode 4) so trunks read clearly
+                // darker than the leaves. Only on planet chunks (floraTint != null) — ship meshes carry no
+                // resolver, so wood_log stays a normal paintable hull block there.
+                bool isWood = floraTint != null && IsWoodBlock(content, id);
+                Color speciesTint = (isFlora || isWood) && floraTint != null ? floraTint(id) : Color.black;
                 // Hull paint (item 32): ship meshes pass a per-block paint resolver — a painted face raises
                 // the tint-mode flag (TEXCOORD1.y) to 2 and carries the ship's hull colour in TEXCOORD2.yzw
                 // (the atlas shader multiplies it into the albedo; black = unpainted).
@@ -219,7 +224,7 @@ namespace BlocksBeyondTheStars.Client
                 var (modTint, _) = chunk.GetModifierLocal(WorldConstants.LocalIndex(x, y, z));
                 bool dyed = modTint != 0;
                 Color dye = dyed ? RgbToColor(modTint) : Color.black;
-                float floraFlag = dyed ? 3f : isFlora ? 1f : painted ? 2f : 0f;
+                float floraFlag = dyed ? 3f : isWood ? 4f : isFlora ? 1f : painted ? 2f : 0f;
                 // Foliage flag (TEXCOORD2.x): tree crowns + leafy plants whose tile carries a baked alpha
                 // mask — the shader clips it so the leaves are see-through (holes), not a solid cube.
                 bool foliage = IsFoliageBlock(content, id);
@@ -291,8 +296,8 @@ namespace BlocksBeyondTheStars.Client
                     float shSky = Skylight(wx, wy + 1, wz);          // open sky above the shaped block
                     Vector3 shBl = BlockLightAt(wx, wy + 1, wz);     // coloured block-light reaching it
                     Vector3 shBlDir = BlockLightDirAt(wx, wy + 1, wz);
-                    Color shTint = dyed ? dye : Color.black;
-                    float shTintMode = dyed ? 3f : 0f;               // 3 = player-dye recolour (matches cubes)
+                    Color shTint = dyed ? dye : (isWood || isFlora) ? speciesTint : Color.black;
+                    float shTintMode = dyed ? 3f : isWood ? 4f : isFlora ? 1f : 0f; // 3 dye, 4 bark, 1 flora (matches cubes)
                     AddShapedBlock(verts, tris, colliderTris, colors, uvs, tangents, skyUv, leafUv, blockLight, blockLightDir,
                         ShapeCode.ShapeOf(shapeDesc), ShapeCode.OrientationOf(shapeDesc), new Vector3(x, y, z), uv,
                         matR, matG, emission, shTint, shTintMode, shSky, shBl, shBlDir);
@@ -400,8 +405,8 @@ namespace BlocksBeyondTheStars.Client
             mesh.SetTriangles(trisT, 1);
             mesh.SetColors(colors);
             mesh.SetUVs(0, uvs);
-            mesh.SetUVs(1, skyUv); // skylight in TEXCOORD1.x, tint mode in .y (1 flora, 2 hull paint, 3 player dye)
-            mesh.SetUVs(2, leafUv); // foliage cutout flag in TEXCOORD2.x, flora/hull/dye tint in .yzw
+            mesh.SetUVs(1, skyUv); // skylight in TEXCOORD1.x, tint mode in .y (1 flora, 2 hull paint, 3 player dye, 4 bark)
+            mesh.SetUVs(2, leafUv); // foliage cutout flag in TEXCOORD2.x, flora/hull/dye/bark tint in .yzw
             mesh.SetUVs(3, blockLight); // TEXCOORD3.xyz: propagated coloured block-light (placed lights illuminate)
             mesh.SetUVs(4, blockLightDir); // TEXCOORD4.xyz: dominant block-light direction (N·L shaping + glint)
             mesh.SetTangents(tangents);
@@ -579,6 +584,12 @@ namespace BlocksBeyondTheStars.Client
                 && (key.StartsWith("flora_", System.StringComparison.Ordinal)
                     || key == "tree_leaves" || key == "pine_needles" || key == "palm_frond");
         }
+
+        /// <summary>True for the tree trunk (wood_log): the block shader recolours it with a per-world DARK
+        /// bark hue (tint mode 4) so trunks read clearly darker than the leaves they carry — never the same
+        /// colour. Separate from <see cref="IsFloraBlock"/> because the bark uses its own (darker) tint band.</summary>
+        private static bool IsWoodBlock(GameContent content, BlockId id)
+            => content.BlockById(id)?.Key == "wood_log";
 
         // Tall cross-billboard flora (an upper vegetation layer above the low ground cover). MUST mirror the
         // FloraHeight.Tall, non-solid entries in FloraCatalog. Solid/cube flora ignore height, so they're absent.

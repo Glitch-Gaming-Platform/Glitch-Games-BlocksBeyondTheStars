@@ -20,6 +20,20 @@ public static class FloraTints
         return HsvToRgb(hue, sat, val);
     }
 
+    /// <summary>The bark/trunk tint colour (RGB 0..1) for a world — wood gets ONE deterministic colour per
+    /// world (uniform across every trunk on the planet). The hue is fully random per world like the leaves,
+    /// but value is forced into a DARK band (0.30..0.58) while leaves always sit bright (0.85..1.15), so the
+    /// trunk is guaranteed to read clearly darker than ANY leaf species regardless of hue — they can never be
+    /// confused. Pure function of (world seed, location key), so server/client/orbit all agree, no traffic.</summary>
+    public static (float R, float G, float B) ForWood(long worldSeed, string locationKey)
+    {
+        ulong h = Hash($"{worldSeed}|{locationKey}|wood-tint");
+        float hue = (h % 3600UL) / 3600f;                        // 0..1 — any bark hue, alien woods allowed
+        float sat = 0.35f + ((h >> 12) % 1000UL) / 1000f * 0.35f; // 0.35..0.70 (muted, never neon)
+        float val = 0.30f + ((h >> 24) % 1000UL) / 1000f * 0.28f; // 0.30..0.58 — always darker than any leaf
+        return HsvToRgb(hue, sat, val);
+    }
+
     /// <summary>FNV-1a (stable across platforms/runs — string.GetHashCode is randomized per process).</summary>
     private static ulong Hash(string s)
     {

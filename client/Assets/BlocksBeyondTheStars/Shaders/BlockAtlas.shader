@@ -63,8 +63,8 @@ Shader "BlocksBeyondTheStars/BlockAtlas"
                 float3 normal : NORMAL;
                 float4 tangent : TANGENT;
                 float2 uv : TEXCOORD0;
-                float2 sky : TEXCOORD1;  // x = skylight, y = tint mode (1 flora, 2 hull paint, 3 player dye)
-                float4 leaf : TEXCOORD2; // x = foliage flag, yzw = flora/hull/dye tint (black = use global flora hue)
+                float2 sky : TEXCOORD1;  // x = skylight, y = tint mode (1 flora, 2 hull paint, 3 player dye, 4 bark)
+                float4 leaf : TEXCOORD2; // x = foliage flag, yzw = flora/hull/dye/bark tint (black = use global flora hue)
                 float3 bl : TEXCOORD3;   // propagated coloured block-light (placed lights illuminate)
                 float3 blDir : TEXCOORD4; // dominant block-light direction (toward source); 0 = none
                 float4 color : COLOR;    // r=gloss, g=metal, b=face AO, a=emission
@@ -112,7 +112,18 @@ Shader "BlocksBeyondTheStars/BlockAtlas"
                 }
 
                 float3 albedo = texel.rgb;
-                if (i.skyl.y > 2.5)
+                if (i.skyl.y > 3.5)
+                {
+                    // Bark (mode 4): the tree trunk's per-world DARK bark hue (TEXCOORD2.yzw). Forced dark at
+                    // the source so it always reads clearly darker than the bright leaf tint. A gentler blend
+                    // than leaves keeps the bark grain. Black (no resolver / ship mesh) → keep natural bark.
+                    if (dot(i.leaf.yzw, float3(1, 1, 1)) > 0.01)
+                    {
+                        float lum = dot(albedo, float3(0.299, 0.587, 0.114));
+                        albedo = lerp(albedo, lum * i.leaf.yzw * 1.4, 0.72);
+                    }
+                }
+                else if (i.skyl.y > 2.5)
                 {
                     // Player dye (mode 3): a luminance-based recolour applied everywhere (independent of the
                     // flora-tint global), so dyed building blocks read vividly on any world and in caves.

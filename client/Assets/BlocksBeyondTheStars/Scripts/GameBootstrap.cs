@@ -113,12 +113,20 @@ namespace BlocksBeyondTheStars.Client
             var map = new System.Collections.Generic.Dictionary<ushort, Color>();
             foreach (var def in Content.Blocks.Values)
             {
-                if (!def.Key.StartsWith("flora_", System.StringComparison.Ordinal) && def.Key != "tree_leaves")
+                // Leaves (small flora + all three tree-crown blocks) roll a per-species per-world hue; the
+                // trunk (wood_log) rolls its own DARK per-world bark hue (ForWood) so it always reads clearly
+                // darker than the leaves it carries, never the same colour.
+                bool isLeaf = def.Key.StartsWith("flora_", System.StringComparison.Ordinal)
+                    || def.Key == "tree_leaves" || def.Key == "pine_needles" || def.Key == "palm_frond";
+                bool isWood = def.Key == "wood_log";
+                if (!isLeaf && !isWood)
                 {
                     continue;
                 }
 
-                var (r, g, b) = BlocksBeyondTheStars.Shared.World.FloraTints.For(_worldSeed, LocationName, def.Key);
+                var (r, g, b) = isWood
+                    ? BlocksBeyondTheStars.Shared.World.FloraTints.ForWood(_worldSeed, LocationName)
+                    : BlocksBeyondTheStars.Shared.World.FloraTints.For(_worldSeed, LocationName, def.Key);
                 // The mesher writes these into TEXCOORD2 and the block shader multiplies them raw —
                 // convert the sRGB-authored hue at this boundary (no-op in Gamma space).
                 map[def.NumericId.Value] = ShaderColor.Srgb(new Color(r, g, b));
