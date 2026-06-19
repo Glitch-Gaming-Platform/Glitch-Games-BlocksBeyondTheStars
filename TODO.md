@@ -53,6 +53,17 @@ history); it gained a screenshot and a smarter output location:
 - New `BugReportPathsTests` (repo detection by `.git` + `.sln`, both branches) and an extended `BumpTests`
   (screenshot variant writes the JPG + references it in the JSON). 683 tests green.
 
+**Follow-up (2026-06-19, server-only, NO client build):** the snapshot is now complete across contexts.
+- **Inventory + rations** of the reporter (slot/item/count) — was missing entirely.
+- **Context flags** `currentLocation`, `inEva`, `aboveAtmosphere`, `inSpace`, `selectedHotbarSlot` so
+  on-planet / ship-interior / station / space can be told apart.
+- **Space-aware:** when the reporter is flying, `p.Position` is stale, so the bump now writes a `space`
+  block — the real `instance.ShipPosition` (+ yaw/EVA) and the 40 nearest space entities (asteroids/
+  hostiles) from their space instance — and skips the (misleading) planet block/creature scan.
+- **Flora/terrain census:** a compact block-type→count histogram over a wider ±12 box (`surroundingsCensus`)
+  captures voxel flora (trees/leaves/planted) + terrain composition without dumping every cell. (Client-side
+  billboard undergrowth is procedural, not server voxels, so it inherently can't appear.) Still 683 green.
+
 ### ★ Tree-trunk bark colour: per-world random, guaranteed darker than the leaves — ✅ client (2026-06-19, libs synced, NEEDS Unity build)
 Trunks (`wood_log`) were never tinted — they always showed the plain bark texture while leaves recolour per
 (species × world), so a brown/amber leaf could read close to the bark. Now the trunk also gets a **per-world

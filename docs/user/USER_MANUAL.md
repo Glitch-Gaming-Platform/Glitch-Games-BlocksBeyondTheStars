@@ -379,10 +379,12 @@ planets get the ore: any / airless / with-atmosphere / single-biome / multi-biom
 
 ### `/bump` — debug snapshot + screenshot (any player, no radio needed)
 - **Syntax:** `/bump <description of the problem>`
-- Writes a detailed JSON snapshot of your current situation (player state, environment, nearby
-  blocks/creatures/players, ship status, and a 30-second history) **plus a screenshot** of the moment
-  (the chat box is hidden for the shot; the HUD stays). The server replies with the saved filename. Use
-  it to capture a bug in the moment.
+- Writes a detailed JSON snapshot of your current situation (player state **and inventory**, environment,
+  nearby blocks/creatures/players + a wider block/flora census, ship status, and a 30-second history)
+  **plus a screenshot** of the moment (the chat box is hidden for the shot; the HUD stays). It adapts to
+  your context: on a surface it captures the terrain around you; **while flying in space** it instead
+  records your ship's position in the system and the nearby asteroids/hostiles. The server replies with
+  the saved filename. Use it to capture a bug in the moment.
 - **Where it's saved:** when the game runs from inside the project source tree (a developer build under
   `client/Build/Windows/…` or the Unity Editor), reports go to the repository's `bugreports/server/`
   folder so they sit next to the code. In a normal installed build they go to the world's `bumps/` folder

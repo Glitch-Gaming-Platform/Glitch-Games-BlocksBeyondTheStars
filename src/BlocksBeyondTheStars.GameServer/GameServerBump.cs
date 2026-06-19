@@ -98,31 +98,94 @@ public sealed partial class GameServer
         var p = session.State;
         var (systemName, planetName) = ActiveLocationNames();
         float r2 = 24f * 24f;
+        bool inSpace = InSpace(p.PlayerId);
 
-        // Surrounding non-air blocks in a box around the player.
+        // Player inventory + suit ration dispenser, so a report is self-contained.
+        var inventory = ItemList(p.Inventory);
+        var rations = ItemList(p.RationStore);
+
+        // Planet surroundings + nearby entities are only meaningful on a surface/interior. While flying in
+        // space the on-foot Position is stale, so we capture the space instance (ship flight pos + entities)
+        // instead and leave the planet scans empty.
         var blocks = new List<object>();
-        int px = (int)Math.Floor(p.Position.X), py = (int)Math.Floor(p.Position.Y), pz = (int)Math.Floor(p.Position.Z);
-        for (int dx = -4; dx <= 4; dx++)
-        for (int dy = -2; dy <= 4; dy++)
-        for (int dz = -4; dz <= 4; dz++)
+        List<object> census = new();
+        object space = null;
+        object creatures = new List<object>();
+        object npcs = new List<object>();
+        object others = new List<object>();
+        object containers = new List<object>();
+
+        if (inSpace && _playerInstance.TryGetValue(p.PlayerId, out var instanceId)
+            && _spaceInstances.TryGetValue(instanceId, out var instance))
         {
-            var id = _world.GetBlock(new Vector3i(px + dx, py + dy, pz + dz));
-            if (id.IsAir)
+            var pose = instance.PlayerPoses.TryGetValue(p.PlayerId, out var pp)
+                ? pp
+                : new SpacePlayerPose(instance.ShipPosition, p.Yaw, p.InEva);
+            var sp = pose.Pos;
+            space = new
             {
-                continue;
+                instanceId = instance.Id,
+                kind = instance.Kind,
+                shipX = sp.X, shipY = sp.Y, shipZ = sp.Z, yaw = pose.Yaw, eva = pose.Eva,
+                entities = instance.Entities
+                    .OrderBy(e => e.Position.DistanceSquared(sp))
+                    .Take(40)
+                    .Select(e => new
+                    {
+                        e.Id, kind = e.Kind.ToString(), e.Name, e.Hostile, species = e.SpeciesId,
+                        e.Hull, e.HullMax,
+                        dist = (float)Math.Sqrt(e.Position.DistanceSquared(sp)),
+                        x = e.Position.X, y = e.Position.Y, z = e.Position.Z,
+                    }).ToList(),
+            };
+        }
+        else
+        {
+            // Detailed non-air blocks in a tight box...
+            int px = (int)Math.Floor(p.Position.X), py = (int)Math.Floor(p.Position.Y), pz = (int)Math.Floor(p.Position.Z);
+            for (int dx = -4; dx <= 4; dx++)
+            for (int dy = -2; dy <= 4; dy++)
+            for (int dz = -4; dz <= 4; dz++)
+            {
+                var id = _world.GetBlock(new Vector3i(px + dx, py + dy, pz + dz));
+                if (id.IsAir)
+                {
+                    continue;
+                }
+
+                blocks.Add(new { x = px + dx, y = py + dy, z = pz + dz, block = _content.BlockById(id)?.Key ?? id.Value.ToString() });
             }
 
-            blocks.Add(new { x = px + dx, y = py + dy, z = pz + dz, block = _content.BlockById(id)?.Key ?? id.Value.ToString() });
-        }
+            // ...plus a wider, compact census (block-type → count) so terrain + voxel flora composition
+            // (trees/leaves/planted crops) is captured without listing every cell. NB: small client-side
+            // billboard undergrowth is procedural and not server voxel data, so it can't appear here.
+            var tally = new Dictionary<string, int>();
+            for (int dx = -12; dx <= 12; dx++)
+            for (int dz = -12; dz <= 12; dz++)
+            for (int dy = -4; dy <= 8; dy++)
+            {
+                var id = _world.GetBlock(new Vector3i(px + dx, py + dy, pz + dz));
+                if (id.IsAir)
+                {
+                    continue;
+                }
 
-        var creatures = _creatures.Where(c => WrapDistSq(p.Position, c.Position) < r2)
-            .Select(c => new { c.Id, kind = c.Kind.ToString(), species = c.SpeciesId, c.Hostile, x = c.Position.X, y = c.Position.Y, z = c.Position.Z }).ToList();
-        var npcs = _npcs.Where(npc => WrapDistSq(p.Position, npc.Pos) < r2)
-            .Select(npc => new { npc.Id, npc.Role, npc.Theme, x = npc.Pos.X, y = npc.Pos.Y, z = npc.Pos.Z }).ToList();
-        var others = _sessions.Values.Where(o => o.Joined && o.ConnectionId != session.ConnectionId && WrapDistSq(p.Position, o.State.Position) < r2)
-            .Select(o => new { o.State.Name, x = o.State.Position.X, y = o.State.Position.Y, z = o.State.Position.Z }).ToList();
-        var containers = _containers.Where(c => Dist2(p.Position, c.Position) < r2)
-            .Select(c => new { c.Id, c.Kind, items = c.Items.Count, c.Position.X, c.Position.Y, c.Position.Z }).ToList();
+                string key = _content.BlockById(id)?.Key ?? id.Value.ToString();
+                tally[key] = tally.TryGetValue(key, out var n) ? n + 1 : 1;
+            }
+
+            census = tally.OrderByDescending(kv => kv.Value)
+                .Select(kv => (object)new { block = kv.Key, count = kv.Value }).ToList();
+
+            creatures = _creatures.Where(c => WrapDistSq(p.Position, c.Position) < r2)
+                .Select(c => new { c.Id, kind = c.Kind.ToString(), species = c.SpeciesId, c.Hostile, x = c.Position.X, y = c.Position.Y, z = c.Position.Z }).ToList();
+            npcs = _npcs.Where(npc => WrapDistSq(p.Position, npc.Pos) < r2)
+                .Select(npc => new { npc.Id, npc.Role, npc.Theme, x = npc.Pos.X, y = npc.Pos.Y, z = npc.Pos.Z }).ToList();
+            others = _sessions.Values.Where(o => o.Joined && o.ConnectionId != session.ConnectionId && WrapDistSq(p.Position, o.State.Position) < r2)
+                .Select(o => new { o.State.Name, x = o.State.Position.X, y = o.State.Position.Y, z = o.State.Position.Z }).ToList();
+            containers = _containers.Where(c => Dist2(p.Position, c.Position) < r2)
+                .Select(c => new { c.Id, c.Kind, items = c.Items.Count, c.Position.X, c.Position.Y, c.Position.Z }).ToList();
+        }
 
         try
         {
@@ -151,12 +214,16 @@ public sealed partial class GameServer
                     x = p.Position.X, y = p.Position.Y, z = p.Position.Z, p.Yaw, p.Pitch,
                     p.Health, p.Oxygen, energy = p.SuitEnergy, p.Hunger,
                     aboardShip = p.AboardShip, station = CurrentStationName(p.PlayerId),
+                    currentLocation = p.CurrentLocationId, inEva = p.InEva, aboveAtmosphere = p.AboveAtmosphere, inSpace,
                     role = p.Role.ToString(), p.GodMode, p.Fly, p.Stealthed,
+                    selectedHotbarSlot = p.SelectedHotbarSlot, inventory, rations,
                 },
                 environment = BuildEnvironment(p.Position), // the player's local biome weather
                 ship = new { _ship.ShipType, _ship.Hull, hullMax = _shipHullMax, _ship.Shield, shieldMax = _shipShieldMax, modules = _ship.Modules },
                 surroundings = blocks,
+                surroundingsCensus = census, // wider block-type histogram (terrain + voxel flora); empty in space
                 nearby = new { creatures, npcs, players = others, containers },
+                space, // ship flight position + nearby space entities when flying; null on a surface/interior
                 historyBefore = session.History,
             };
 
@@ -175,6 +242,22 @@ public sealed partial class GameServer
             _log.Info($"Bump capture failed: {e.Message}");
             Send(session, new ServerMessage { Text = "Bump failed: " + e.Message });
         }
+    }
+
+    /// <summary>Flattens an inventory's non-empty slots into a serialisable list (slot index + item + count).</summary>
+    private static List<object> ItemList(BlocksBeyondTheStars.Shared.State.Inventory inv)
+    {
+        var list = new List<object>();
+        var slots = inv.Slots;
+        for (int i = 0; i < slots.Count; i++)
+        {
+            if (slots[i] is { } s)
+            {
+                list.Add(new { slot = i, item = s.Item, count = s.Count });
+            }
+        }
+
+        return list;
     }
 
     private static string SanitizeFileStem(string name)

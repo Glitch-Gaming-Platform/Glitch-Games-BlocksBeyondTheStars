@@ -52,6 +52,9 @@ public sealed class BumpTests : IDisposable
         string json = File.ReadAllText(files[0]);
         Assert.Contains("the ship interior glitches with flora", json); // description captured
         Assert.Contains("environment", json);                            // env snapshot present
+        Assert.Contains("inventory", json);                              // player items captured
+        Assert.Contains("surroundingsCensus", json);                     // wider block/flora census present
+        Assert.Contains("\"inSpace\": false", json);                     // on-surface context flag
     }
 
     [Fact]
