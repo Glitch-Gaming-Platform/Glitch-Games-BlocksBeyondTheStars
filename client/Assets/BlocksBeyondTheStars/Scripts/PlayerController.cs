@@ -729,6 +729,21 @@ namespace BlocksBeyondTheStars.Client
             }
         }
 
+        private CameraTool _cameraTool;
+
+        /// <summary>Lazily builds the client-side camera tool (HUD-free photo capture), wired to the view camera.</summary>
+        private CameraTool EnsureCameraTool()
+        {
+            if (_cameraTool == null)
+            {
+                _cameraTool = gameObject.AddComponent<CameraTool>();
+                _cameraTool.Game = Game;
+                _cameraTool.Source = Camera;
+            }
+
+            return _cameraTool;
+        }
+
         /// <summary>Right-click use of a held gadget (item 36): sends the use intent at the aim point and plays
         /// the local effect + sound. The server validates suit energy + cooldown and applies the real effect.</summary>
         private void UseGadget(string key)
@@ -1490,6 +1505,15 @@ namespace BlocksBeyondTheStars.Client
                 {
                     Game.Network?.SendConsume(held);
                     ClientAudio.Instance?.Cue("eat");
+                    return;
+                }
+
+                // Right-click the camera → photograph the current view (HUD-free), saved to disk locally.
+                // Handled entirely on the client (no server round-trip), so it's intercepted before the
+                // generic gadget path below.
+                if (held == "camera")
+                {
+                    EnsureCameraTool().TryCapture();
                     return;
                 }
 

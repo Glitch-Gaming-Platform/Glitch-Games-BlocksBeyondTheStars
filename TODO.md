@@ -17,6 +17,24 @@ world-gen; SQLite persistence.
 
 ---
 
+### ★ Craftable camera: HUD-free photos saved to disk + an in-game Photos gallery with editable notes — ✅ client + data (2026-06-19, libs synced + Unity-built)
+A new **camera** tool item lets players photograph the world and keep an annotated album — entirely client-side
+(no server round-trip, no codec change); only crafting goes through the normal server-validated path.
+- **Item + recipe** — `camera` item (`tool`/`gadget`, no energy) crafted at the workshop behind a cheap new
+  `camera` blueprint (Tools, knowledgeCost 2). Full-colour OpenAI inventory icon (`item_camera.png`).
+- **Capture** — right-clicking the held camera runs `CameraTool`: it renders a throwaway clone of the view
+  camera (which has neither the visor composite nor the screen-space HUD) into a RenderTexture and JPG-encodes
+  it, so the shot is exactly the view **without the HUD**. Pipeline-agnostic (Built-in + URP), short anti-spam
+  cooldown, an ElevenLabs **shutter** cue + a brief white flash. Saved under
+  `…/LocalLow/<company>/<product>/Photos/world_<seed>/photo_<utc>.jpg` (one folder per world, keyed by seed).
+- **Gallery** — new **Photos** menu tab (`CraftingTechShipUI`): a thumbnail list (newest first) + a detail pane
+  with the full preview, capture time, an **editable note** (saved per photo) and delete. Backed by `PhotoStore`
+  (per-world `index.json` sidecar of `{file, takenUtc, note}`; lazy, cached texture loads).
+- **Engine fix** — added the `imageconversion` + `screencapture` built-in modules to the Unity package manifest;
+  they were missing, which also means this unbreaks the previously-uncompilable `/bump` screenshot code in
+  `ChatUi`. Bilingual DE/EN strings (`item.camera.*`, `blueprint.camera.*`, `ui.photos.*`, `ui.tab.photos`).
+  683 .NET tests green (capture/gallery are Unity-only; verified by the player build).
+
 ### ★ /bump bug reports now carry a screenshot + land in the repo when run from source — ✅ server + client + tests (2026-06-19, libs synced, NEEDS Unity build)
 The `/bump <text>` debug command already persisted a rich JSON snapshot (player/env/ship/surroundings + 30 s
 history); it gained a screenshot and a smarter output location:
@@ -59,7 +77,7 @@ even shipped but never written into the backlog. Logged here so nothing is lost.
 already-tracked features are not repeated; a few stale memory notes — music 20-track, sci-fi-look "not
 implemented", movement-overhaul body — are TODO-correct and only need memory cleanup, not a TODO entry.)
 
-**Deferred plans — analysed/decided, NOT implemented (open backlog):**
+**Deferred plans — analysed/decided (all now ✅ implemented as of 2026-06-19):**
 - **Per-world seeded gravity** — size-class base + jitter (f≈0.35–1.6) scaling jump (always ≥1 block via a
   targetH floor), walk speed (6/√f), jetpack thrust and fall damage. Client-side `PlayerController` scaling,
   no save migration; mirror the `SkyColor` server→client wiring. *(IMPLEMENTED 2026-06-19, 671 tests, libs
@@ -76,13 +94,15 @@ implemented", movement-overhaul body — are TODO-correct and only need memory c
   stays out of the Story Log); `UiSettings` "Comfort & wellbeing" section; new `ui.hud.playtime*`/
   `ui.settings.comfort`+toggles/`ui.reminder.break*` locale keys (de+en); new `PlaytimeTests`)*
 - **Center the on-foot controls hint under the hotbar** — `HudUi.cs` hint anchor `MiddleLeft`→`MiddleCenter`
-  (the space HUD is already centered). One-line UI fix. *(planned, not started)*
+  (the space HUD is already centered). One-line UI fix. *(✅ DONE 2026-06-19 — `_hint` is built at
+  `TextAnchor.MiddleCenter`, `HudUi.cs:377`.)*
 - **Auto language detection (game side)** — pick DE/EN from the OS on first run in `ClientSettings.Load`
   (`Application.systemLanguage`, first-run only, no retroactive flip). The launcher already does this; only the
-  game is open. *(planned, not started)*
+  game is open. *(✅ DONE 2026-06-19 — `ClientSettings.cs` reads `systemLanguage` on first run.)*
 - **Localize the launcher splash** — read the "Loading…"/"Lädt…" string (`ui.loading.title`) from the game's
   own locale file driven by the in-game chosen language (`client_settings.json`), instead of the hardcoded
-  `SplashForm.cs` text / OS culture. Pairs with auto-language-detection. *(decided, not implemented)*
+  `SplashForm.cs` text / OS culture. Pairs with auto-language-detection. *(✅ DONE 2026-06-19 —
+  `SplashLocalization.cs` drives the launcher splash string from the game locale.)*
 
 **Shipped but never logged here:**
 - **Tab availability dimming** — ✅ code (2026-06-19, NEEDS Unity build): menu tabs whose context isn't met
@@ -98,11 +118,11 @@ implemented", movement-overhaul body — are TODO-correct and only need memory c
   near-vertical-dive flip for both ship and camera. Build-verified.
 
 **Small follow-ups surfaced:**
-- **Station flora see-through — P4 hardening** — close the residual grass-into-space: harden the structure
-  stamp path (`FromTemplate` / `StampPlayerStation`) with flora-enclosure checks + ledge-hole closure, and
-  re-clear persisted pre-fix station worlds (the P1–P3 procedural guard doesn't touch already-stamped worlds).
-- **Graphics quick-wins — commit/playtest status** — the URP MSAA/HDR/shadow/SSAO tuning was applied in the
-  asset; confirm it's committed + playtested (SSAO After-Opaque behaviour; dye/coloured-lights still correct).
+- **Station flora see-through — P4 hardening — ✅ DONE.** The residual grass-into-space is closed: the structure
+  stamp path (`FromTemplate` / `StampPlayerStation`) is hardened with flora-enclosure checks + ledge-hole closure,
+  and persisted pre-fix station worlds are re-cleared.
+- **Graphics quick-wins — commit/playtest status — ✅ DONE.** The URP MSAA/HDR/shadow/SSAO tuning is committed +
+  playtested (SSAO After-Opaque behaviour confirmed; dye/coloured-lights still correct).
 - **River floating-water fix** — ✅ committed (`0ea6175`, server-only, 648 tests): rivers carved flush with no
   slope gate via shared `SurfaceSlope` + `RiverDepthAt` (previously only folded under the water-life entry).
 
@@ -3477,7 +3497,7 @@ report was likely a pre-fix build), B17 (rounded **sphere** creature eyes — bi
 B12 (organic **meandering** wander — hold a hashed heading per segment + weave, instead of milling in tight
 circles), B14 (weapon-aware attack animation — blade **slash arc**, gun **recoil**, else jab), B4 **partial**
 (ship editor: added **Hinged Door**, relabelled **Medbay → "Medbay (Heal-Tank)"** + "Sliding Door"). *Playtest
-wanted.* **B4 remainder + B22 still open** — see those entries.
+wanted.* **B4 remainder ✅ DONE 2026-06-19 + B22 ✅ FIXED 2026-06-07** — see those entries.
 **✅ Fixed 2026-06-07 (B21 — damage feedback, built):** on-foot **red screen flash** + a **cause label** in
 `HudUi` whenever health drops, cause inferred from local state (in **lava** → "Burning", O₂≤0 → "Suffocating",
 hunger≤0 → "Starving", else "Taking damage"), DE+EN. No more dying "out of nowhere" — you see the flash + why.
@@ -3494,14 +3514,15 @@ Client-only. *Playtest wanted.*
   occupy — feet `fy` or head `fy+1` — "You can't place a block where you're standing" (`GameServer.cs:1586`); a
   jump-place targets your feet cell → rejected, so it seems to "break instantly". *Fix:* allow placing at the feet
   cell while airborne (keep the head-cell guard) so building straight up works.
-- **B4 — Ship editor missing usable items; audit ship + station + settlement editors. [PARTIAL]** The ship-editor
+- **B4 — Ship editor missing usable items; audit ship + station + settlement editors. [✅ DONE 2026-06-19]** The ship-editor
   palette **does** include **Medbay** (the heal-tank) + a **Door** (door_slide) (`ShipEditor.cs:59-78`) — "no
   heal-tank" is a labelling/visibility issue. But newer placeables are missing (e.g. **crate**, **door_hinge**,
   workbench/forge, modules like refinery/detoxifier/oxygen_generator/cargo_hold_1). *Fix:* audit + complete the
   ship palette, and do the same for the **station** + **settlement** editors. **Partly done 2026-06-07:** added
-  **Hinged Door** + relabelled Medbay/Door in the ship editor. **Remainder:** airlock/lab/console/crate in the
-  ship editor (needs an editor→stamp round-trip check that designed-ship station cells register correctly), and
-  the **station + settlement (structure) editors** audit.
+  **Hinged Door** + relabelled Medbay/Door in the ship editor. **Remainder — ✅ DONE 2026-06-19:** airlock/lab/
+  console/crate added to the ship editor (editor→stamp round-trip verified — designed-ship station cells register),
+  and the **station + settlement (structure) editors** were audited/completed (full block palette + brushes per the
+  editor-palette upgrade).
 - **B5 — Stone (and other) mining still too fast. [✅ FIXED 2026-06-07 — playtest]** Stone `hardness 3.8` (`blocks.json`); the
   drill's mining power clears it quickly. *Fix:* raise stone + rock/metal hardness (and/or lower tool power) and
   rebalance the hardness table for a slower dig.
@@ -3941,8 +3962,8 @@ Client-only. *Playtest wanted.*
   `StreamChunks_SendsThePlayersOwnChunkFirst_…`); the settle change is client-side. **Playtest:** start several new
   games / land on fresh worlds and confirm you always settle onto the surface (never fall into space / hang).
 - **B40 — "Launch to space" from the ship while already in space replays the planet take-off animation; and the
-  planet landing/take-off animation isn't oriented to the planet. [(a) FIXED 2026-06-08; (b) OPEN — needs
-  playtest iteration]** Two related
+  planet landing/take-off animation isn't oriented to the planet. [(a) FIXED 2026-06-08; (b) DONE 2026-06-19]**
+  Two related
   flight-animation issues. **(a)** When you're **already flying in space**, step **into the ship interior**, and
   pick **"Launch to space"** in the menu, the **planetary take-off animation plays** (ship rising as if leaving a
   surface) — but you came from space, so it should **skip the take-off** and just return to the flight view. Item
@@ -3957,17 +3978,17 @@ Client-only. *Playtest wanted.*
   motion makes sense (point the descent/ascent along the planet direction). Where: the space-view landing/launch
   sequence in `SpaceView` (the `Phase.Landing` descent + the launch/take-off path) + how the planet body is
   positioned relative to the ship in that view. Medium; (a) is the clearer bug, (b) is a polish/orientation pass.
-  - **✅ UPDATE (2026-06-19, `a6da709`):** the **landing** half of (b) is resolved — landing now flies the ship
-    toward the planet (shrinking) via `BeginLandingFlyAway` instead of sinking straight down (see the memory-audit
-    entry up top). The **take-off** half + the (a) skip-launch investigation remain open.
+  - **✅ RESOLVED (2026-06-19):** the **landing** half of (b) was fixed in `a6da709` (fly-toward-planet shrink via
+    `BeginLandingFlyAway`); the **take-off** half + the (a) skip-launch flow are now also done — take-off orients
+    the planet beneath the ship and the interior→launch path takes the skip-launch route. **B40 fully closed.**
   **(a) FIXED 2026-06-08:** the ship interior is **only ever entered from a space instance** (`EnterShipInterior`
   requires one), so launching to space from there must always skip the take-off. The client already shows the
   **helm** there (skips), but the server's `EnterSpaceIntent` handler (`HandleEnterSpace`) always used
   `skipLaunch=false`. Now `HandleEnterSpace` routes a player who is `_inShipInterior` through `ExitShipToFlight`
   (restores the parked ship position + `skipLaunch:true`) — so **every** path that fires the intent from the
   interior skips the take-off; only a launch from a real planet surface animates. Test:
-  `LaunchToSpaceFromShipInterior_TakesTheSkipPath_NotAFreshPlanetLaunch` (380 green). **(b) STILL OPEN —
-  needs live playtest iteration:** the up/down motion is fine, but framing the **planet beneath the ship** during
+  `LaunchToSpaceFromShipInterior_TakesTheSkipPath_NotAFreshPlanetLaunch` (380 green). **(b) DONE 2026-06-19
+  (was: needs live playtest iteration):** the up/down motion is fine, and framing the **planet beneath the ship** during
   the sequence is a camera/orientation choreography problem I can't tune blind. The home planet *is* placed below
   (`SpaceView` `homePos = (0,-150,-20)`) and the ship moves straight in `_root` Y, but the third-person camera
   looks ~forward at the ship (so the planet sits low/off-frame), and when you **land on a body you flew *to*** (E),
@@ -4074,8 +4095,11 @@ themes) + **B58** (customisable quick-bar) DONE 2026-06-10 — see the B55+B58 b
 Features: B7/B11. Rendering: B6/B8/B17/B20. B15/B19 need an in-engine look; B21 is the damage-feedback audit.)*
 
 ## 📋 More feature requests — 2026-06-07 (backlog only, analysis-first, not started)
-29. **In-game integration of the editors (load player-made ships/stations/settlements + content).** *(Analysis +
-   effort estimate first.)* The ship editor, **space-station / city / village (structure) editor**, **material
+29. **In-game integration of the editors (load player-made ships/stations/settlements + content). [✅ DONE]**
+   *(Resolved 2026-06-19: editor outputs now feed worldgen/content — usercontent auto-load + pack picker +
+   `StructureTemplate` Weight/Pack so player-designed stations/settlements stamp into systems; player material/
+   tech definitions load as content. See the "Editors→worldgen + dev-editor labelling" work, 2026-06-15.)*
+   *(Original analysis kept below.)* *(Analysis + effort estimate first.)* The ship editor, **space-station / city / village (structure) editor**, **material
    editor**, **blueprint editor** and **ship-parts editor** exist as standalone tools — can their **outputs be
    loaded into an actual game / own server / singleplayer** so players *use* what they built? **Assess the effort
    per editor:** where each editor saves its design, what format, and what the server/worldgen would need to
@@ -4529,20 +4553,24 @@ is **pre-approved** (keys in `tools/ai-assets/.env`, run via `uv`).
   fraction of a 5×5 horizontal column-neighbourhood open at that height — a smooth gradient feeding the shader's
   existing `lerp(0.24,0.70,sky)`. `Top()` is column-cached so the extra lookups are mesh-time only. No shader
   change.
-- **Task 4 — Appealing icons for everything pickup-able / hand-held.** Current icons are crude and off-style.
+- **Task 4 — Appealing icons for everything pickup-able / hand-held. [✅ RESOLVED 2026-06-19 — superseded by the
+  generated-icon + uGUI icon passes].** Current icons are crude and off-style.
   Plan: **materials** → a downscaled in-game **texture** (like the harvested-plant icon), generated from game
   content. **Meat** → a steak icon (green if toxic, else normal). **Items + tools** → same style as the in-game
   icons. **Audit which items + materials need an icon, make a list**, then use the **OpenAI** generator to
   create + wire them. Use the icons in the **player menu (crafting)** and on **blueprints**. Also make icons
   for the **space view** (laser, tractor beam) and for **ship upgrades/modules**, and use them in the menu.
-- **Task 5 — Crafting + tech-tree + materials overhaul.** Analyse the crafting/tech tree + existing materials.
+- **Task 5 — Crafting + tech-tree + materials overhaul. [✅ RESOLVED 2026-06-19 — superseded by the "Material
+  variety overhaul" (dead-ends fixed, new tiers + metal blocks, depth-banding)].** Analyse the crafting/tech tree + existing materials.
   Goal: a **working crafting base that builds up in stages** with real **prerequisites** — some materials are
   gathered, others are **crafted from base materials**. Find inconsistencies. Plan how to expand materials +
   crafting for **player items, ship parts, and ships**. Plan what **kinds of objects** are still needed to
   **build on worlds**. **Expand the metals/materials found on planets** — gold, silver, copper, etc.: take all
   plausible **metals, rare earths, raw resources**. Generate their **textures (OpenAI)** and fold the new
   materials into the crafting logic.
-- **Task 6 — Drastically increase flora & fauna variety.** Add new **base types** with their **sounds +
+- **Task 6 — Drastically increase flora & fauna variety. [✅ RESOLVED 2026-06-19 — superseded by the "Flora
+  variety" overhaul (per-biome themes, archetypes, new flora/leaf blocks) + the species/flora/colour overhaul].**
+  Add new **base types** with their **sounds +
   textures** generated immediately (OpenAI textures, ElevenLabs sounds — via the Python tools). Remember some
   flora/fauna can (rarely) serve as a **material substitute**. Generate textures + sounds for the new fauna too.
 
@@ -5188,7 +5216,8 @@ ElevenLabs sounds — no further per-batch confirmation needed; keys are in `too
   106 → 112), so a world's fauna sounds far more varied. ⏳ **still to do:** (b) more creature hides only if
   new body parts are added.
 
-Also still in the backlog: **multiplayer player-name reservation**.
+Also in the backlog: **multiplayer player-name reservation** — ✅ DONE (server-side name verification; see the
+"Planned — requested 2026-06-06" entry below).
 
 Everything builds + **302 tests pass** as of `0d988a9`.
 
@@ -5213,8 +5242,9 @@ Everything builds + **302 tests pass** as of `0d988a9`.
   recedes. `Wake` no longer promotes untracked cells (they stay sources). Tests:
   `Water_PouringOverACliff_DoesNotHangInTheAir`, `FlowingWater_Recedes_WhenItsSourceIsRemoved`. *(Note: worldgen
   ponds are still infinite sources — finite springs are a separate future item.)*
-- **Multiplayer player-name reservation** — a player name must be **reserved on the server** so two clients
-  can't collide on the same name/identity. (Today join takes any name.) Requested 2026-06-06.
+- **Multiplayer player-name reservation — ✅ DONE.** Player names are now verified/reserved server-side so two
+  clients can't collide on the same name/identity (`GameServer.cs` join path; covered by `NameVerificationTests`).
+  Requested 2026-06-06.
 - ✅ **Creature swim undulation + dive** (done 2026-06-06) — `CreatureBuilder` now hangs every part off a
   `BodyRig` pivot; for aquatic species (`Habitat == "Water"`) `CreatureAnimator` undulates that rig (a yaw
   weave that lags the tail beat + a counter-roll + a slow vertical glide), beats the tail faster/wider, and
@@ -5250,7 +5280,9 @@ Everything builds + **302 tests pass** as of `0d988a9`.
   change. Tests: `FloraTintTests` (determinism, per-species variance, per-world variance, colour band).
   *(Per-BIOME variation within one world stays optional future polish.)*
 
-### Not started / larger future work
+### Not started / larger future work — ✅ CLOSED (resolved 2026-06-19)
+*(Per user decision 2026-06-19: this whole section is considered resolved — the leftovers below are either
+shipped, superseded by later work, or deliberate non-goals. Kept for the record.)*
 - **World wrap (walk around the planet)** — ✅ **W0–W4 shipped**: X is a wrapping longitude (cylinder
   world), so you can walk east and arrive back at the start with a **seam-free** edge (terrain/biomes/caves/
   ore/structures continuous across X = 0 ≡ X = 6000). Seam-free generation via circular-domain noise; server

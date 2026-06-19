@@ -15,7 +15,7 @@ namespace BlocksBeyondTheStars.Client
         public ClientSettings Settings;   // for in-game character customization
         public PlayerAvatar Avatar;       // local avatar, recoloured live
 
-        private enum Tab { Inventory, Crafting, Tech, Ship, Map, Missions, Character, Alliances, Story, Companions }
+        private enum Tab { Inventory, Crafting, Tech, Ship, Map, Missions, Character, Alliances, Story, Companions, Photos }
 
         /// <summary>Which full-screen browser sub-screen (if any) replaces the tab view while the menu is open.
         /// The Wiki ("Codex") and Arcade are reached from buttons in the menu header.</summary>

@@ -127,6 +127,7 @@ ITEMS = [
     ("biofuel", "a small glass flask of glowing green-amber biofuel liquid with a cork stopper"),
     ("bronze_gear", "a single toothed bronze mechanical gear cog with a warm golden-brown sheen"),
     ("brass_fitting", "a small polished brass pipe fitting coupling with threads"),
+    ("camera", "a compact retro-futuristic handheld camera, dark rounded metal body with a large glassy cyan-tinted lens, a small shutter button on top and a glowing status light"),
 ]
 
 # Ship MODULES (builder UI). Space-view laser/tractor reuse ship_laser_basic / tractor_beam.

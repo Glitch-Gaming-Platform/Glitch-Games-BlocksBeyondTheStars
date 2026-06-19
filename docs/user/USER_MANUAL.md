@@ -258,6 +258,15 @@ the hauler slow and heavy. Hull + shield are shown on the HUD; shields recharge,
   pulses once (10 suit energy, 10 s cooldown) and reveals ores, crystal and data caches within 20 blocks
   as through-wall glow markers for 8 s, tinted by ore type. An `ai_core_mk2` extends the radius.
 
+### Camera & photos
+- Craft a **Camera** (`camera`, workshop recipe + the cheap `camera` blueprint). Select it and **right-click**
+  to take a photo of exactly what you see — the **HUD is left out** of the shot. It costs no energy (just a
+  short cooldown), plays a shutter sound and a quick flash.
+- Photos are saved to disk as JPGs, in a **per-world** folder under your local app data
+  (`…/LocalLow/<company>/Blocks Beyond The Stars/Photos/world_<seed>/`).
+- Browse them in **Tab → Photos**: pick a photo to see it full-size, **add or edit a note** (saved with the
+  photo) and **delete** ones you don't want. The list shows the newest first with the capture time and your note.
+
 ### Travel & the star map
 - Open **Tab → Map**. The system list is grouped: **Current system** at the top (its reachable worlds, plus
   the **Launch into space / Leave space** button), then **Hyperspace** for the other systems. Selecting a
