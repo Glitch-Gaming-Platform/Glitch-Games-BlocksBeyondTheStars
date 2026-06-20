@@ -45,6 +45,14 @@ jobs:
         shell: pwsh
         run: ./scripts/sync-client-libs.ps1
 
+      # The client's in-app updater (ClientUpdater.cs) references Velopack in the player build
+      # (#if !UNITY_EDITOR). Velopack is a client-only dep with its own sync step; without it the
+      # StandaloneWindows64 script compile fails with CS0246 'Velopack'. Must run after sync-client-libs
+      # so it skips the System.* facades that script already placed.
+      - name: Sync Velopack libs
+        shell: pwsh
+        run: ./scripts/sync-velopack-libs.ps1
+
       - name: Publish bundled local server (win-x64)
         shell: pwsh
         run: ./scripts/publish-local-server.ps1 -Runtime win-x64
