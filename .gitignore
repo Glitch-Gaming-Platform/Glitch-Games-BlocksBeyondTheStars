@@ -63,6 +63,9 @@ scripts/_*.txt
 # Local build/capture run logs at the repo root (build-run*.log, capture-run*.log, ...)
 /*.log
 
+# Local-only marketing scratch (website copy drafts etc.); screenshots live under docs/screenshots/
+/marketing/
+
 # Python bytecode (tools/)
 __pycache__/
 *.pyc
