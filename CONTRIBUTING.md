@@ -8,7 +8,7 @@ Everyone is welcome here. Please be kind — see our short
 [Code of Conduct](CODE_OF_CONDUCT.md) (it's basically "be nice to one another").
 
 > Repository: <https://github.com/marceld23/BlocksBeyondTheStars>
-> · Website: <https://www.blocksbeyondthestars.com/>
+> · Website: <https://www.blocksbeyondthestars.com/en>
 
 ## 1. Play it (and have fun)
 

@@ -1,6 +1,6 @@
 # Blocks Beyond the Stars
 
-### 🌐 [www.blocksbeyondthestars.com](https://www.blocksbeyondthestars.com/) &nbsp;·&nbsp; [Play / report a bug](CONTRIBUTING.md) &nbsp;·&nbsp; [Contribute](CONTRIBUTING.md)
+### 🌐 [www.blocksbeyondthestars.com](https://www.blocksbeyondthestars.com/en) &nbsp;·&nbsp; [Play / report a bug](CONTRIBUTING.md) &nbsp;·&nbsp; [Contribute](CONTRIBUTING.md)
 
 A block-based 3D space crafting game for Windows. You start with a small spaceship,
 explore procedurally generated planets, mine resources, craft gear, research blueprints,

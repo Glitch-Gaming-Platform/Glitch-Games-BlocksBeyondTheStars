@@ -1,7 +1,7 @@
 blank_issues_enabled: true
 contact_links:
   - name: 🌐 Project website
-    url: https://www.blocksbeyondthestars.com/
+    url: https://www.blocksbeyondthestars.com/en
     about: Screenshots, the story, and what makes the game special.
   - name: 🔒 Report a security vulnerability
     url: https://github.com/marceld23/BlocksBeyondTheStars/security/advisories/new
