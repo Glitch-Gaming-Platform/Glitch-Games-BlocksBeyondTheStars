@@ -17,6 +17,16 @@ world-gen; SQLite persistence.
 
 ---
 
+### ★ Open-source "Mach mit" invite + menu/splash polish (2026-06-20) — ✅ code done, NEEDS Unity client build
+Preparing the repo to go open source and recruit contributors (repo still PRIVATE; in-game GitHub links go live only once public).
+- **Studio logo** ([StudioSplash.cs](client/Assets/BlocksBeyondTheStars/Scripts/StudioSplash.cs)): new "Beitragende: Dein Name könnte hier stehen" line below the slogan (fades in with it); the previously hardcoded slogan is now localized too (`ui.studio.slogan` / `ui.studio.contributors`).
+- **Title splash** ([SplashScreen.cs](client/Assets/BlocksBeyondTheStars/Scripts/SplashScreen.cs)): one-line teaser "Open Source — mach mit auf GitHub" (`ui.splash.contribute`).
+- **Main menu** ([UiMainMenu.cs](client/Assets/BlocksBeyondTheStars/Scripts/UiMainMenu.cs)): the bottom-right "Auf Steam merken" text is replaced by a clickable **"Mach mit"** button (`ui.menu.contribute`) opening a participate overlay (3 tiers: play / report bugs as a GitHub issue / open a PR + repo URL, keys `ui.contribute.*`). GitHub-only for now (the /bump→website upload idea is parked).
+- **Shared modal dim** ([UiKit.cs](client/Assets/BlocksBeyondTheStars/Scripts/UiKit.cs) `AddModalDim`): one consistent dark scrim + click-swallow behind overlay dialogs; used by the new participate panel (existing overlays can adopt it later).
+- **CONTRIBUTING.md** (new, root, English, GitHub-focused) + linked from README. README/AGENTS/TODO renaming notes removed (game was never published).
+- **Menu/splash blur** reduced ([UrpScenePost.cs](client/Assets/BlocksBeyondTheStars/Scripts/UrpScenePost.cs) new `ShellMode`: tighter bloom threshold 1.1 / intensity 0.28 / scatter 0.4; [MenuBackground.cs](client/Assets/BlocksBeyondTheStars/Scripts/MenuBackground.cs) nebula menu-brightness 0.75→0.6; URP asset Adaptive Performance off) — it was a *look* issue (bloom over an emissive-dense attract scene), not resolution (renderScale 1, direct render). Tune by eye after a build.
+- Locale parity kept (en+de); localization + content tests green. **Follow-up: rebuild the Windows player, eyeball the blur/menu, then re-capture marketing screenshots (`scripts/capture-screenshots.ps1`) since the splash changed.**
+
 ### ★ GitHub Actions release build (public-repo safe) — ✅ working end-to-end (2026-06-20, v0.1.0 published)
 `.github/workflows/release.yml` builds a Windows release and publishes a GitHub Release on a pushed `v*` tag
 (or the manual *Run workflow* button). **Validated: v0.1.0 published a 450 MB `BlocksBeyondTheStars-v0.1.0.zip`
@@ -24,10 +34,11 @@ world-gen; SQLite persistence.
 secrets in all logs and never hands them to fork PRs, and the workflow runs **only** on tags / manual dispatch
 (never on `pull_request`), so no foreign code can reach the Unity secrets.
 - **Version single-source-of-truth (2026-06-20):** the git tag `vX.Y.Z` is now the only version source.
-  CI passes it as `-buildVersion` → `BuildScript` sets `PlayerSettings.bundleVersion`, so the in-game UI shows
-  it via `AppShell.Version` (now `=> Application.version`, no longer a hardcoded const); the launcher gets
-  `-p:Version` and Velopack `--packVersion` the same value. Committed `bundleVersion` = `0.0.0-dev` for local
-  builds. A CI guard fails the build if the baked `version.txt` ≠ the tag. `Protocol.Version` stays separate.
+  CI feeds it to GameCI `versioning: Custom` → `PlayerSettings.bundleVersion`, so the in-game UI shows it via
+  `AppShell.Version` (now `=> Application.version`, no longer a hardcoded const); the launcher gets `-p:Version`
+  and Velopack `--packVersion` the same value. Committed `bundleVersion` = `0.1.0-dev` for local builds
+  (Velopack needs packVersion ≥ 0.0.1). A CI guard (BuildScript writes `version.txt`) fails the build if the
+  baked version ≠ the tag. `Protocol.Version` stays separate.
 - **Windows installer trio (2026-06-20):** the release no longer ships a hand-rolled zip — the windows job runs
   `publish-client-installer.ps1 -Msi` (vpk pinned 1.2.0) and attaches **Setup.exe** (per-user, no admin),
   the **WiX MSI** (machine-wide/IT) and **Portable.zip**. (Linux/macOS client installers intentionally skipped
@@ -1427,26 +1438,6 @@ need **name verification**.
 token-based name ownership (recommended; without it the admin can be impersonated when offline)?
 (2) hostable worlds = the existing singleplayer saves ("open to LAN" style, recommended) or a separate
 multiplayer world list? (3) hosting port: keep 31550 (current SP port) or the dedicated default 31415?
-
-### ★ Game renamed to "Blocks Beyond the Stars" (2026-06-12) — ✅ DONE
-**Part 1 — display title.** Splash + main-menu + loading logos, Unity `productName` (ProjectSettings
-**and** `BuildScript.EnsureAppIcon`, which overrides it at build time), credits (en/de),
-README/AGENTS/USER_MANUAL/docs titles. The **in-game menu** no longer shows the game title — it carries
-a localized **"Ship Interface"** heading (`ui.shipmenu.title`: EN "SHIP INTERFACE" / DE "BORDKONSOLE").
-The productName change moves `persistentDataPath` to `…/LocalLow/JuMaVe Games/Blocks Beyond the Stars/`;
-`AppShell.MigrateRenamedPersistentData()` adopts the old folder (settings, singleplayer saves, editor
-exports) on first start.
-
-**Part 2 — full technical rename** (decided: verbose `BlocksBeyondTheStars`, GitHub repo renamed too).
-Solution + all 8 projects/folders/assemblies/namespaces (`BlocksBeyondTheStars.*`), Unity
-`Assets/BlocksBeyondTheStars/` (folder + asmdefs + icon `app_icon.png`, all via `git mv` so GUIDs
-survive), shader paths `BlocksBeyondTheStars/...` incl. the always-included list, build/publish
-scripts (`-buildOut` arg, packages `blocks-beyond-the-stars-server-<rid>.zip`), LiteNetLib connection
-key, ai-backend env prefix `BBTS_AI_*` + package names, NOTICES/docs sweep. Safe by design: saves are
-plain JSON (no type names) and the wire protocol uses stable byte tags, so renames don't break
-saves/protocol; scene files reference scripts by GUID. Historical entries below this line keep the old
-name — they describe the past. The only remaining "Spacecraft" literals in code are the persistent-data
-migration (must match the old on-disk folder) and this changelog.
 
 ### ★ Docs sync (2026-06-12) — ✅ DONE
 README/AGENTS/manual/AI-backend doc brought up to the shipped state: README status section rewritten

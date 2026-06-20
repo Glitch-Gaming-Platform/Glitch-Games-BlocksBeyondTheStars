@@ -38,7 +38,8 @@ jobs:
 
       # Version single source of truth: a tag push (vX.Y.Z) defines the version for the whole build —
       # in-game (Application.version), the launcher and the Velopack installers all derive from it. A manual
-      # workflow_dispatch run has no tag, so it builds a 0.0.0-dev test artifact (and never publishes).
+      # workflow_dispatch run has no tag, so it builds a 0.1.0-dev test artifact (and never publishes).
+      # (Velopack requires packVersion >= 0.0.1, so the dev value can't be 0.0.0-*.)
       - name: Resolve + validate version
         id: ver
         shell: bash
@@ -50,7 +51,7 @@ jobs:
               exit 1
             fi
           else
-            v="0.0.0-dev"
+            v="0.1.0-dev"
           fi
           echo "version=$v" >> "$GITHUB_OUTPUT"
           echo "Resolved build version: $v"

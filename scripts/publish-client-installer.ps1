@@ -95,7 +95,7 @@ if ($render.ExitCode -ne 0 -or -not (Test-Path $splashImage)) {
 
 # Derive the version unless one was given. The single source of truth is PlayerSettings.bundleVersion
 # (set by the release CI from the git tag at build time, e.g. "0.3.0"); read it from ProjectSettings.asset.
-# A local build keeps the committed dev value (0.0.0-dev) — pass -Version for a real local release.
+# A local build keeps the committed dev value (0.1.0-dev) — pass -Version for a real local release.
 if ([string]::IsNullOrWhiteSpace($Version)) {
     $projSettings = Get-Content (Join-Path $repo 'client/ProjectSettings/ProjectSettings.asset') -Raw
     if ($projSettings -match '(?m)^\s*bundleVersion:\s*(\S+)') { $Version = $Matches[1] }

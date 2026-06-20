@@ -21,8 +21,8 @@ namespace BlocksBeyondTheStars.Client
     {
         /// <summary>The build version shown in the UI. Single source of truth = <see cref="Application.version"/>
         /// (PlayerSettings.bundleVersion), which the release CI sets from the git tag at build time
-        /// (BuildScript reads <c>-buildVersion</c>). Local/dev builds show the committed bundleVersion
-        /// (e.g. <c>0.0.0-dev</c>).</summary>
+        /// (via GameCI's versioning). Local/dev builds show the committed bundleVersion
+        /// (e.g. <c>0.1.0-dev</c>).</summary>
         public static string Version => Application.version;
 
         public ShellPhase Phase { get; private set; } = ShellPhase.Studio; // studio splash → title splash → menu
