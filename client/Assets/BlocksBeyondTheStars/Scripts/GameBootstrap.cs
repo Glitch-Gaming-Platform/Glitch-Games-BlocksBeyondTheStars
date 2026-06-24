@@ -712,6 +712,12 @@ namespace BlocksBeyondTheStars.Client
         public int MeshChunksPerFrame = 4;
         private readonly List<ChunkCoord> _dirtyScratch = new List<ChunkCoord>();
 
+        // Distance culling (A4): chunks farther than this (blocks, seam-aware 3D distance) have their renderer
+        // disabled — the client never unloads chunks, so without this the accumulated far chunks keep costing
+        // draw calls. Generous default so normally-visible chunks are never culled; lower it to trade view
+        // distance for fewer draw calls. Re-evaluated in RepositionChunks (throttled to once per block moved).
+        public float ChunkDrawDistanceBlocks = 256f;
+
         // Performance (P2): assigning MeshCollider.sharedMesh cooks the collision mesh synchronously on the
         // main thread — the single heaviest per-chunk op. Instead we run Physics.BakeMesh on a worker thread
         // and assign the (now-cached) cook back on the main thread in DrainBakedColliders. _colliderGen +
@@ -1142,9 +1148,12 @@ namespace BlocksBeyondTheStars.Client
         private int _lastReposZ = int.MinValue;
 
         /// <summary>Re-places every loaded chunk GameObject at the seam-aware scene position for the player's
-        /// current longitude AND latitude (see <see cref="SceneX"/>/<see cref="SceneZ"/>).</summary>
+        /// current longitude AND latitude (see <see cref="SceneX"/>/<see cref="SceneZ"/>), and distance-culls
+        /// far chunks' renderers (A4).</summary>
         private void RepositionChunks()
         {
+            var pp = PlayerPosition;
+            float cullSq = ChunkDrawDistanceBlocks * ChunkDrawDistanceBlocks;
             foreach (var kv in _chunkObjects)
             {
                 if (kv.Value == null)
@@ -1154,6 +1163,20 @@ namespace BlocksBeyondTheStars.Client
 
                 var origin = WorldConstants.ChunkOrigin(kv.Key);
                 kv.Value.transform.position = new Vector3(SceneX(origin.X), origin.Y, SceneZ(origin.Z));
+
+                // Distance culling (A4): disable the renderer of chunks well beyond the draw distance so the
+                // accumulated far chunks (never unloaded) stop costing draw calls; re-enabled when the player
+                // moves back into range. Colliders are left intact (cheap when untouched, and far physics still
+                // resolves). Frustum culling Unity does for free once the per-chunk bounds are correct (A1).
+                var mr = kv.Value.GetComponent<MeshRenderer>();
+                if (mr != null)
+                {
+                    bool visible = ChunkDistSqToPlayer(kv.Key, pp) <= cullSq;
+                    if (mr.enabled != visible)
+                    {
+                        mr.enabled = visible;
+                    }
+                }
             }
         }
 
@@ -1521,9 +1544,13 @@ namespace BlocksBeyondTheStars.Client
         /// collider bake (P2). A null collider (only fluids/air) clears the collider immediately.</summary>
         private void ApplyChunkMesh(ChunkCoord coord, ChunkMeshData data)
         {
-            var (mesh, collider) = data.ToMeshes();
+            // Reuse this chunk's existing render mesh on a rebuild (A3) — avoids a per-remesh Mesh allocation and
+            // the leak of the previous one (A2 raises the rebuild rate, which would otherwise grow that leak).
+            bool exists = _chunkObjects.TryGetValue(coord, out var go) && go != null;
+            var reuse = exists ? go.GetComponent<MeshFilter>().sharedMesh : null;
+            var (mesh, collider) = data.ToMeshes(reuse);
 
-            if (!_chunkObjects.TryGetValue(coord, out var go))
+            if (!exists)
             {
                 go = new GameObject($"Chunk {coord.X},{coord.Y},{coord.Z}");
                 go.transform.SetParent(transform);

@@ -1043,9 +1043,17 @@ namespace BlocksBeyondTheStars.Client
 
         /// <summary>Uploads the data into a render mesh (opaque + see-through submeshes) and a separate
         /// fluid-excluded collision mesh. MUST run on the main thread (the Unity Mesh API is not thread-safe).</summary>
-        public (Mesh Render, Mesh Collider) ToMeshes()
+        public (Mesh Render, Mesh Collider) ToMeshes(Mesh reuseRender = null)
         {
-            var mesh = new Mesh { indexFormat = UnityEngine.Rendering.IndexFormat.UInt32 };
+            // Reuse the chunk's existing render Mesh on a rebuild (A3): Clear()+refill avoids allocating a fresh
+            // Mesh — and leaking the old one — on every remesh. The collider mesh is always fresh, because it is
+            // cooked asynchronously by Physics.BakeMesh and reusing a mesh mid-bake would be unsafe.
+            var mesh = reuseRender != null ? reuseRender : new Mesh { indexFormat = UnityEngine.Rendering.IndexFormat.UInt32 };
+            if (reuseRender != null)
+            {
+                mesh.Clear();
+            }
+
             mesh.SetVertices(Verts);
             // Two submeshes sharing one vertex buffer: 0 = opaque (BlockAtlas), 1 = see-through
             // (BlockAtlasTransparent). The renderer is given both materials in the same order. Submesh 1
