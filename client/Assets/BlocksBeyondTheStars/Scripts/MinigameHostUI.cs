@@ -70,7 +70,13 @@ namespace BlocksBeyondTheStars.Client
             _rh = h;
             var self = (RectTransform)transform;
             self.SetParent(parent, false);
-            UiKit.Place(gameObject, 0f, 0f, parent.rect.width, parent.rect.height); // cover the canvas → region coords map straight through
+            // Stretch-fill the parent canvas (anchors, not rect — independent of layout timing) so the region
+            // coords (top-left space) map straight through to children placed under us.
+            self.anchorMin = Vector2.zero;
+            self.anchorMax = Vector2.one;
+            self.offsetMin = Vector2.zero;
+            self.offsetMax = Vector2.zero;
+            self.localScale = Vector3.one;
             _region = self;
             EnsureBuilt();
         }
