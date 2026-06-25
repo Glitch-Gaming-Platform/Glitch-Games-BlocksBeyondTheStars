@@ -1,3 +1,7 @@
+// Blocks Beyond the Stars — Copyright (c) 2026 Justus Dütscher & Marcel Dütscher (JuMaVe Games)
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// This file is part of Blocks Beyond the Stars. See LICENSE for the full AGPL-3.0 text.
+
 namespace BlocksBeyondTheStars.Client.Minigames
 {
     /// <summary>A 32-bit RGBA colour (Unity-free, so it lives in Client.Core). Maps byte-for-byte onto a Unity
