@@ -274,7 +274,7 @@ namespace BlocksBeyondTheStars.Client
                 return;
             }
 
-            if (Input.GetKeyDown(KeyCode.V))
+            if (InputMap.Down(InputAction.ToggleThirdPerson))
             {
                 ThirdPerson = !ThirdPerson;
                 ApplyCameraMode();
@@ -288,22 +288,22 @@ namespace BlocksBeyondTheStars.Client
                 TriggerSwing();
             }
 
-            if (Input.GetKeyDown(KeyCode.G))
+            if (InputMap.Down(InputAction.LootContainer))
             {
                 LootNearestContainer();
             }
 
-            if (Input.GetKeyDown(KeyCode.H))
+            if (InputMap.Down(InputAction.DepositToCrate))
             {
                 DepositToNearestCrate();
             }
 
-            if (Input.GetKeyDown(KeyCode.R))
+            if (InputMap.Down(InputAction.RepairWreck))
             {
                 RepairWreckCell();
             }
 
-            if (Input.GetKeyDown(KeyCode.L))
+            if (InputMap.Down(InputAction.ToggleLamp))
             {
                 _lampOn = !_lampOn;
                 ClientAudio.Instance?.Cue("lamp_toggle");

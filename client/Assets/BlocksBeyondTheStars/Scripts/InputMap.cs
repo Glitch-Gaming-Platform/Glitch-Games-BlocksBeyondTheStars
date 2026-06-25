@@ -10,9 +10,14 @@ namespace BlocksBeyondTheStars.Client
     /// </summary>
     public enum InputAction
     {
-        Interact,      // generic "use / board / open" — default E
-        PrimaryFire,   // melee swing / fire the held weapon — default F
-        StowVehicle,   // pack up a deployed speeder you're standing next to — default X
+        Interact,          // generic "use / board / open" — default E
+        PrimaryFire,       // melee swing / fire the held weapon — default F
+        StowVehicle,       // pack up a deployed speeder you're standing next to — default X
+        ToggleThirdPerson, // switch first/third-person camera — default V
+        LootContainer,     // loot the nearest container — default G
+        DepositToCrate,    // deposit into the nearest storage crate — default H
+        RepairWreck,       // repair the nearest wreck cell (on foot) — default R
+        ToggleLamp,        // toggle the suit lamp — default L
     }
 
     /// <summary>
@@ -26,6 +31,14 @@ namespace BlocksBeyondTheStars.Client
     {
         private static ClientSettings _settings;
 
+        /// <summary>The actions exposed in the controls-rebinding UI, in display order.</summary>
+        public static readonly InputAction[] Remappable =
+        {
+            InputAction.Interact, InputAction.PrimaryFire, InputAction.StowVehicle,
+            InputAction.ToggleThirdPerson, InputAction.LootContainer, InputAction.DepositToCrate,
+            InputAction.RepairWreck, InputAction.ToggleLamp,
+        };
+
         /// <summary>Points the map at the active settings (called once after <c>ClientSettings.Load()</c>).</summary>
         public static void Use(ClientSettings settings) => _settings = settings;
 
@@ -35,6 +48,11 @@ namespace BlocksBeyondTheStars.Client
             InputAction.Interact => KeyCode.E,
             InputAction.PrimaryFire => KeyCode.F,
             InputAction.StowVehicle => KeyCode.X,
+            InputAction.ToggleThirdPerson => KeyCode.V,
+            InputAction.LootContainer => KeyCode.G,
+            InputAction.DepositToCrate => KeyCode.H,
+            InputAction.RepairWreck => KeyCode.R,
+            InputAction.ToggleLamp => KeyCode.L,
             _ => KeyCode.None,
         };
 
