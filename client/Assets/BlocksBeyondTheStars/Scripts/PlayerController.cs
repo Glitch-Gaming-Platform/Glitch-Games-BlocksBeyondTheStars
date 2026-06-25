@@ -264,12 +264,12 @@ namespace BlocksBeyondTheStars.Client
 
             // On foot: board a speeder you own that you're standing next to (E), or pack one up (X). Checked
             // before the generic E interact so boarding the speeder beside you wins.
-            if (Input.GetKeyDown(KeyCode.E) && TryBoardNearbySpeeder())
+            if (InputMap.Down(InputAction.Interact) && TryBoardNearbySpeeder())
             {
                 return;
             }
 
-            if (Input.GetKeyDown(KeyCode.X) && TryStowNearbySpeeder())
+            if (InputMap.Down(InputAction.StowVehicle) && TryStowNearbySpeeder())
             {
                 return;
             }
@@ -282,7 +282,7 @@ namespace BlocksBeyondTheStars.Client
 
             RefreshHeldItem();
 
-            if (Input.GetKeyDown(KeyCode.F) && WeaponSwingReady())
+            if (InputMap.Down(InputAction.PrimaryFire) && WeaponSwingReady())
             {
                 AttackNearestEnemy();
                 TriggerSwing();
@@ -840,7 +840,7 @@ namespace BlocksBeyondTheStars.Client
                 Game.NearbyStation = "market"; // a settlement/station vendor → "trade" prompt + E opens the market
             }
 
-            if (!Input.GetKeyDown(KeyCode.E))
+            if (!InputMap.Down(InputAction.Interact))
             {
                 return;
             }

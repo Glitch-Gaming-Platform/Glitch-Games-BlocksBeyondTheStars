@@ -60,6 +60,7 @@ namespace BlocksBeyondTheStars.Client
         {
             MigrateRenamedPersistentData();
             Settings = ClientSettings.Load();
+            InputMap.Use(Settings); // route remappable controls through the loaded bindings (Stream C)
             Settings.Apply();
             LoadLocalizer();
             if (!string.IsNullOrWhiteSpace(Settings.PlayerName))
