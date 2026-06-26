@@ -60,6 +60,18 @@ Per-item detail lives in the dated work log below.
 
 ---
 
+### ★ Refinery does more: Tier-2 metallurgy + efficiency smelts (2026-06-26) — ✅ data+tests green, NOT committed to main, client content-sync only (no Unity code build)
+The Refinery held only 4 recipes while the always-available workshop held ~80, so the station felt pointless even though
+`titanium_plate` (refinery-only) is already the de-facto gate to the titanium age. Gave it a real role WITHOUT breaking
+crafting order: moved the smelting of the six metals whose ore needs a Tier-2 drill (cobalt, platinum, tungsten, uranium,
+neodymium + carbide sintering) to the refinery — provably safe because that ore is unreachable until the refinery exists.
+Added four **efficiency smelts** (refine_iron/copper/gold/silver) that out-yield the workshop but keep the workshop
+fallback, so nothing is gated. Everything that feeds pre-refinery gear (iron/copper/nickel→steel, gold/silver→circuit_board,
+tin→bronze, zinc→brass, sulfur→polymer) stays at the workshop. New `RefineryProgressionTests` adds an ordering guard: a
+fixpoint over Hand+Workshop recipes (basic-drill ore only) asserts no pre-refinery item is ever stranded behind the refinery
+— the generic obtainability tests don't check station order. User manual + in-game wiki (DE+EN) updated to describe the
+workshop/refinery split (+ the transmuter, which they previously omitted; dropped the dead "machine room").
+
 ### ★ Matter converter ("Transmuter"): craft scarce ore from spare terrain (2026-06-26) — ✅ data+server+assets+tests green (730), local Unity build green, NOT committed to main
 A new gated crafting station (placeable `matter_forge` block + `transmuter` ship module, unlocked by the `matter_forge`
 blueprint, prereq `refinery`) gives the effectively-infinite trash terrain (sand/dirt/mud/stone/basalt/ash) a sink:

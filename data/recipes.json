@@ -20,6 +20,11 @@
 
   { "key": "titanium_plate",   "station": "refinery", "inputs": [ { "item": "titanium_ore", "count": 2 } ],                                        "outputs": [ { "item": "titanium_plate", "count": 1 } ] },
 
+  { "key": "refine_iron",   "station": "refinery", "inputs": [ { "item": "iron_ore", "count": 1 } ],   "outputs": [ { "item": "iron_ingot", "count": 1 } ] },
+  { "key": "refine_copper", "station": "refinery", "inputs": [ { "item": "copper_ore", "count": 1 } ], "outputs": [ { "item": "copper_wire", "count": 3 } ] },
+  { "key": "refine_gold",   "station": "refinery", "inputs": [ { "item": "gold_ore", "count": 1 } ],   "outputs": [ { "item": "gold_ingot", "count": 1 } ] },
+  { "key": "refine_silver", "station": "refinery", "inputs": [ { "item": "silver_ore", "count": 1 } ], "outputs": [ { "item": "silver_ingot", "count": 1 } ] },
+
   { "key": "titanium_drill",   "station": "workshop", "requiredBlueprint": "titanium_drill", "inputs": [ { "item": "titanium_plate", "count": 6 }, { "item": "cable", "count": 4 }, { "item": "energy_cell_1", "count": 2 }, { "item": "carbide", "count": 1 } ], "outputs": [ { "item": "titanium_drill", "count": 1 } ] },
   { "key": "oxygen_tank_1",    "station": "workshop", "requiredBlueprint": "oxygen_tank_1",  "inputs": [ { "item": "iron_plate", "count": 4 }, { "item": "cable", "count": 2 }, { "item": "glass", "count": 1 } ],          "outputs": [ { "item": "oxygen_tank_1", "count": 1 } ] },
 
@@ -100,14 +105,14 @@
   { "key": "aluminium_ingot","station": "workshop", "inputs": [ { "item": "aluminium_ore", "count": 2 } ], "outputs": [ { "item": "aluminium_ingot", "count": 1 } ] },
   { "key": "tin_ingot",      "station": "workshop", "inputs": [ { "item": "tin_ore", "count": 2 } ],       "outputs": [ { "item": "tin_ingot", "count": 1 } ] },
   { "key": "nickel_ingot",   "station": "workshop", "inputs": [ { "item": "nickel_ore", "count": 2 } ],    "outputs": [ { "item": "nickel_ingot", "count": 1 } ] },
-  { "key": "cobalt_ingot",   "station": "workshop", "inputs": [ { "item": "cobalt_ore", "count": 2 } ],    "outputs": [ { "item": "cobalt_ingot", "count": 1 } ] },
-  { "key": "platinum_ingot", "station": "workshop", "inputs": [ { "item": "platinum_ore", "count": 2 } ],  "outputs": [ { "item": "platinum_ingot", "count": 1 } ] },
+  { "key": "cobalt_ingot",   "station": "refinery", "inputs": [ { "item": "cobalt_ore", "count": 2 } ],    "outputs": [ { "item": "cobalt_ingot", "count": 1 } ] },
+  { "key": "platinum_ingot", "station": "refinery", "inputs": [ { "item": "platinum_ore", "count": 2 } ],  "outputs": [ { "item": "platinum_ingot", "count": 1 } ] },
   { "key": "lead_ingot",     "station": "workshop", "inputs": [ { "item": "lead_ore", "count": 2 } ],      "outputs": [ { "item": "lead_ingot", "count": 1 } ] },
   { "key": "zinc_ingot",     "station": "workshop", "inputs": [ { "item": "zinc_ore", "count": 2 } ],      "outputs": [ { "item": "zinc_ingot", "count": 1 } ] },
-  { "key": "tungsten_ingot", "station": "workshop", "inputs": [ { "item": "tungsten_ore", "count": 2 } ],  "outputs": [ { "item": "tungsten_ingot", "count": 1 } ] },
+  { "key": "tungsten_ingot", "station": "refinery", "inputs": [ { "item": "tungsten_ore", "count": 2 } ],  "outputs": [ { "item": "tungsten_ingot", "count": 1 } ] },
   { "key": "lithium",        "station": "workshop", "inputs": [ { "item": "lithium_ore", "count": 2 } ],   "outputs": [ { "item": "lithium", "count": 1 } ] },
-  { "key": "uranium",        "station": "workshop", "inputs": [ { "item": "uranium_ore", "count": 2 } ],   "outputs": [ { "item": "uranium", "count": 1 } ] },
-  { "key": "neodymium",      "station": "workshop", "inputs": [ { "item": "neodymium_ore", "count": 2 } ], "outputs": [ { "item": "neodymium", "count": 1 } ] },
+  { "key": "uranium",        "station": "refinery", "inputs": [ { "item": "uranium_ore", "count": 2 } ],   "outputs": [ { "item": "uranium", "count": 1 } ] },
+  { "key": "neodymium",      "station": "refinery", "inputs": [ { "item": "neodymium_ore", "count": 2 } ], "outputs": [ { "item": "neodymium", "count": 1 } ] },
   { "key": "sulfur",         "station": "workshop", "inputs": [ { "item": "sulfur_ore", "count": 1 } ],    "outputs": [ { "item": "sulfur", "count": 1 } ] },
 
   { "key": "steel",         "station": "workshop", "inputs": [ { "item": "iron_ingot", "count": 2 }, { "item": "nickel_ingot", "count": 1 }, { "item": "carbon", "count": 1 } ], "outputs": [ { "item": "steel", "count": 1 } ] },
@@ -116,7 +121,7 @@
   { "key": "circuit_board", "station": "workshop", "inputs": [ { "item": "gold_ingot", "count": 1 }, { "item": "silver_ingot", "count": 1 }, { "item": "silicate", "count": 2 } ], "outputs": [ { "item": "circuit_board", "count": 1 } ] },
   { "key": "power_cell",    "station": "workshop", "inputs": [ { "item": "energy_cell_1", "count": 1 }, { "item": "lithium", "count": 1 }, { "item": "cobalt_ingot", "count": 1 }, { "item": "sulfur", "count": 1 } ], "outputs": [ { "item": "power_cell", "count": 1 } ] },
   { "key": "reactor_fuel",  "station": "refinery", "inputs": [ { "item": "uranium", "count": 2 }, { "item": "lead_ingot", "count": 1 } ],                                        "outputs": [ { "item": "reactor_fuel", "count": 1 } ] },
-  { "key": "carbide",       "station": "workshop", "inputs": [ { "item": "tungsten_ingot", "count": 1 }, { "item": "platinum_ingot", "count": 1 }, { "item": "carbon", "count": 1 } ], "outputs": [ { "item": "carbide", "count": 1 } ] },
+  { "key": "carbide",       "station": "refinery", "inputs": [ { "item": "tungsten_ingot", "count": 1 }, { "item": "platinum_ingot", "count": 1 }, { "item": "carbon", "count": 1 } ], "outputs": [ { "item": "carbide", "count": 1 } ] },
   { "key": "magnet",        "station": "workshop", "inputs": [ { "item": "neodymium", "count": 1 }, { "item": "iron_ingot", "count": 1 } ],                                      "outputs": [ { "item": "magnet", "count": 2 } ] },
   { "key": "light_alloy",   "station": "workshop", "inputs": [ { "item": "aluminium_ingot", "count": 2 }, { "item": "titanium_plate", "count": 1 } ],                            "outputs": [ { "item": "light_alloy", "count": 1 } ] },
 
