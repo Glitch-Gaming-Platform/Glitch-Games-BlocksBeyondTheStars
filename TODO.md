@@ -295,7 +295,7 @@ creature the ship parked on/over (or that a ship redesign grew over), leaving it
 
 ### ★ Full Linux support (2026-06-23) — ✅ .NET build+scripts done; NEEDS Unity build+release CI
 - **Cross-platform fixes:** `LocalServerLauncher.cs` + `ServerRoundtripPlayModeTests.cs` use `.exe` only on Windows;
-  CEF linux.x64 engine added to package manifest; `BuildScript.cs` got `BuildLinux()` targeting `StandaloneLinux64`.
+  `BuildScript.cs` got `BuildLinux()` targeting `StandaloneLinux64`.
 - **Linux console launcher:** `src/BlocksBeyondTheStars.Launcher.Console/` — SkiaSharp-based splash renderer,
   Velopack lifecycle hooks, starts Unity player as child process (replaces WinForms launcher on Linux).
 - **Bash build scripts:** `sync-client-libs.sh`, `sync-velopack-libs.sh`, `publish-local-server.sh`,
@@ -412,7 +412,7 @@ secrets in all logs and never hands them to fork PRs, and the workflow runs **on
 - **Windows installer trio (2026-06-20):** the release no longer ships a hand-rolled zip — the windows job runs
   `publish-client-installer.ps1 -Msi` (vpk pinned 1.2.0) and attaches **Setup.exe** (per-user, no admin),
 the **WiX MSI** (machine-wide/IT) and **Portable.zip**. (macOS client installer intentionally skipped
-   — blocked by the macOS UWB/CEF engine not being available.)
+   — out of scope: needs Metal/Vulkan + Apple code-signing.)
 - **Gotchas hit + fixed during bring-up:** (1) GameCI v4 Personal license needs **three** secrets —
   `UNITY_LICENSE` (.ulf) + `UNITY_EMAIL` + `UNITY_PASSWORD` (a Google-SSO Unity account must set a password via
   "Forgot password" first). (2) `ClientUpdater.cs` references Velopack in the **player** build (`#if !UNITY_EDITOR`),
