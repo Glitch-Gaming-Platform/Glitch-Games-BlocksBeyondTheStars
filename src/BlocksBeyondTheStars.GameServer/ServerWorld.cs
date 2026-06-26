@@ -56,6 +56,10 @@ public sealed class ServerWorld
 
     public int LoadedChunkCount => _loaded.Count;
 
+    /// <summary>Whether a chunk is currently resident in the cache (canonicalized like the cache keys). For
+    /// tests/diagnostics — e.g. asserting far-chunk eviction by <see cref="UnloadFarChunks"/>.</summary>
+    public bool IsChunkLoaded(ChunkCoord coord) => _loaded.ContainsKey(WorldConstants.CanonicalChunk(coord, Circumference));
+
     public ChunkData GetOrLoadChunk(ChunkCoord coord)
     {
         // Longitude wraps: a chunk a whole lap away is the same chunk. Canonicalize X so the cache and

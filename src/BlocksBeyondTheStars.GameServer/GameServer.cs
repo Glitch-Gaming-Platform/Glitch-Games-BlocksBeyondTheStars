@@ -119,6 +119,10 @@ public sealed partial class GameServer
     private ServerWorld _world => _worlds.Active.World;
 
     private double _sinceAutoSave;
+    // Far-chunk unload throttle: sweeping every loaded chunk against every player each tick would be wasteful,
+    // so the server only evicts out-of-range cached chunks on this cadence (seconds). Bounds server memory on
+    // long exploration — without it _loaded grows unbounded as a player crosses the world (the cache never shrank).
+    private double _sinceChunkSweep;
     // Fractional playtime carry: whole seconds are flushed into _meta.CumulativePlaytimeSeconds, the
     // sub-second remainder lives here between ticks. Only advanced while a player is joined.
     private double _playtimeCarry;
@@ -745,6 +749,15 @@ public sealed partial class GameServer
             ticking.Add(_worlds.Active.LocationId);
         }
 
+        // Decide once per tick whether this is a chunk-sweep tick (throttled), then run the eviction per active
+        // world inside the loop so each world's anchors are its own players. See SweepFarChunks.
+        _sinceChunkSweep += deltaSeconds;
+        bool sweepDue = _sinceChunkSweep >= ChunkSweepIntervalSeconds;
+        if (sweepDue)
+        {
+            _sinceChunkSweep = 0;
+        }
+
         foreach (var locId in ticking)
         {
             if (!SetActiveWorld(locId))
@@ -766,6 +779,10 @@ public sealed partial class GameServer
             TickVoidRescue(deltaSeconds);
             TickShipAi(deltaSeconds); // VEGA advisor hints + memory-fragment redemption
             StreamChunks();
+            if (sweepDue)
+            {
+                SweepFarChunks();
+            }
         }
 
         SampleHistories(deltaSeconds);
@@ -1226,10 +1243,20 @@ public sealed partial class GameServer
         SendNpcs(session);
     }
 
+    /// <summary>Upper bound on a client-requested render distance (matches the in-game slider's max), so a
+    /// spoofed JoinRequest can't make the server stream/generate an enormous column (memory/CPU DoS).</summary>
+    private const int MaxClientViewDistanceChunks = 8;
+
+    /// <summary>This player's streaming radius in chunks: their requested view distance (clamped to the slider
+    /// range) when they sent one, otherwise the host's configured default.</summary>
+    private int EffectiveViewRadius(PlayerSession session)
+        => session.ViewDistance > 0
+            ? System.Math.Clamp(session.ViewDistance, 1, MaxClientViewDistanceChunks)
+            : System.Math.Max(1, _config.ViewDistanceChunks);
+
     private void StreamChunks()
     {
-        int radius = System.Math.Max(1, _config.ViewDistanceChunks);
-        const int perTickBudget = 12;
+        int perTickBudget = System.Math.Max(1, _config.ChunkStreamPerTick);
 
         // Chunk band the build height maps to — the streamed column is clamped into it so a spoofed player
         // position can't make the server generate/cache chunks at arbitrary heights (memory DoS). See MinBuildY.
@@ -1238,6 +1265,7 @@ public sealed partial class GameServer
 
         foreach (var session in JoinedInActiveWorld())
         {
+            int radius = EffectiveViewRadius(session); // per-player: honour the client's View Distance slider
             var center = WorldConstants.WorldToChunk(session.State.Position.ToBlock());
             center = new ChunkCoord(center.X, System.Math.Clamp(center.Y, minChunkY, maxChunkY), center.Z);
 
@@ -1292,6 +1320,39 @@ public sealed partial class GameServer
                 sent++;
             }
         }
+    }
+
+    /// <summary>How often (seconds) the server evicts cached chunks that drifted out of every player's keep-range.
+    /// Coarse on purpose: chunk caching is cheap and re-loading is on-demand, so a slow sweep is plenty to keep
+    /// memory bounded without scanning the whole cache every tick.</summary>
+    private const double ChunkSweepIntervalSeconds = 10.0;
+
+    /// <summary>Evicts cached chunks in the active world that fall outside the keep-range of every joined player,
+    /// bounding server memory on long exploration (the cache otherwise only ever grew). The keep radius sits a
+    /// few chunks beyond the streaming radius so a chunk the player can currently see is never dropped; chunks
+    /// regenerate on demand (with persisted edits re-applied) if the player returns, and the client keeps its own
+    /// copy regardless (it never unloads), so eviction is invisible. Honours <see cref="ServerConfig.MaxLoadedChunksPerPlayer"/>
+    /// in spirit by keeping the resident set proportional to the view, not the distance travelled.</summary>
+    private void SweepFarChunks()
+    {
+        var anchors = new List<ChunkCoord>();
+        int maxViewRadius = 1;
+        foreach (var session in JoinedInActiveWorld())
+        {
+            anchors.Add(WorldConstants.WorldToChunk(session.State.Position.ToBlock()));
+            maxViewRadius = System.Math.Max(maxViewRadius, EffectiveViewRadius(session));
+        }
+
+        if (anchors.Count == 0)
+        {
+            return; // nobody here — leave the cache as-is (an idle world isn't growing it)
+        }
+
+        // Keep a margin beyond the widest player's horizontal streaming radius so the diagonal/vertical fringe of
+        // the streamed column (dy -3..+2) is never evicted while still in view. A single shared keep radius (the
+        // max across players) is safe: it can only keep MORE than any one player needs, never less.
+        int keepRadius = maxViewRadius + 4;
+        _world.UnloadFarChunks(anchors, keepRadius);
     }
 
     /// <summary>Fills a chunk message's sparse colour-modifier + shape arrays from the chunk's dyed/glowing/
@@ -1624,7 +1685,7 @@ public sealed partial class GameServer
         var (joinBody, joinBodyType) = RestoreJoinBody(state);
         LoadWorld(joinBodyType, joinBody);
 
-        var session = new PlayerSession(connectionId, state) { Joined = true, CurrentLocationId = joinBody, Locale = NormalizeLocale(join.Locale) };
+        var session = new PlayerSession(connectionId, state) { Joined = true, CurrentLocationId = joinBody, Locale = NormalizeLocale(join.Locale), ViewDistance = join.ViewDistanceChunks };
         _sessions[connectionId] = session;
         SetupPlayerShip(session); // give the player their own ship, stamped into their world
         EnsureSafeSpawn(session); // self-heal a position persisted mid-fall (don't load them into the void)
