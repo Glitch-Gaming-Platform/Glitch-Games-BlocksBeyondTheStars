@@ -469,14 +469,11 @@ public class WorldGenerationTests
     [Fact]
     public void WateryWorld_CarvesRivers()
     {
-        // Rivers used to never generate: Generate's river gate compared columnFluid to the sea fluid, which on a
-        // water world is the column's own default fluid, so the gate never opened. This guards the fix — a wet
-        // world must carve river channels, and each channel column must actually be filled with water (its flush
-        // surface cell holds water or the aquatic flora that grows in it).
+        // A wet world must carve routed rivers (RiverNetwork/RiverField), and a river column must actually be
+        // filled with water near its surface (water itself, or the aquatic flora that grows in it).
         var content = Content();
         var planet = content.GetPlanet("jungle")!; // WaterAbundance defaults to 0.55 (≥ 0.4) → rivers
         var gen = new WorldGenerator(7, content);
-        int sea = gen.SeaLevel(planet);
         var aquatic = new System.Collections.Generic.HashSet<ushort>
         {
             content.GetBlock("water")!.NumericId.Value,
@@ -488,58 +485,120 @@ public class WorldGenerationTests
         int cs = WorldConstants.ChunkSize;
 
         int rivers = 0;
-        for (int wx = 0; wx < 512 && rivers < 10; wx++)
-            for (int wz = 0; wz < 512 && rivers < 10; wz++)
-            {
-                int depth = gen.SurfaceRiverDepth(planet, wx, wz);
-                if (depth <= 0)
-                {
-                    continue;
-                }
-
-                int surfaceY = gen.SurfaceHeight(planet, wx, wz);
-                Assert.True(surfaceY > sea, "a river is carved above the global sea level");
-
-                // The channel is filled flush to the surface; the surface water cell must be water/aquatic flora.
-                var coord = new ChunkCoord(wx / cs, surfaceY / cs, wz / cs);
-                var chunk = gen.Generate(planet, coord);
-                ushort cell = chunk.Get(wx % cs, surfaceY % cs, wz % cs).Value;
-                Assert.True(aquatic.Contains(cell), $"river surface cell ({wx},{surfaceY},{wz}) should be water/aquatic flora");
-                rivers++;
-            }
-
-        Assert.True(rivers > 0, "a wet world should carve river channels.");
-    }
-
-    [Fact]
-    public void Rivers_OnlyCarveOnGentleSlopes()
-    {
-        // Floating-water fix: a river fills its channel flush to each column's local surface, so on a slope the
-        // water surface used to step down with the terrain, leaving free-standing walls of (never-receding
-        // source) water hanging over the lower ground. Rivers now share the ponds' flat-ground gate. Every
-        // river column must therefore sit on gentle ground — Δheight summed over ±2 in x and z within the cap.
-        const int riverMaxSlope = 4; // mirrors WorldGenerator.RiverMaxSlope
-        var content = Content();
-        var planet = content.GetPlanet("jungle")!; // WaterAbundance 0.55 ≥ 0.4 → rivers
-        var gen = new WorldGenerator(7, content);
-
-        int rivers = 0;
-        for (int wx = 0; wx < 512; wx++)
-            for (int wz = 0; wz < 512; wz++)
+        for (int wx = 0; wx < 1200 && rivers < 8; wx++)
+            for (int wz = 0; wz < 1200 && rivers < 8; wz++)
             {
                 if (gen.SurfaceRiverDepth(planet, wx, wz) <= 0)
                 {
                     continue;
                 }
 
-                int slope = System.Math.Abs(gen.SurfaceHeight(planet, wx + 2, wz) - gen.SurfaceHeight(planet, wx - 2, wz))
-                          + System.Math.Abs(gen.SurfaceHeight(planet, wx, wz + 2) - gen.SurfaceHeight(planet, wx, wz - 2));
-                Assert.True(slope <= riverMaxSlope,
-                    $"river column ({wx},{wz}) sits on a slope of {slope} (> {riverMaxSlope}) — it would leave a floating water wall");
+                // The routed channel's water surface follows the terrain; some cell near the surface must be
+                // water/aquatic flora (sheet at terrain, or a pooled/waterfall cell just above it).
+                int surfaceY = gen.SurfaceHeight(planet, wx, wz);
+                bool wet = false;
+                for (int y = surfaceY - 3; y <= surfaceY + 6 && !wet; y++)
+                {
+                    if (y < 0) continue;
+                    var coord = new ChunkCoord(wx / cs, y / cs, wz / cs);
+                    var chunk = gen.Generate(planet, coord);
+                    if (aquatic.Contains(chunk.Get(wx % cs, ((y % cs) + cs) % cs, wz % cs).Value)) wet = true;
+                }
+
+                Assert.True(wet, $"routed river column ({wx},{wz}) holds no water near surface {surfaceY}");
                 rivers++;
             }
 
-        Assert.True(rivers > 0, "expected to find river columns on a watery world (else the gate erased all rivers).");
+        Assert.True(rivers > 0, "a wet world should carve routed river channels.");
+    }
+
+    [Fact]
+    public void LavaWorld_CarvesLavaRivers()
+    {
+        // L2: the routed-river machinery is reused for lava on the `lava`/`ashen` worlds — magma channels
+        // that flow downhill into the lava sea. The field fills with LAVA (not water), and a routed channel
+        // column holds lava near its surface.
+        var content = Content();
+        var planet = content.GetPlanet("lava")!; // basalt surface → volcanic → lava sea
+        var gen = new WorldGenerator(7, content);
+        var lavaId = content.GetBlock("lava")!.NumericId;
+
+        var field = gen.RiverFieldFor(planet);
+        Assert.True(field.ColumnCount > 0, "the lava world produced no routed lava channels");
+        Assert.Equal(lavaId, field.FillFluid); // the field fills with lava, not water
+
+        int cs = WorldConstants.ChunkSize;
+        int rivers = 0;
+        for (int wx = 0; wx < 1500 && rivers < 6; wx++)
+            for (int wz = 0; wz < 1500 && rivers < 6; wz++)
+            {
+                if (gen.SurfaceRiverDepth(planet, wx, wz) <= 0) continue;
+
+                int surfaceY = gen.SurfaceHeight(planet, wx, wz);
+                bool molten = false;
+                for (int y = surfaceY - 3; y <= surfaceY + 6 && !molten; y++)
+                {
+                    if (y < 0) continue;
+                    var chunk = gen.Generate(planet, new ChunkCoord(wx / cs, y / cs, wz / cs));
+                    if (chunk.Get(wx % cs, ((y % cs) + cs) % cs, wz % cs).Value == lavaId.Value) molten = true;
+                }
+
+                Assert.True(molten, $"routed lava column ({wx},{wz}) holds no lava near surface {surfaceY}");
+                rivers++;
+            }
+
+        Assert.True(rivers > 0, "the lava world should carve routed lava channels.");
+    }
+
+    [Fact]
+    public void Rivers_RouteWithoutFloatingWater()
+    {
+        // Routed rivers replace the old flat-ground gate: instead of being erased wherever the ground tilts, a
+        // river now flows downhill with its water surface FOLLOWING the terrain (a steep step becomes a waterfall).
+        // The regression this guards: a normal (non-waterfall) river column must never leave floating water — the
+        // cell under its carved bed is solid, and its surface cell holds water/aquatic flora.
+        var content = Content();
+        var planet = content.GetPlanet("jungle")!;
+        var gen = new WorldGenerator(7, content);
+        var field = gen.RiverFieldFor(planet);
+        Assert.True(field.ColumnCount > 0, "a wet world produced no routed river columns");
+
+        int cs = WorldConstants.ChunkSize;
+        var aquatic = new System.Collections.Generic.HashSet<ushort>
+        {
+            content.GetBlock("water")!.NumericId.Value,
+            content.GetBlock("flora_kelp")!.NumericId.Value,
+            content.GetBlock("flora_lily")!.NumericId.Value,
+            content.GetBlock("flora_coral")!.NumericId.Value,
+            content.GetBlock("flora_seagrass")!.NumericId.Value,
+        };
+
+        int verified = 0;
+        for (int wx = 0; wx < 1200 && verified < 60; wx++)
+            for (int wz = 0; wz < 1200 && verified < 60; wz++)
+            {
+                // SurfaceRiverDepth is the truth Generate uses: it excludes pond columns (pond precedence) and
+                // sea-owned columns, so a >0 here means Generate actually places this river. Use the field only
+                // for the bed/surface levels.
+                if (gen.SurfaceRiverDepth(planet, wx, wz) <= 0) continue;
+                if (!field.TryGet(wx, wz, out var col) || col.WaterfallDrop > 0)
+                {
+                    continue; // waterfall columns intentionally stand water above the lower ground
+                }
+
+                // No floating water: the bed cell is solid (supports the column) and the surface cell is water.
+                var bedCoord = new ChunkCoord(wx / cs, col.BedY / cs, wz / cs);
+                var bedChunk = gen.Generate(planet, bedCoord);
+                Assert.False(bedChunk.Get(wx % cs, ((col.BedY % cs) + cs) % cs, wz % cs).IsAir,
+                    $"river bed under ({wx},{wz}) is air — floating water");
+
+                var surfCoord = new ChunkCoord(wx / cs, col.WaterSurfaceY / cs, wz / cs);
+                var surfChunk = gen.Generate(planet, surfCoord);
+                Assert.Contains(surfChunk.Get(wx % cs, ((col.WaterSurfaceY % cs) + cs) % cs, wz % cs).Value, aquatic);
+                verified++;
+            }
+
+        Assert.True(verified > 0, "found no normal river columns to verify");
     }
 
     [Fact]

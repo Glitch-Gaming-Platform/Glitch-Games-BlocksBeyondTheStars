@@ -1,0 +1,182 @@
+// Blocks Beyond the Stars — Copyright (c) 2026 Justus Dütscher & Marcel Dütscher (JuMaVe Games)
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// This file is part of Blocks Beyond the Stars. See LICENSE for the full AGPL-3.0 text.
+using System.Collections.Generic;
+using BlocksBeyondTheStars.Shared.Primitives;
+using BlocksBeyondTheStars.Shared.World;
+
+namespace BlocksBeyondTheStars.WorldGeneration;
+
+/// <summary>
+/// Block-resolution river placement, rasterized once per world from the coarse <see cref="RiverNetwork"/>.
+/// Where the network says "a channel of this size flows through here," this stamps the actual block columns
+/// the river covers, each carrying a water-surface height, a carved bed, a flow axis, and — at a steep step —
+/// a waterfall drop. <see cref="WorldGenerator.Generate"/> and the shared surface-water queries do an O(1)
+/// lookup here instead of the old noise band, so a river follows the terrain down to a guaranteed sink.
+/// <para>
+/// Design (Phase 1, see <c>docs/developer/RIVER_ROUTING_AND_WATERFALLS_PLAN.md</c>):
+/// the water surface FOLLOWS the terrain on a flowing reach (a thin sheet, so no tall "floating water wall"
+/// on a slope), rises to the filled level inside a shallow capped basin (a pool/lake), and where the terrain
+/// drops more than <c>WaterfallMinDrop</c> over one step the column is tagged with that drop so Generate can
+/// pour a vertical waterfall column into the lower reach. Deep flood basins (the over-flooding the Phase-0
+/// spike found) are capped: anything deeper than <c>MaxLakeDepth</c> is treated as a thin reach, not a lake.
+/// </para>
+/// All integer math + deterministic inputs ⇒ identical on server and client.
+/// </summary>
+public sealed class RiverField
+{
+    public readonly struct RiverColumn
+    {
+        /// <summary>Topmost water cell Y (inclusive).</summary>
+        public readonly int WaterSurfaceY;
+        /// <summary>Carved channel bed Y (last solid cell below the water).</summary>
+        public readonly int BedY;
+        /// <summary>0 = none; &gt;0 = a vertical waterfall column of this many blocks pours into this column.</summary>
+        public readonly int WaterfallDrop;
+        /// <summary>0 = flow runs along X, 1 = along Z (feeds the surface-water flow classification).</summary>
+        public readonly byte FlowAxis;
+
+        public RiverColumn(int surface, int bed, int waterfallDrop, byte flowAxis)
+        {
+            WaterSurfaceY = surface; BedY = bed; WaterfallDrop = waterfallDrop; FlowAxis = flowAxis;
+        }
+    }
+
+    private readonly Dictionary<(int X, int Z), RiverColumn> _cols;
+    private readonly int _circumference;
+
+    public int ColumnCount => _cols.Count;
+    public int WaterfallColumnCount { get; }
+
+    /// <summary>The fluid this field fills its channels with — water on watery worlds, lava on volcanic ones.
+    /// Generate reads it so one routing path serves both (L2). Air on an empty field.</summary>
+    public BlockId FillFluid { get; }
+
+    /// <summary>All stamped columns (inspection / tests).</summary>
+    public IReadOnlyCollection<RiverColumn> Columns => _cols.Values;
+
+    private RiverField(Dictionary<(int, int), RiverColumn> cols, int circumference, int waterfalls, BlockId fillFluid)
+    {
+        _cols = cols; _circumference = circumference; WaterfallColumnCount = waterfalls; FillFluid = fillFluid;
+    }
+
+    /// <summary>An empty field (dry / no-river worlds) — every lookup misses.</summary>
+    public static RiverField Empty(int circumference) => new(new Dictionary<(int, int), RiverColumn>(), circumference, 0, default);
+
+    /// <summary>O(1) lookup: is (worldX, worldZ) a river column, and with what surface/bed/waterfall? Wraps X.</summary>
+    public bool TryGet(int worldX, int worldZ, out RiverColumn col)
+        => _cols.TryGetValue((WorldConstants.WrapX(worldX, _circumference), WorldConstants.WrapZ(worldZ, _circumference)), out col);
+
+    public static RiverField Build(
+        RiverNetwork net,
+        System.Func<int, int, int> height,
+        int circumference,
+        BlockId fillFluid = default,
+        int channelFlowThreshold = 2,
+        int maxWidth = 7,
+        int widthPerFlow = 8,
+        int waterfallMinDrop = 4,
+        int maxLakeDepth = 6,
+        int estuaryWiden = 3)
+    {
+        var cols = new Dictionary<(int, int), RiverColumn>();
+        int period = net.LatitudePeriod;
+        int cell = net.CellSize;
+        int gridW = net.GridW, gridH = net.GridH;
+        int waterfalls = 0;
+
+        // Coarse cell containing a world column (wrapped).
+        int CellOf(int wx, int wz)
+        {
+            int cgx = WorldConstants.WrapX(wx, circumference) / cell;
+            if (cgx >= gridW) cgx = gridW - 1;
+            int zc = ((wz + period / 2) % period + period) % period;
+            int cgz = zc / cell;
+            if (cgz >= gridH) cgz = gridH - 1;
+            return cgz * gridW + cgx;
+        }
+
+        void Stamp(int wx, int wz, int surface, int bed, int waterfallDrop, byte axis)
+        {
+            var key = (WorldConstants.WrapX(wx, circumference), WorldConstants.WrapZ(wz, circumference));
+            if (cols.TryGetValue(key, out var existing))
+            {
+                // Where two channel strokes overlap, keep the lower (more-downstream) water surface so the
+                // confluence never lifts water above a reach that already ran lower through here.
+                if (existing.WaterSurfaceY <= surface)
+                {
+                    if (waterfallDrop > 0 && existing.WaterfallDrop == 0)
+                    {
+                        cols[key] = new RiverColumn(existing.WaterSurfaceY, existing.BedY, waterfallDrop, existing.FlowAxis);
+                        waterfalls++;
+                    }
+
+                    return;
+                }
+
+                if (existing.WaterfallDrop > 0) waterfalls--; // the replaced column was a waterfall
+            }
+
+            if (waterfallDrop > 0) waterfalls++;
+            cols[key] = new RiverColumn(surface, bed, waterfallDrop, axis);
+        }
+
+        foreach (int c in net.ChannelCells)
+        {
+            if (net.FlowAccum[c] < channelFlowThreshold) continue;
+            int d = net.FlowDir[c];
+            if (d < 0) continue; // ocean outlet — the sea takes over here
+
+            net.CellWorld(c, out int cx, out int cz);
+            net.CellWorld(d, out int dx, out int dz);
+            int ddx = WorldConstants.WrapDeltaX(dx - cx, circumference);
+            int ddz = WorldConstants.WrapDeltaZ(dz - cz, circumference);
+            int steps = System.Math.Max(System.Math.Abs(ddx), System.Math.Abs(ddz));
+            if (steps == 0) steps = 1;
+
+            byte axis = (byte)(System.Math.Abs(ddx) >= System.Math.Abs(ddz) ? 0 : 1);
+            // Width grows with the upstream flow: a headwater brook is 1 wide, a trunk that has gathered many
+            // tributaries widens toward the cap. Where the channel meets the sea the mouth flares into an estuary.
+            int width = 1 + System.Math.Min(maxWidth - 1, net.FlowAccum[c] / widthPerFlow);
+            if (net.IsSea[d]) width = System.Math.Min(width + estuaryWiden, maxWidth + estuaryWiden);
+            int half = width / 2;
+
+            int prevTerrain = height(cx, cz);
+            for (int s = 0; s <= steps; s++)
+            {
+                int wx = cx + (int)System.Math.Round((double)ddx * s / steps);
+                int wz = cz + (int)System.Math.Round((double)ddz * s / steps);
+                int terrain = height(wx, wz);
+
+                int cellIdx = CellOf(wx, wz);
+                int poolDepth = net.FilledLevel[cellIdx] - net.Height[cellIdx];
+
+                int surface, bed;
+                if (poolDepth > 0 && poolDepth <= maxLakeDepth)
+                {
+                    surface = net.FilledLevel[cellIdx]; // flat pool surface
+                    bed = net.Height[cellIdx] - 1;
+                }
+                else
+                {
+                    surface = terrain;                  // thin sheet following the ground (no floating wall)
+                    bed = terrain - (width >= 3 ? 2 : 1);
+                }
+
+                int drop = prevTerrain - terrain;
+                int waterfallDrop = drop > waterfallMinDrop ? drop : 0;
+                prevTerrain = terrain;
+
+                // Centerline + perpendicular band (flat cross-section at the centerline's surface).
+                for (int o = -half; o <= half; o++)
+                {
+                    int sx = axis == 0 ? wx : wx + o;
+                    int sz = axis == 0 ? wz + o : wz;
+                    Stamp(sx, sz, surface, bed, o == 0 ? waterfallDrop : 0, axis);
+                }
+            }
+        }
+
+        return new RiverField(cols, circumference, waterfalls, fillFluid);
+    }
+}
