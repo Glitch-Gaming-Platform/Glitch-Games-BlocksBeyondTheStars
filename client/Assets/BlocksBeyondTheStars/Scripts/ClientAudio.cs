@@ -331,31 +331,73 @@ namespace BlocksBeyondTheStars.Client
 
             var p = Game.PlayerPosition;
             int px = Mathf.FloorToInt(p.x), py = Mathf.FloorToInt(p.y), pz = Mathf.FloorToInt(p.z);
-            string found = string.Empty;
-            for (int dx = -3; dx <= 3 && found.Length == 0; dx++)
+            string found = string.Empty;   // fire / lava take precedence and short-circuit the scan
+            string waterBed = string.Empty; // best water bed seen so far (a waterfall outranks calm water)
+            bool stop = false;
+            for (int dx = -3; dx <= 3 && !stop; dx++)
             {
-                for (int dy = -2; dy <= 2 && found.Length == 0; dy++)
+                for (int dy = -2; dy <= 2 && !stop; dy++)
                 {
-                    for (int dz = -3; dz <= 3 && found.Length == 0; dz++)
+                    for (int dz = -3; dz <= 3 && !stop; dz++)
                     {
                         string k = Game.Content.BlockById(Game.World.GetBlock(px + dx, py + dy, pz + dz))?.Key ?? string.Empty;
-                        if (k == "fire") found = "fire_crackle";       // a fire nearby crackles (item 30)
-                        else if (k.Contains("lava")) found = "lava_bubble";
-                        else if (k.Contains("water")) found = WaterBedFor(px + dx, py + dy, pz + dz);
+                        if (k == "fire") { found = "fire_crackle"; stop = true; } // a fire nearby crackles (item 30)
+                        else if (k.Contains("lava")) { found = LavaBedFor(px + dx, py + dy, pz + dz); stop = true; }
+                        else if (k.Contains("water"))
+                        {
+                            string bed = WaterBedFor(px + dx, py + dy, pz + dz);
+                            if (WaterRank(bed) > WaterRank(waterBed)) waterBed = bed;
+                            if (bed == "water_fall") stop = true; // loudest water — no need to scan further
+                        }
                     }
                 }
             }
 
-            SetFluid(found);
+            SetFluid(found.Length == 0 ? waterBed : found);
+        }
+
+        /// <summary>Loudness rank of a water bed, so the nearest-but-calm cell never drowns out a waterfall
+        /// in range: waterfall &gt; brook &gt; surf &gt; shore.</summary>
+        private static int WaterRank(string bed) => bed switch
+        {
+            "water_fall" => 4,
+            "water_brook" => 3,
+            "water_surf" => 2,
+            "water_shore" => 1,
+            _ => 0,
+        };
+
+        /// <summary>Picks the looping lava bed: a falling lava column or its impact (drop &gt; three, same gate
+        /// as the lavafall embers) roars as <c>lava_fall</c>; otherwise the calm <c>lava_bubble</c> blubber.</summary>
+        private string LavaBedFor(int wx, int wy, int wz)
+        {
+            var id = Game.World.GetBlock(wx, wy, wz);
+            if (WaterfallDetect.IsFalling(Game.World.GetBlock, id, wx, wy, wz)
+                || WaterfallDetect.ImpactDrop(Game.World.GetBlock, id, wx, wy, wz, 24) >= 4)
+            {
+                return "lava_fall";
+            }
+
+            return "lava_bubble";
         }
 
         /// <summary>Picks the looping water bed for a nearby water cell using the SAME surface
-        /// classification the mesher feeds the shader: flowing river/brook → babble, open water →
-        /// rolling surf, calm bounded lake/pond → the soft generic shoreline lap.</summary>
+        /// classification the mesher feeds the shader: a falling column (a waterfall) → its loud rush;
+        /// flowing river/brook → babble, open water → rolling surf, calm bounded lake/pond → the soft
+        /// generic shoreline lap.</summary>
         private string WaterBedFor(int wx, int wy, int wz)
         {
             var world = Game.World;
             var id = world.GetBlock(wx, wy, wz);
+
+            // A waterfall takes priority over the calm beds: the cell is either part of the falling column
+            // itself, or the landing it pours onto (drop > three blocks, the same gate the mist VFX uses).
+            // Inferred from block ids exactly like WaterfallMistView, so it works on every world / old save.
+            if (WaterfallDetect.IsFalling(world.GetBlock, id, wx, wy, wz)
+                || WaterfallDetect.ImpactDrop(world.GetBlock, id, wx, wy, wz, 24) >= 4)
+            {
+                return "water_fall";
+            }
 
             // Climb to this column's water surface — the classification reads the surface layer.
             int top = wy;

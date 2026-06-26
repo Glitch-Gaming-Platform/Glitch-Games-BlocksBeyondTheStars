@@ -483,11 +483,8 @@ public sealed class WorldGenerator
     private const double PondBand = 0.10;   // mask range from "rim" (depth 0) to "centre" (full depth)
     private const int PondMaxSlope = 4;     // only carve on flat ground (Δheight over ±2 in x+z) so water sits level
 
-    private const double RiverHalfWidth = 0.04; // |river-line noise − 0.5| under this is in-channel (narrow, winding)
-    private const int RiverMaxDepth = 4;        // channel depth at the river centre, tapering to the banks (item 21 V2)
-    private const int RiverMaxSlope = 4;        // like ponds: only carve on gentle ground (Δheight over ±2 in x+z),
-                                                // so a flush-filled channel never leaves a stepped wall of water on a
-                                                // slope (the "floating water over the terrain" artefact)
+    // Rivers no longer use a noise band + slope gate; they are routed downhill into a sink by RiverNetwork /
+    // RiverField (see RiverFieldFor below and docs/developer/RIVER_ROUTING_AND_WATERFALLS_PLAN.md).
 
     /// <summary>Local terrain steepness at a column: the summed |Δheight| over ±2 blocks in x and z. 0 on a flat
     /// plain, growing with the grade. Used to gate flush-filled water bodies (ponds, rivers) to ground level
@@ -518,31 +515,81 @@ public sealed class WorldGenerator
         return (int)System.Math.Round(System.Math.Min(1.0, strength) * PondMaxDepth);
     }
 
-    /// <summary>River carve depth (0 = none) at a column: the winding river-line noise band, deepest at the
-    /// centre and tapering to the banks, gated to gentle ground so the flush water fill never leaves a
-    /// free-standing wall on a slope. Pure noise + heightmap → deterministic. Shared by <see cref="Generate"/>
-    /// (placement) and <see cref="SurfaceRiverDepth"/> (water life / client preview / ship landing) so the two
-    /// can never disagree about where river water is. Callers apply the outer eligibility (wet world, above the
-    /// sea, low/mid terrain, no pond here) before calling.</summary>
-    private int RiverDepthAt(PlanetType planet, long seed, int worldX, int worldZ)
+    // --- Routed rivers (Phase 1): per-world memoized network + block-resolution placement field ---
+    // A river is no longer a height-blind noise band. RiverNetwork traces every river downhill (steepest
+    // descent + fill-and-spill lakes) to a guaranteed sink (the sea or a self-formed lake); RiverField then
+    // rasterizes that to block columns whose water surface FOLLOWS the terrain (no floating wall) and which
+    // carry a waterfall drop at steep steps. The whole thing is integer + seed-deterministic, so the client
+    // rebuilds the identical field — no network snapshot. See the plan doc.
+    private readonly System.Collections.Generic.Dictionary<(string, int, bool), RiverField> _riverFields = new();
+    private readonly object _riverLock = new object();
+
+    /// <summary>This world's routed river placement (built once per world, then cached). Empty on worlds that
+    /// get no rivers (no water sea, or WaterAbundance below the river threshold).</summary>
+    public RiverField RiverFieldFor(PlanetType planet)
     {
-        double rl = FbmT(seed + 0x817E12, worldX, worldZ, planet.TerrainScale * 2.5, octaves: 2);
-        double rv = System.Math.Abs(rl - 0.5);
-        if (rv >= RiverHalfWidth)
+        var key = (planet.Key, _circumference, _crateredWorld);
+        lock (_riverLock)
         {
-            return 0; // outside the winding channel band
+            if (_riverFields.TryGetValue(key, out var cached))
+            {
+                return cached;
+            }
+
+            var field = BuildRiverField(planet);
+            if (_riverFields.Count >= 8)
+            {
+                _riverFields.Clear(); // soft cap: only a handful of worlds are resident at once
+            }
+
+            _riverFields[key] = field;
+            return field;
+        }
+    }
+
+    private RiverField BuildRiverField(PlanetType planet)
+    {
+        var (seaLevel, seaFluid) = ResolveSeaFluid(planet);
+        if (seaLevel == int.MinValue)
+        {
+            return RiverField.Empty(_circumference); // dry world: no sea, nothing to drain into
         }
 
-        // Gentle-ground gate — sampled lazily, only inside the channel band, mirroring the pond gate. Without
-        // it a river crossing a slope/cliff fills flush to each column's local surface and steps down with the
-        // terrain, leaving vertical walls of (never-receding source) water hanging over the lower ground.
-        if (SurfaceSlope(planet, worldX, worldZ) > RiverMaxSlope)
+        var waterId = _content.GetBlock("water")?.NumericId ?? BlockId.Air;
+        var lavaId = _content.GetBlock("lava")?.NumericId ?? BlockId.Air;
+        double pondAbundance = planet.WaterAbundance
+            ?? (string.Equals(planet.Atmosphere, "none", System.StringComparison.OrdinalIgnoreCase) ? 0.0 : 0.55);
+
+        int period = WorldConstants.LatitudePeriodFor(_circumference);
+        int Height(int x, int z) => SurfaceHeight(planet, x, z);
+        long refArea = (long)(WorldConstants.Circumference / 16) * (WorldConstants.LatitudePeriodFor(WorldConstants.Circumference) / 16);
+        long area = (long)(_circumference / 16) * (period / 16);
+        double areaScale = area / (double)refArea;
+
+        // WATER rivers: the wetter water worlds. Density scales with WaterAbundance + world area (Phase 4).
+        if (seaFluid == waterId && !waterId.IsAir && pondAbundance >= 0.4)
         {
-            return 0;
+            double wetness = System.Math.Min(1.0, System.Math.Max(0.0, (pondAbundance - 0.4) / 0.6));
+            int sources = System.Math.Max(8, (int)System.Math.Round((40 + 80 * wetness) * areaScale));
+            var net = RiverNetwork.Build(PlanetSeed(planet), _circumference, period, seaLevel, Height, cellSize: 16, sourceCount: sources);
+            return RiverField.Build(net, Height, _circumference, fillFluid: waterId);
         }
 
-        int depth = (int)System.Math.Round(RiverMaxDepth * (1.0 - rv / RiverHalfWidth));
-        return depth >= 1 ? depth : 0;
+        // LAVA rivers (L2): only the `lava` and `ashen` worlds (user decision). Magma is viscous, so the
+        // channels are FEWER, WIDER and SHALLOWER than water brooks — thick flows creeping into the lava sea.
+        bool lavaWorld = string.Equals(planet.Key, "lava", System.StringComparison.OrdinalIgnoreCase)
+                      || string.Equals(planet.Key, "ashen", System.StringComparison.OrdinalIgnoreCase);
+        if (lavaWorld && seaFluid == lavaId && !lavaId.IsAir)
+        {
+            int sources = System.Math.Max(6, (int)System.Math.Round(26 * areaScale));
+            var net = RiverNetwork.Build(PlanetSeed(planet), _circumference, period, seaLevel, Height, cellSize: 16, sourceCount: sources);
+            // channelFlowThreshold 1: magma flows are sparse, so every routed source path counts as a channel
+            // (they rarely merge the way dense water tributaries do). Wider + shallower = thick, slow flows.
+            return RiverField.Build(net, Height, _circumference, fillFluid: lavaId,
+                channelFlowThreshold: 1, maxWidth: 9, widthPerFlow: 6, maxLakeDepth: 4, estuaryWiden: 4);
+        }
+
+        return RiverField.Empty(_circumference);
     }
 
     /// <summary>Upland-pond carve depth (0 = none) at a surface column — the same scattered-water gate
@@ -569,34 +616,31 @@ public sealed class WorldGenerator
         return PondDepthAt(planet, PlanetSeed(planet), worldX, worldZ, pondThreshold);
     }
 
-    /// <summary>River carve depth (0 = none) at a surface column — the same winding-channel gate
-    /// <see cref="Generate"/> applies, resolved internally so callers (tree/prop placement, ship landing,
-    /// aquatic life) can find/avoid river water without duplicating the rule. Rivers only on the wetter worlds
-    /// (WaterAbundance ≥ 0.4), above the global sea, on low/mid terrain, and not where a pond already sits.</summary>
+    /// <summary>River water depth (0 = none) at a surface column — resolved from the routed
+    /// <see cref="RiverFieldFor"/> placement so callers (tree/prop placement, ship landing, aquatic life,
+    /// client preview) and <see cref="Generate"/> can never disagree about where river water is. A pond takes
+    /// precedence (matches Generate's pond-first order); the sea owns columns at/below sea level.</summary>
     public int SurfaceRiverDepth(PlanetType planet, int worldX, int worldZ)
     {
-        var (seaLevel, seaFluid) = ResolveSeaFluid(planet);
-        var waterId = _content.GetBlock("water")?.NumericId ?? BlockId.Air;
-        double pondAbundance = planet.WaterAbundance
-            ?? (string.Equals(planet.Atmosphere, "none", System.StringComparison.OrdinalIgnoreCase) ? 0.0 : 0.55);
-        if (pondAbundance < 0.4 || seaFluid != waterId || waterId.IsAir)
-        {
-            return 0; // rivers only on the wetter worlds (matches Generate's `rivers` gate)
-        }
-
-        int surfaceY = SurfaceHeight(planet, worldX, worldZ);
-        int riverMaxY = planet.BaseHeight + (int)(planet.Amplitude * 0.5);
-        if (surfaceY <= seaLevel || surfaceY > riverMaxY)
-        {
-            return 0; // below the global sea (the sea fills it) or up on the high terrain (rivers stay low/mid)
-        }
-
         if (SurfacePondDepth(planet, worldX, worldZ) > 0)
         {
-            return 0; // a pond already claims this column (matches Generate's pond-first precedence)
+            return 0; // a pond already claims this column (pond-first precedence)
         }
 
-        return RiverDepthAt(planet, PlanetSeed(planet), worldX, worldZ);
+        // The global sea owns columns at/below sea level — Generate skips the river fill there, so we must too.
+        int seaLevel = ResolveSeaFluid(planet).Level;
+        if (SurfaceHeight(planet, worldX, worldZ) <= seaLevel)
+        {
+            return 0;
+        }
+
+        if (RiverFieldFor(planet).TryGet(worldX, worldZ, out var col))
+        {
+            int depth = col.WaterSurfaceY - col.BedY;
+            return depth >= 1 ? depth : 1;
+        }
+
+        return 0;
     }
 
     /// <summary>True if this surface column is under water — beneath the global water sea, inside an upland
@@ -756,10 +800,10 @@ public sealed class WorldGenerator
         // world lowers it for more/larger ponds. The flat-ground gate keeps them scattered (not everywhere).
         double pondThreshold = 0.70 - pondAbundance * 0.12;
 
-        // Rivers (item 21 V2): wet worlds get winding water channels carved flush like a long pond. Kept to
-        // low/mid terrain (rivers don't climb mountaintops).
-        bool rivers = ponds && pondAbundance >= 0.4;
-        int riverMaxY = planet.BaseHeight + (int)(planet.Amplitude * 0.5);
+        // Rivers (routed): a gefälle-aware network traced once per world (RiverFieldFor), guaranteed to flow
+        // downhill into a sink (the sea or a self-formed lake). Empty on non-river worlds, so this is a cheap
+        // O(1) lookup per column below. Replaces the old height-blind noise band + flat-ground gate.
+        var riverField = RiverFieldFor(planet);
 
         var origin = WorldConstants.ChunkOrigin(coord);
 
@@ -789,19 +833,15 @@ public sealed class WorldGenerator
                     }
                 }
 
-                // Rivers: a winding river-line noise band carves a channel (deepest at the centre, tapering to the
-                // banks) and fills it with water flush to the surface — a meandering river across low/mid terrain.
-                // (Skipped where a pond already claimed the column. The old guard compared columnFluid to the sea
-                // fluid, which on a water world equals the column's default fluid — so rivers never carved.)
-                if (rivers && !pondHere && surfaceY > fluidLevel && surfaceY <= riverMaxY)
+                // Rivers (routed): the RiverField places a channel whose water surface FOLLOWS the terrain — a
+                // thin sheet on a flowing reach (no floating wall), the pooled level inside a capped lake, and at
+                // a flagged step a vertical waterfall column poured into the lower reach. Skipped where a pond or
+                // the global sea already claims the column. The river bed is carved to BedY.
+                if (!pondHere && surfaceY > fluidLevel && riverField.TryGet(worldX, worldZ, out var river))
                 {
-                    int depth = RiverDepthAt(planet, seed, worldX, worldZ);
-                    if (depth >= 1)
-                    {
-                        seabedY = surfaceY - depth;
-                        waterTop = surfaceY;
-                        columnFluid = seaWaterId;
-                    }
+                    seabedY = river.BedY;
+                    waterTop = river.WaterfallDrop > 0 ? river.WaterSurfaceY + river.WaterfallDrop : river.WaterSurfaceY;
+                    columnFluid = riverField.FillFluid; // water on watery worlds, lava on lava/ashen worlds (L2)
                 }
 
                 // Per-column biome → surface/sub-surface blocks (single-biome worlds use index 0).
