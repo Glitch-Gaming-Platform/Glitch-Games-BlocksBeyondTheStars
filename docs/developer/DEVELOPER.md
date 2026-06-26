@@ -319,17 +319,21 @@ not locally. Cut one by pushing a SemVer tag:
 git tag v0.3.0 && git push origin v0.3.0
 ```
 
-The workflow has two jobs:
+The workflow has four parallel jobs, building for Windows **and** Linux:
 
-1. **Build Unity player (Linux)** — GameCI (`game-ci/unity-builder`) cross-builds the `StandaloneWindows64`
-   player from a Docker image (Mono backend). It first runs the same prereqs as `build-client.ps1`
-   (`sync-client-libs.ps1`, `sync-velopack-libs.ps1`, `publish-local-server.ps1 -Runtime win-x64`), caches
-   `client/Library`, and frees runner disk space before the ~6 GB editor image pull.
-2. **Package + release (Windows)** — builds the launcher, downloads the player, and runs
-   `publish-client-installer.ps1 -Msi` (with `vpk` pinned to the vendored Velopack version) to produce and
-   attach three assets to a published GitHub Release: **`…-win-Setup.exe`** (per-user, no admin),
-   **`…-win.msi`** (machine-wide, for IT/MDM) and **`…-win-Portable.zip`**. The same three assets are then
-   mirrored to **itch.io** (see below).
+1. **Build Unity player (Windows)** — GameCI (`game-ci/unity-builder`) in a Linux Docker image
+   cross-builds the `StandaloneWindows64` player (Mono backend). It first runs the same prereqs as
+   `build-client.ps1` (`sync-client-libs.ps1`, `sync-velopack-libs.ps1`, `publish-local-server.ps1 -Runtime win-x64`),
+   caches `client/Library`, and frees runner disk space before the ~6 GB editor image pull.
+2. **Build Unity player (Linux)** — same GameCI builder, targets `StandaloneLinux64`. Produces a
+   native `BlocksBeyondTheStars.x86_64` player.
+3. **Package + release (Windows)** — builds the WinForms launcher, downloads the Windows player from job 1,
+   and runs `publish-client-installer.ps1 -Msi` to produce three assets for the GitHub Release:
+   **`…-win-Setup.exe`** (per-user, no admin), **`…-win.msi`** (machine-wide, for IT/MDM) and
+   **`…-win-Portable.zip`**. The same three assets are mirrored to **itch.io** (see below).
+4. **Package + release (Linux)** — builds the console launcher, downloads the Linux player from job 2,
+   and packages it with Velopack (`vpk`) into an **AppImage** + **portable zip**, attached to the same
+   GitHub Release.
 
 The workflow triggers **only** on tag pushes and manual dispatch (never `pull_request`), so the Unity license
 secrets (`UNITY_LICENSE`/`UNITY_EMAIL`/`UNITY_PASSWORD`) are never exposed — safe even with a public repo. A
@@ -384,10 +388,11 @@ When working on this pipeline, three non-obvious gotchas already cost a debuggin
 - **`gh workflow run` right after `git push`** can dispatch the *previous* commit (tag/branch HEAD hasn't
   propagated yet) — wait ~20 s and verify the run's `headSha`.
 
-Linux/macOS **client** installers are intentionally not built: the client can't yet build for those platforms
-(the Windows-only UnityWebBrowser/CEF engine is the blocker — see
-[WEBCLIENT_FEASIBILITY.md](WEBCLIENT_FEASIBILITY.md)). The .NET **server** already cross-builds
-(`publish-server.ps1`: win-x64/linux-x64/linux-arm64) and could be attached separately.
+macOS **client** installers are intentionally not built: the macOS Unity editor has no CEF engine for
+UnityWebBrowser, so a native macOS client would need the embedded browser removed first
+(see [WEBCLIENT_FEASIBILITY.md](WEBCLIENT_FEASIBILITY.md)). Linux **client** installers (AppImage + portable zip)
+are now produced alongside the Windows builds — see the release pipeline above.
+The .NET **server** also cross-builds (`publish-server.ps1` / `.sh`: win-x64/linux-x64/linux-arm64).
 
 ## Troubleshooting: works in the Editor, silently broken in the build
 
