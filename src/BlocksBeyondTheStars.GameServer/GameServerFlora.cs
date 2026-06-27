@@ -202,7 +202,11 @@ public sealed partial class GameServer
         // grows in over the delay (the plant pops back on its own via BlockChanged regardless of this).
         BroadcastToWorld(new FloraRegrowStarted
         {
-            X = pos.X, Y = pos.Y, Z = pos.Z, Block = floraId, Seconds = (float)FloraRegrowSeconds,
+            X = pos.X,
+            Y = pos.Y,
+            Z = pos.Z,
+            Block = floraId,
+            Seconds = (float)FloraRegrowSeconds,
         });
     }
 
