@@ -303,26 +303,19 @@ jobs:
           dotnet tool install -g vpk --version 1.2.0
           echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
 
-      # libSkiaSharp.so (used by the splash render below) links against fontconfig; install it so
-      # SKTypeface.FromFamilyName can resolve a system font on the runner.
-      - name: Install fontconfig (for SkiaSharp text rendering)
-        run: sudo apt-get update && sudo apt-get install -y libfontconfig1 fontconfig fonts-dejavu-core
-
       - name: Download Linux player artifact
         uses: actions/download-artifact@v7
         with:
           name: player-linux
           path: client/Build/Linux
 
-      # vpk can produce AppImage + portable zip for Linux.
+      # vpk can produce AppImage + portable zip for Linux. NOTE: the splash options
+      # (--splashImage / --splashProgressColor) are Windows-installer only — the Linux `vpk pack`
+      # rejects them ("Unrecognized command or argument"), so they are not passed here.
       - name: Package Linux AppImage + Portable
         run: |
           OUT="artifacts/installer-linux"
           mkdir -p "$OUT"
-
-          # Render installer splash
-          dotnet run --project src/BlocksBeyondTheStars.Launcher.Console/BlocksBeyondTheStars.Launcher.Console.csproj \
-            -- --render-install-splash "$OUT/splash.png" 560 320
 
           vpk pack \
             --packId BlocksBeyondTheStars \
@@ -331,8 +324,6 @@ jobs:
             --packAuthors 'JuMaVe Games' \
             --packDir client/Build/Linux \
             --mainExe BlocksBeyondTheStars.Launcher.Console \
-            --splashImage "$OUT/splash.png" \
-            --splashProgressColor '#7DDEEC' \
             --channel linux \
             --outputDir "$OUT"
 
