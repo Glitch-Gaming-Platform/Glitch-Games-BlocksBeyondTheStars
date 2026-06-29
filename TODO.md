@@ -114,6 +114,10 @@ stripping stale native-server StreamingAssets from browser builds.
   `glitch_username`, etc.) feed name verification/auto-join consistently, absolute WebSocket URLs inherit the
   configured port when needed, and landing back on the current body now resolves a real body id with timeout
   feedback plus client/server coverage.
+- **Hosted Glitch smoke follow-up (2026-06-29):** fixed the live Glitch regression where the browser client could
+  enter gameplay still targeting `127.0.0.1`; WebGL now refuses loopback joins when no hosted server is configured,
+  the menu rebuilds after remote `StreamingAssets/data` localization finishes, and the Glitch install heartbeat
+  normalizes `/api` base URLs and adopts the platform `user_name` as the player name.
 
 ---
 

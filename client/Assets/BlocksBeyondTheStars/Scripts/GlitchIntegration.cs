@@ -21,6 +21,7 @@ namespace BlocksBeyondTheStars.Client
     {
         private const float HeartbeatSeconds = 60f;
         private static GlitchIntegration _instance;
+        private static string _resolvedUserName = string.Empty;
 
         private string _apiBaseUrl;
         private string _titleId;
@@ -33,6 +34,13 @@ namespace BlocksBeyondTheStars.Client
         public static bool IsConfigured => TryReadConfig(out _, out _, out _, out _, out _);
         public static bool IsOnline => _instance != null && _instance._online;
         public static string InstallId => _instance == null ? string.Empty : _instance._installId;
+        public static string ResolvedUserName => _resolvedUserName;
+        public static bool HasExplicitPlayerName => !string.IsNullOrWhiteSpace(ReadLaunchPlayerName());
+        public static bool CanResolveUserNameFromInstall
+            => IsConfigured && !HasExplicitPlayerName && !string.IsNullOrWhiteSpace(NameVerificationToken);
+
+        public static event Action<string> UserNameResolved;
+
         public static string NameVerificationToken => FirstNonEmpty(
             ReadQueryValue(Application.absoluteURL, "install_id"),
             ReadQueryValue(Application.absoluteURL, "glitch_install_id"),
@@ -57,20 +65,15 @@ namespace BlocksBeyondTheStars.Client
         {
             get
             {
-                string suppliedName = FirstNonEmpty(
-                    ReadQueryValue(Application.absoluteURL, "glitch_username"),
-                    ReadQueryValue(Application.absoluteURL, "username"),
-                    ReadQueryValue(Application.absoluteURL, "user_name"),
-                    ReadQueryValue(Application.absoluteURL, "display_name"),
-                    ReadQueryValue(Application.absoluteURL, "player_name"),
-                    ReadQueryValue(Application.absoluteURL, "bbs_player_name"),
-                    ReadQueryValue(Application.absoluteURL, "glitch_player_name"),
-                    GetEnv("GLITCH_USERNAME"),
-                    GetEnv("GLITCH_PLAYER_NAME"),
-                    GetEnv("BBS_PLAYER_NAME"));
+                string suppliedName = ReadLaunchPlayerName();
                 if (!string.IsNullOrWhiteSpace(suppliedName))
                 {
                     return NormalizePlayerName(suppliedName);
+                }
+
+                if (!string.IsNullOrWhiteSpace(_resolvedUserName))
+                {
+                    return _resolvedUserName;
                 }
 
 #if UNITY_WEBGL && !UNITY_EDITOR
@@ -288,7 +291,11 @@ namespace BlocksBeyondTheStars.Client
             {
                 yield return request.SendWebRequest();
                 _online = IsSuccess(request);
-                if (!_online)
+                if (_online)
+                {
+                    ApplyInstallResponse(request.downloadHandler?.text);
+                }
+                else
                 {
                     Debug.LogWarning("[Glitch] Install heartbeat failed: " + DescribeFailure(request));
                 }
@@ -398,7 +405,7 @@ namespace BlocksBeyondTheStars.Client
 
         private static bool TryReadConfig(out string apiBaseUrl, out string titleId, out string titleToken, out string testInstallId, out string sessionId)
         {
-            apiBaseUrl = FirstNonEmpty(GlitchIntegrationSecrets.ApiBaseUrl, GetEnv("GLITCH_API_URL"));
+            apiBaseUrl = NormalizeApiBaseUrl(FirstNonEmpty(GlitchIntegrationSecrets.ApiBaseUrl, GetEnv("GLITCH_API_URL")));
             titleId = FirstNonEmpty(GlitchIntegrationSecrets.TitleId, GetEnv("GLITCH_TITLE_ID"));
             titleToken = FirstNonEmpty(GlitchIntegrationSecrets.TitleToken, GetEnv("GLITCH_TITLE_TOKEN"));
             testInstallId = FirstNonEmpty(GlitchIntegrationSecrets.DeveloperTestInstallId, GetEnv("GLITCH_TEST_INSTALL_ID"));
@@ -409,6 +416,18 @@ namespace BlocksBeyondTheStars.Client
                 && !string.IsNullOrWhiteSpace(apiBaseUrl)
                 && !string.IsNullOrWhiteSpace(titleId)
                 && !string.IsNullOrWhiteSpace(titleToken);
+        }
+
+        private static string NormalizeApiBaseUrl(string value)
+        {
+            string normalized = (value ?? string.Empty).Trim().TrimEnd('/');
+            const string apiSuffix = "/api";
+            if (normalized.EndsWith(apiSuffix, StringComparison.OrdinalIgnoreCase))
+            {
+                normalized = normalized.Substring(0, normalized.Length - apiSuffix.Length);
+            }
+
+            return normalized;
         }
 
         private static string ResolveInstallId(string testInstallId)
@@ -448,6 +467,38 @@ namespace BlocksBeyondTheStars.Client
         {
             string trimmed = (value ?? string.Empty).Trim();
             return trimmed.Length <= 24 ? trimmed : trimmed.Substring(0, 24);
+        }
+
+        private void ApplyInstallResponse(string json)
+        {
+            string userName = ExtractInstallUserName(json);
+            if (string.IsNullOrWhiteSpace(userName) || string.Equals(_resolvedUserName, userName, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            _resolvedUserName = userName;
+            UserNameResolved?.Invoke(userName);
+            Debug.Log("[Glitch] Resolved player name from install profile.");
+        }
+
+        private static string ExtractInstallUserName(string json)
+        {
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                return string.Empty;
+            }
+
+            try
+            {
+                var parsed = JsonUtility.FromJson<InstallResponse>(json);
+                return NormalizePlayerName(parsed?.data?.user_name);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[Glitch] Could not parse install profile: {ex.Message}");
+                return string.Empty;
+            }
         }
 
         private static string StableFallbackPlayerName(string token)
@@ -760,6 +811,19 @@ namespace BlocksBeyondTheStars.Client
             return string.Empty;
         }
 
+        private static string ReadLaunchPlayerName()
+            => FirstNonEmpty(
+                ReadQueryValue(Application.absoluteURL, "glitch_username"),
+                ReadQueryValue(Application.absoluteURL, "username"),
+                ReadQueryValue(Application.absoluteURL, "user_name"),
+                ReadQueryValue(Application.absoluteURL, "display_name"),
+                ReadQueryValue(Application.absoluteURL, "player_name"),
+                ReadQueryValue(Application.absoluteURL, "bbs_player_name"),
+                ReadQueryValue(Application.absoluteURL, "glitch_player_name"),
+                GetEnv("GLITCH_USERNAME"),
+                GetEnv("GLITCH_PLAYER_NAME"),
+                GetEnv("BBS_PLAYER_NAME"));
+
         private static string GetEnv(string name)
         {
             try
@@ -814,6 +878,18 @@ namespace BlocksBeyondTheStars.Client
                 default:
                     return Application.platform.ToString().ToLowerInvariant();
             }
+        }
+
+        [Serializable]
+        private sealed class InstallResponse
+        {
+            public InstallResponseData data;
+        }
+
+        [Serializable]
+        private sealed class InstallResponseData
+        {
+            public string user_name;
         }
     }
 }

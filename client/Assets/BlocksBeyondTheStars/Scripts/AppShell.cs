@@ -1,6 +1,7 @@
 // Blocks Beyond the Stars — Copyright (c) 2026 Justus Dütscher & Marcel Dütscher (JuMaVe Games)
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // This file is part of Blocks Beyond the Stars. See LICENSE for the full AGPL-3.0 text.
+using System;
 using System.Collections;
 using System.IO;
 using BlocksBeyondTheStars.Shared.Content;
@@ -75,6 +76,10 @@ namespace BlocksBeyondTheStars.Client
 
         private bool _splashSoundDone;
         private bool _autoJoinWhenReady;
+        private bool _autoJoinWaitingForGlitchUserName;
+        private float _autoJoinNameWaitStarted = -1f;
+
+        private const float GlitchUserNameWaitSeconds = 5f;
 
         private void Awake()
         {
@@ -103,6 +108,7 @@ namespace BlocksBeyondTheStars.Client
                 PlayerName = Settings.PlayerName.Trim();
             }
 
+            GlitchIntegration.UserNameResolved += OnGlitchUserNameResolved;
             ApplyGlitchServerDefaults();
             ConfigureOptionalWebAutoJoin();
 
@@ -130,8 +136,10 @@ namespace BlocksBeyondTheStars.Client
             string playerName = GlitchIntegration.AutoJoinPlayerName;
             if (!string.IsNullOrWhiteSpace(playerName))
             {
-                PlayerName = playerName.Trim();
+                ApplyGlitchPlayerName(playerName);
             }
+
+            _autoJoinWaitingForGlitchUserName = _autoJoinWhenReady && GlitchIntegration.CanResolveUserNameFromInstall;
 #endif
         }
 
@@ -166,6 +174,7 @@ namespace BlocksBeyondTheStars.Client
 
             LoadLocalizer();
             EnsureMenuBackground();
+            RebuildShellUi();
         }
 
         /// <summary>
@@ -461,6 +470,35 @@ namespace BlocksBeyondTheStars.Client
 
         public void StartJoin()
         {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            bool hasConfiguredServer = false;
+            if (IsLoopbackHost(Host))
+            {
+                if (GlitchIntegration.TryGetConfiguredServer(out string host, out string port, out string password))
+                {
+                    hasConfiguredServer = true;
+                    Host = host;
+                    if (!string.IsNullOrWhiteSpace(port))
+                    {
+                        Port = port;
+                    }
+
+                    Password = password ?? string.Empty;
+                }
+            }
+
+            if (IsLoopbackHost(Host) && !hasConfiguredServer)
+            {
+                MenuNotice = L("ui.webgl.server_missing");
+                HostInfo = string.Empty;
+                _serverPending = false;
+                _autoJoinWhenReady = false;
+                Phase = ShellPhase.MainMenu;
+                RebuildShellUi();
+                return;
+            }
+#endif
+
             _hostLocal = false;
             HostInfo = "";
             MenuNotice = "";
@@ -514,7 +552,11 @@ namespace BlocksBeyondTheStars.Client
 
         private void OnApplicationQuit() => _localServer.Stop();
 
-        private void OnDestroy() => _localServer.Stop();
+        private void OnDestroy()
+        {
+            GlitchIntegration.UserNameResolved -= OnGlitchUserNameResolved;
+            _localServer.Stop();
+        }
 
         /// <summary>Builds the in-game rig (player + camera + world + HUD) and enters play.</summary>
         public void LaunchGame()
@@ -723,8 +765,23 @@ namespace BlocksBeyondTheStars.Client
 
             if (_autoJoinWhenReady && ContentReady && Phase == ShellPhase.MainMenu)
             {
-                _autoJoinWhenReady = false;
-                StartJoin();
+                bool readyToJoin = true;
+                if (_autoJoinWaitingForGlitchUserName && string.IsNullOrWhiteSpace(GlitchIntegration.ResolvedUserName))
+                {
+                    if (_autoJoinNameWaitStarted < 0f)
+                    {
+                        _autoJoinNameWaitStarted = Time.realtimeSinceStartup;
+                    }
+
+                    readyToJoin = Time.realtimeSinceStartup - _autoJoinNameWaitStarted >= GlitchUserNameWaitSeconds;
+                }
+
+                if (readyToJoin)
+                {
+                    _autoJoinWhenReady = false;
+                    _autoJoinWaitingForGlitchUserName = false;
+                    StartJoin();
+                }
             }
 
             // The main menu + loading are uGUI (M27): spawn each for its phase, tear it down otherwise.
@@ -936,6 +993,70 @@ namespace BlocksBeyondTheStars.Client
                 22, UiKit.TextCol, TextAnchor.MiddleCenter);
             UiKit.AddButton(panel.transform, 30f, 132f, 200f, 58f, de ? "Ja, verlassen" : "Yes, leave", ReturnToMenu);
             UiKit.AddButton(panel.transform, 250f, 132f, 200f, 58f, de ? "Nein, weiter" : "No, keep playing", CancelQuit);
+        }
+
+        private void OnGlitchUserNameResolved(string userName)
+        {
+            ApplyGlitchPlayerName(userName);
+            if (Phase == ShellPhase.MainMenu)
+            {
+                RebuildShellUi();
+            }
+        }
+
+        private void ApplyGlitchPlayerName(string playerName)
+        {
+            if (string.IsNullOrWhiteSpace(playerName))
+            {
+                return;
+            }
+
+            PlayerName = playerName.Trim();
+            if (Settings != null)
+            {
+                Settings.PlayerName = PlayerName;
+                Settings.Save();
+            }
+        }
+
+        private void RebuildShellUi()
+        {
+            DestroyUi(ref _uiMenu);
+            DestroyUi(ref _uiLoading);
+            DestroyUi(ref _uiSettings);
+            DestroyUi(ref _uiCredits);
+            DestroyUi(ref _uiEditors);
+            DestroyUi(ref _uiSaveSelect);
+        }
+
+        private static void DestroyUi(ref GameObject ui)
+        {
+            if (ui == null)
+            {
+                return;
+            }
+
+            UnityEngine.Object.Destroy(ui);
+            ui = null;
+        }
+
+        private static bool IsLoopbackHost(string host)
+        {
+            if (string.IsNullOrWhiteSpace(host))
+            {
+                return true;
+            }
+
+            string candidate = host.Trim();
+            if (Uri.TryCreate(candidate, UriKind.Absolute, out Uri uri))
+            {
+                candidate = uri.Host;
+            }
+
+            candidate = candidate.Trim('[', ']').ToLowerInvariant();
+            return candidate == "127.0.0.1"
+                || candidate == "localhost"
+                || candidate == "::1";
         }
     }
 }

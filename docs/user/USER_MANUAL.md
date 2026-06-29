@@ -31,6 +31,9 @@ Last updated: 2026-06-29.
   joins under that name from other machines are rejected ("name belongs to another player"), and a name
   that is currently online can't join twice. So pick your name once and keep it; it also keys your
   inventory/progress on each server.
+- **Browser/WebGL builds:** browser play joins a hosted online realm through WebSockets. It cannot start a
+  local singleplayer or host session inside the browser, and it will ask you to refresh if the hosted server
+  address is missing from the deployed build.
 - **World options** ("Weltoptionen") at world creation: pick a preset (**Friedlich / Standard /
   Feindselig**) or tune sliders — life & threats (creatures, planet enemies, enemy ships, UFOs),
   survival (oxygen, hunger, hazards, death penalty), generated world (flora, ore, settlements,

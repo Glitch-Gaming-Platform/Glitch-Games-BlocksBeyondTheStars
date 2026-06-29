@@ -58,6 +58,12 @@ The local fix is now verified: WebGL joins through `BrowserWebSocketClientTransp
 WebSockets with a browser JSON envelope, and authoritative chunks render in the browser against a real .NET
 server using PostgreSQL. Provider-specific deployment wiring is intentionally left for a separate follow-up.
 
+A later hosted Glitch smoke found a deployment/config regression rather than a content failure: the WebGL player
+was still allowed to join `127.0.0.1:31415` when the hosted server address was missing, producing an empty world in
+the browser. The shell now refuses loopback joins in WebGL unless a hosted server is configured, rebuilds the menu
+after remote localization data finishes loading, and uses the Glitch install heartbeat response `user_name` as the
+default player name once Aegis returns it.
+
 ## Key files
 
 - `src/BlocksBeyondTheStars.Networking/Transport/WebSocketServerTransport.cs`
