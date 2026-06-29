@@ -134,8 +134,7 @@ namespace BlocksBeyondTheStars.Client
             if (Game != null)
             {
                 Game.MenuOpen = false;
-                Cursor.lockState = CursorLockMode.Locked;
-                Cursor.visible = false;
+                ClientCursor.LockForGameplay();
             }
         }
 

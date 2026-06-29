@@ -32,6 +32,13 @@ namespace BlocksBeyondTheStars.Client
             boot.PlayerName = string.IsNullOrWhiteSpace(shell.PlayerName) ? "Pilot" : shell.PlayerName;
             boot.Password = shell.Password ?? "";
             boot.Token = shell.Settings.PlayerToken ?? "";
+#if UNITY_WEBGL && !UNITY_EDITOR
+            string glitchToken = GlitchIntegration.NameVerificationToken;
+            if (!string.IsNullOrWhiteSpace(glitchToken))
+            {
+                boot.Token = glitchToken;
+            }
+#endif
             boot.HostInfo = shell.HostInfo ?? "";
             boot.German = shell.Settings.Language == "de";
             boot.ViewDistanceChunks = shell.Settings.ViewDistanceChunks; // forward the slider so remote hosts stream this radius

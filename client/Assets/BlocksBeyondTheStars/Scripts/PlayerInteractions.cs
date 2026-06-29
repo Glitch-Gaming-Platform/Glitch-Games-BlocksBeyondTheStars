@@ -44,8 +44,7 @@ namespace BlocksBeyondTheStars.Client
             else if (!modal && _managedCursor)
             {
                 Game.MenuOpen = false;
-                Cursor.lockState = CursorLockMode.Locked;
-                Cursor.visible = false;
+                ClientCursor.LockForGameplay();
                 _managedCursor = false;
             }
 

@@ -146,8 +146,7 @@ namespace BlocksBeyondTheStars.Client
             }
 
             // Hand the cursor back to gameplay (on-foot look / flight re-lock it as before).
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
+            ClientCursor.LockForGameplay();
         }
 
         private void EnsureUi()

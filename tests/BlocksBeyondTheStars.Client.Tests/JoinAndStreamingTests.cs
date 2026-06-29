@@ -92,4 +92,20 @@ public sealed class JoinAndStreamingTests
         Assert.True(gotWithinClientView, "client's radius-3 view should stream terrain past the host's radius-1 default");
         Assert.False(gotBeyondClientView, "nothing beyond the client's requested radius should stream");
     }
+
+    [Fact]
+    public void EmptyLandingPadRequest_UsesTheCurrentBody()
+    {
+        using var h = new ClientServerHarness(LoadContent());
+        h.Join("LandingTester");
+
+        int before = h.LandingPadLists.Count;
+        h.Client.SendRequestLandingPads(string.Empty);
+        bool got = h.PumpUntil(() => h.LandingPadLists.Count > before, maxTicks: 20);
+
+        Assert.True(got, "the server should answer empty-body pad requests with the current body's pad list");
+        var reply = h.LandingPadLists[^1];
+        Assert.Equal(h.Server.Sessions[1].CurrentLocationId, reply.BodyId);
+        Assert.Equal(h.Server.LandingPadCount, reply.Pads.Length);
+    }
 }

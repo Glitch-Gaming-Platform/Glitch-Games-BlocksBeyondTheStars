@@ -37,6 +37,7 @@ public sealed class ClientServerHarness : IDisposable
     public readonly List<BlockChanged> BlockChanges = new();
     public readonly List<ActionRejected> Rejections = new();
     public readonly Dictionary<(int, int, int), ChunkDataMessage> Chunks = new();
+    public readonly List<LandingPadList> LandingPadLists = new();
 
     /// <summary>The client-side world view, fed from the captured chunk + block-change messages.</summary>
     public ClientWorld World { get; } = new();
@@ -73,6 +74,7 @@ public sealed class ClientServerHarness : IDisposable
         Client.InventoryUpdated += m => LastInventory = m;
         Client.CraftCompleted += m => LastCraftResult = m;
         Client.ActionRejected += m => Rejections.Add(m);
+        Client.LandingPadsReceived += m => LandingPadLists.Add(m);
         Client.BlockChanged += m =>
         {
             BlockChanges.Add(m);

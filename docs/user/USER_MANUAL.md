@@ -8,7 +8,7 @@ chat/admin commands. This is a living document.
 > truth for player-facing operation. (Written in English per project doc policy; in-game text itself is
 > bilingual DE/EN.)
 
-Last updated: 2026-06-27.
+Last updated: 2026-06-29.
 
 ---
 
@@ -31,6 +31,9 @@ Last updated: 2026-06-27.
   joins under that name from other machines are rejected ("name belongs to another player"), and a name
   that is currently online can't join twice. So pick your name once and keep it; it also keys your
   inventory/progress on each server.
+- **Browser/WebGL builds:** browser play joins a hosted online realm through WebSockets. It cannot start a
+  local singleplayer or host session inside the browser, and it will ask you to refresh if the hosted server
+  address is missing from the deployed build or cannot be reached.
 - **World options** ("Weltoptionen") at world creation: pick a preset (**Friedlich / Standard /
   Feindselig**) or tune sliders — life & threats (creatures, planet enemies, enemy ships, UFOs),
   survival (oxygen, hunger, hazards, death penalty), generated world (flora, ore, settlements,
@@ -68,11 +71,11 @@ Last updated: 2026-06-27.
 | **U** | Undock from a player / leave a boarded space station |
 | **V** | Toggle first / third-person camera |
 | **N** | Advance the current **VEGA** dialogue line (also fast-completes the typewriter) |
-| **Tab** | Open / close the gameplay menu (Inventory, Crafting, Tech, Ship, Map, Missions, Character) |
+| **Tab** | Open / close the gameplay menu (Inventory, Crafting, Tech, Ship, Map, Missions, Character); also closes full-screen menu screens such as the Codex |
 | **M** | Toggle the world map (top-down planet view; click to set a waypoint) |
 | **Enter** | Open the chat box (Esc cancels) |
 | **V** (hold) | Push-to-talk voice (if the server enabled voice; needs a radio; key is configurable) |
-| **Esc** | Pause / close the current screen |
+| **Esc** | Close the current screen; if no game screen is open, show the leave-game confirmation |
 
 Interaction reach is ~6 m (extended by reach equipment).
 
@@ -95,6 +98,8 @@ Enter space by launching the ship; on foot you board/leave via the cockpit. Whil
 
 Ship classes differ in **speed** and **handling** (`data/ships.json`): e.g. the scout is fast and agile,
 the hauler slow and heavy. Hull + shield are shown on the HUD; shields recharge, hull does not.
+Hosted/default servers allow free manual space flight so players can fly through a system without needing a
+separate unlock; admins can still disable it through server world rules.
 
 ---
 
@@ -104,6 +109,8 @@ the hauler slow and heavy. Hull + shield are shown on the HUD; shields recharge,
   Character (appearance), plus **Story**, **Companions** (tamed creatures, see §5) and **Alliances** (see §5),
   with **Settings** pinned far right. Crafting/Tech/Ship are **location-bound** (workshop / lab / ship console); the
   UI tells you when you must go to the right station.
+- **Codex and DataQubes screens** — use the top-right **Close** button, **Esc**, or **Tab** to return to play.
+  **< Menu** returns from the full-screen screen to the normal Tab menu.
 - **Tab availability dimming** — tabs whose context isn't met are **greyed out** (but still clickable to peek):
   **Map** needs you aboard, **Crafting** a workshop, **Tech** a lab, **Ship** the ship console. While not aboard,
   the Map's travel buttons are also disabled (the world is shown but you can't quick-travel from on foot), and

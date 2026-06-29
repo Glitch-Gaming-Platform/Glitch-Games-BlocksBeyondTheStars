@@ -540,7 +540,11 @@ public sealed partial class GameServer
     /// positions arrive once the player is actually on the body; the chooser only needs index + occupancy.</summary>
     private void HandleRequestLandingPads(PlayerSession session, RequestLandingPadsIntent intent)
     {
-        var body = _galaxy?.FindBody(intent.BodyId);
+        string bodyId = !string.IsNullOrWhiteSpace(intent.BodyId)
+            ? intent.BodyId.Trim()
+            : (!string.IsNullOrWhiteSpace(session.CurrentLocationId) ? session.CurrentLocationId : _world.LocationId);
+
+        var body = _galaxy?.FindBody(bodyId);
         if (body is null)
         {
             return;

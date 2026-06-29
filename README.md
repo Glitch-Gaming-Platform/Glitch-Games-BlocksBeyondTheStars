@@ -218,8 +218,8 @@ oxygen, damage, blueprints or travel.
 | Client | Unity 6 LTS (6000.4.x), URP + C# (Windows, Linux, experimental macOS) — see [`client/`](client/) |
 | Server | .NET 8, standalone console host (no Unity runtime) |
 | Admin UI | ASP.NET Core 8 minimal API + HTML dashboard |
-| Database | SQLite (default, portable); PostgreSQL later |
-| Realtime net | LiteNetLib (UDP) + MessagePack |
+| Database | SQLite (default, portable); optional PostgreSQL for hosted realms |
+| Realtime net | LiteNetLib UDP + MessagePack for native clients; WebSocket + JSON envelope for WebGL |
 | Shared logic | `netstandard2.1` so the same code runs in Unity *and* the server |
 
 ## Repository layout
@@ -227,8 +227,8 @@ oxygen, damage, blueprints or travel.
 ```
 src/BlocksBeyondTheStars.Shared/          data models, data-driven definitions, localization, protocol DTOs
 src/BlocksBeyondTheStars.WorldGeneration/ seed-based deterministic chunk generation
-src/BlocksBeyondTheStars.Persistence/     SQLite repository, savegame layout, autosave, backups
-src/BlocksBeyondTheStars.Networking/      transport abstraction (LiteNetLib + loopback), messages, codec
+src/BlocksBeyondTheStars.Persistence/     SQLite/PostgreSQL repositories, savegame layout, autosave, backups
+src/BlocksBeyondTheStars.Networking/      transport abstraction (LiteNetLib + WebSocket + loopback), messages, codec
 src/BlocksBeyondTheStars.GameServer/      authoritative tick loop + console host
 src/BlocksBeyondTheStars.Api/             admin web UI + API
 src/BlocksBeyondTheStars.Tools/           validate/info/backup CLI

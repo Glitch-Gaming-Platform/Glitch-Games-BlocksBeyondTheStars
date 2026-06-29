@@ -195,8 +195,7 @@ namespace BlocksBeyondTheStars.Client
             }
 
             bool flying = Input.GetMouseButton(1);
-            Cursor.lockState = flying ? CursorLockMode.Locked : CursorLockMode.None;
-            Cursor.visible = !flying;
+            ClientCursor.SetGameplayLock(flying);
 
             if (flying)
             {

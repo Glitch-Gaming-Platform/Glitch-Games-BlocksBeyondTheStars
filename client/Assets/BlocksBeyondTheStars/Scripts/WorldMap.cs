@@ -71,8 +71,7 @@ namespace BlocksBeyondTheStars.Client
         {
             _open = false;
             Game.MenuOpen = false;
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
+            ClientCursor.LockForGameplay();
             if (_canvas != null)
             {
                 Destroy(_canvas.gameObject);
