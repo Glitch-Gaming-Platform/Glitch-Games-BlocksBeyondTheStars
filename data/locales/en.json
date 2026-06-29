@@ -1436,6 +1436,7 @@
   "ui.worldopt.size.1": "Normal",
   "ui.worldopt.size.2": "Large",
   "ui.worldopt.size.3": "Huge",
+  "ui.connection_failed": "Could not reach the game server at {host}:{port}. Please try again in a moment.",
   "ui.vega.restart": "Restart tutorial",
   "ui.vega.next": "Continue · [N]",
   "ui.scan.first_time": "New discovery!"

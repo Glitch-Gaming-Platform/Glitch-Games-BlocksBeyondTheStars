@@ -118,6 +118,13 @@ stripping stale native-server StreamingAssets from browser builds.
   enter gameplay still targeting `127.0.0.1`; WebGL now refuses loopback joins when no hosted server is configured,
   the menu rebuilds after remote `StreamingAssets/data` localization finishes, and the Glitch install heartbeat
   normalizes `/api` base URLs and adopts the platform `user_name` as the player name.
+- **Hosted Glitch port follow-up (2026-06-29):** production smoke showed Azure Container Apps exposes the browser
+  WebSocket gateway on standard TLS 443, not public `:31415`. Redeploy with `server_port=443`, and show a localized
+  connection-failure notice instead of revealing an empty HUD if the websocket retries are exhausted.
+- **Hosted WebGL smoke-test guardrails (2026-06-29):** documented the timeout traps that caused repeated false
+  positives: `ready`/content-load/HUD are not proof of gameplay, first WebGL loads need multi-minute browser
+  timeouts, smoke usernames must be unique unless testing duplicate-name rejection, and release proof requires a
+  `Joined as ...` log plus a screenshot with visible world geometry/interactions.
 
 ---
 

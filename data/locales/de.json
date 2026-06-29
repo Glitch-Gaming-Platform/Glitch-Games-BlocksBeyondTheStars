@@ -1437,6 +1437,7 @@
   "ui.worldopt.size.1": "Normal",
   "ui.worldopt.size.2": "Groß",
   "ui.worldopt.size.3": "Riesig",
+  "ui.connection_failed": "Der Spielserver unter {host}:{port} ist nicht erreichbar. Bitte versuche es gleich erneut.",
   "ui.vega.restart": "Tutorial neu starten",
   "ui.vega.next": "Weiter · [N]",
   "ui.scan.first_time": "Neue Entdeckung!"

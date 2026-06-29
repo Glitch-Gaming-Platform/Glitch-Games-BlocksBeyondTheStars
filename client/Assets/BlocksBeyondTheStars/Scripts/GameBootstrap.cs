@@ -830,6 +830,7 @@ namespace BlocksBeyondTheStars.Client
 
         private bool _joinSent;
         private bool _joinSendFailureLogged;
+        private bool _connectionFailureReported;
         private float _retryTimer;
         private int _retries;
 
@@ -889,6 +890,7 @@ namespace BlocksBeyondTheStars.Client
 #endif
             Network.JoinAccepted += m =>
             {
+                _connectionFailureReported = false;
                 LocalPlayerId = m.PlayerId;
                 LocationName = string.IsNullOrEmpty(m.SystemName)
                     ? m.PlanetName
@@ -1218,6 +1220,12 @@ namespace BlocksBeyondTheStars.Client
                         _retries++;
                         Network.Connect(Host, Port);
                     }
+                    else if (_retryTimer >= 2f && !_connectionFailureReported)
+                    {
+                        _connectionFailureReported = true;
+                        JoinRejectedReason = FormatConnectionFailure();
+                        Debug.LogWarning(JoinRejectedReason);
+                    }
                 }
             }
 
@@ -1271,6 +1279,15 @@ namespace BlocksBeyondTheStars.Client
                 _lastReposZ = chunkAnchorZ;
                 RepositionChunks();
             }
+        }
+
+        private string FormatConnectionFailure()
+        {
+            string message = Localizer?.Get("ui.connection_failed")
+                ?? "Could not reach the game server at {host}:{port}. Please try again in a moment.";
+            return message
+                .Replace("{host}", Host ?? string.Empty)
+                .Replace("{port}", Port.ToString(System.Globalization.CultureInfo.InvariantCulture));
         }
 
         private int _lastReposX = int.MinValue;

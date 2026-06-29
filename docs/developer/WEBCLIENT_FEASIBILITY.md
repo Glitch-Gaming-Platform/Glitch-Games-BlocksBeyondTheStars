@@ -64,6 +64,44 @@ the browser. The shell now refuses loopback joins in WebGL unless a hosted serve
 after remote localization data finishes loading, and uses the Glitch install heartbeat response `user_name` as the
 default player name once Aegis returns it.
 
+A follow-up production smoke found the hosted Azure Container Apps gateway is publicly exposed through the
+standard TLS ingress (`wss://<app-fqdn>` / port 443), not the internal gameplay port. Deployments must pass
+`server_port=443` (or omit the port on the absolute `wss://` host) to avoid browser WebSocket timeouts. The
+client now also reports a localized connection failure after retries instead of revealing an empty HUD when the
+websocket cannot be reached.
+
+## Production WebGL Smoke Rules
+
+Do not treat any of these as proof that production gameplay works:
+
+- Glitch CLI status `ready`.
+- Unity payload downloaded.
+- `StreamingAssets/data` cached and content counts logged.
+- A visible HUD with health/oxygen/hotbar.
+
+The required proof is all of the following from the exact deployed build id:
+
+- Console log shows `Applied WebGL server defaults` with the hosted `wss://` endpoint and no accidental
+  `127.0.0.1` or public `:31415`.
+- Console log shows `Connecting to browser WebSocket game server`.
+- Console log shows either `Joined as ...` or, for a deliberate duplicate-name test, the server-side rejection
+  `name ... already online`; a browser WebSocket timeout or repeated connect loop is a failed smoke.
+- A screenshot after join shows world content, not only the HUD. Good proof includes ship/interior blocks,
+  terrain, an interact prompt, or other authored world geometry.
+- The smoke player name/install id is unique per run unless the test is intentionally checking duplicate-name
+  rejection. Reusing the same `glitch_username` can leave a previous tab/session online and turn a healthy
+  WebSocket into a misleading join rejection.
+
+Timeout traps to account for:
+
+- Production Brotli builds and first WebGL browser loads can take several minutes; use browser/test timeouts of
+  at least 5 minutes for full smoke and keep polling logs rather than assuming a tab is hung.
+- The `www.glitch.fun/play` wrapper may require a platform click before Unity starts; direct S3 build URLs are
+  acceptable for transport smoke, but the wrapped page still needs a manual/automated "Play" click smoke before
+  release sign-off.
+- Azure Container Apps routes the WebSocket through TLS 443. `:31415` is the internal server bind/gameplay port
+  and is not a public browser endpoint.
+
 ## Key files
 
 - `src/BlocksBeyondTheStars.Networking/Transport/WebSocketServerTransport.cs`

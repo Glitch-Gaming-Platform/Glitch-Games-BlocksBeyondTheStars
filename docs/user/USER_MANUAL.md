@@ -33,7 +33,7 @@ Last updated: 2026-06-29.
   inventory/progress on each server.
 - **Browser/WebGL builds:** browser play joins a hosted online realm through WebSockets. It cannot start a
   local singleplayer or host session inside the browser, and it will ask you to refresh if the hosted server
-  address is missing from the deployed build.
+  address is missing from the deployed build or cannot be reached.
 - **World options** ("Weltoptionen") at world creation: pick a preset (**Friedlich / Standard /
   Feindselig**) or tune sliders — life & threats (creatures, planet enemies, enemy ships, UFOs),
   survival (oxygen, hunger, hazards, death penalty), generated world (flora, ore, settlements,
