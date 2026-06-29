@@ -160,8 +160,7 @@ namespace BlocksBeyondTheStars.Client
 
             _open = open;
             Game.MenuOpen = _open;
-            Cursor.lockState = _open ? CursorLockMode.None : CursorLockMode.Locked;
-            Cursor.visible = _open;
+            ClientCursor.SetGameplayLock(!_open);
             if (_open)
             {
                 SwitchTo(_tab); // refresh data for the current tab

@@ -108,6 +108,12 @@ stripping stale native-server StreamingAssets from browser builds.
 - **PR review follow-up (2026-06-29):** committed the WebGL `.jslib` bridge, fixed the `link.xml` client
   assembly preserve entry, added JSON/frame-size guards plus browser-payload drop logging, and moved
   provider-specific deployment scripts/README links out of this merge PR for a later platform-owned deploy PR.
+- **Hosted WebGL crash follow-up (2026-06-29):** fixed the browser hosted-player polish surfaced after the first
+  Glitch smoke: WebGL gameplay cursor locking no longer trips iframe pointer-lock permission errors, generated
+  `index.html` handles Unity's browser permission exception, Glitch launch query aliases (`user_install_id`,
+  `glitch_username`, etc.) feed name verification/auto-join consistently, absolute WebSocket URLs inherit the
+  configured port when needed, and landing back on the current body now resolves a real body id with timeout
+  feedback plus client/server coverage.
 
 ---
 

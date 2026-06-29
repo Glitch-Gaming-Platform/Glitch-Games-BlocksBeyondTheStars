@@ -135,6 +135,7 @@ namespace BlocksBeyondTheStars.Client.EditorTools
             if (target == BuildTarget.WebGL)
             {
                 RemoveAutoFullscreen(outDir);
+                RestoreWebGLProductionSettingsAfterFastLocalBuild();
             }
 
             File.WriteAllText(Path.Combine(outDir, "version.txt"), PlayerSettings.bundleVersion);
@@ -144,8 +145,7 @@ namespace BlocksBeyondTheStars.Client.EditorTools
         /// API shuffles while still applying Brotli + 512 MB heap when those properties are available.</summary>
         public static void ConfigureWebGLPlayer()
         {
-            bool fastLocal = string.Equals(Environment.GetEnvironmentVariable("BBS_WEBGL_FAST_LOCAL"), "1", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(Environment.GetEnvironmentVariable("BBS_WEBGL_FAST_LOCAL"), "true", StringComparison.OrdinalIgnoreCase);
+            bool fastLocal = IsWebGLFastLocalBuild();
 
             EditorUserBuildSettings.development = false;
             PlayerSettings.SetManagedStrippingLevel(NamedBuildTarget.WebGL, ManagedStrippingLevel.Low);
@@ -157,6 +157,23 @@ namespace BlocksBeyondTheStars.Client.EditorTools
             {
                 Debug.Log("BBS_WEBGL_FAST_LOCAL enabled: WebGL build compression disabled for local browser verification.");
             }
+        }
+
+        private static bool IsWebGLFastLocalBuild()
+            => string.Equals(Environment.GetEnvironmentVariable("BBS_WEBGL_FAST_LOCAL"), "1", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(Environment.GetEnvironmentVariable("BBS_WEBGL_FAST_LOCAL"), "true", StringComparison.OrdinalIgnoreCase);
+
+        private static void RestoreWebGLProductionSettingsAfterFastLocalBuild()
+        {
+            if (!IsWebGLFastLocalBuild())
+            {
+                return;
+            }
+
+            SetWebGLProperty("compressionFormat", "Brotli");
+            SetWebGLProperty("decompressionFallback", true);
+            AssetDatabase.SaveAssets();
+            Debug.Log("Restored WebGL production compression settings after fast-local build.");
         }
 
         private static void EnsureStreamingAssetsManifest()
@@ -220,6 +237,7 @@ namespace BlocksBeyondTheStars.Client.EditorTools
             string[] lines = File.ReadAllLines(indexPath);
             var kept = new List<string>(lines.Length);
             bool changed = false;
+            bool hasPermissionHandler = Array.Exists(lines, line => line.Contains("BBS handled browser permission error", StringComparison.Ordinal));
             foreach (string line in lines)
             {
                 if (line.Trim() == "unityInstance.SetFullscreen(1);")
@@ -229,6 +247,18 @@ namespace BlocksBeyondTheStars.Client.EditorTools
                 }
 
                 kept.Add(line);
+                if (!hasPermissionHandler && line.Trim() == "showBanner: unityShowBanner,")
+                {
+                    kept.Add("        errorHandler: function(err, url, line) {");
+                    kept.Add("          if (String(err).indexOf(\"Permissions check failed\") >= 0) {");
+                    kept.Add("            console.warn(\"BBS handled browser permission error\", err);");
+                    kept.Add("            return true;");
+                    kept.Add("          }");
+                    kept.Add("          return false;");
+                    kept.Add("        },");
+                    hasPermissionHandler = true;
+                    changed = true;
+                }
             }
 
             if (changed)

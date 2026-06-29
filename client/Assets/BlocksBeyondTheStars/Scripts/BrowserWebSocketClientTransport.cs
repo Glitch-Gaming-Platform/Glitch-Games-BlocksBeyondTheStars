@@ -126,17 +126,17 @@ namespace BlocksBeyondTheStars.Client
             if (host.StartsWith("wss://", StringComparison.OrdinalIgnoreCase)
                 || host.StartsWith("ws://", StringComparison.OrdinalIgnoreCase))
             {
-                return host;
+                return CompleteAbsoluteWebSocketUrl(host, port);
             }
 
             if (host.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
             {
-                return "wss://" + host.Substring("https://".Length).TrimEnd('/');
+                return CompleteAbsoluteWebSocketUrl("wss://" + host.Substring("https://".Length), port);
             }
 
             if (host.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
             {
-                return "ws://" + host.Substring("http://".Length).TrimEnd('/');
+                return CompleteAbsoluteWebSocketUrl("ws://" + host.Substring("http://".Length), port);
             }
 
             string scheme = Application.absoluteURL.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
@@ -147,6 +147,29 @@ namespace BlocksBeyondTheStars.Client
                 || (scheme == "wss" && port == 443)
                 || (scheme == "ws" && port == 80);
             return omitPort ? $"{scheme}://{host}" : $"{scheme}://{host}:{port}";
+        }
+
+        private static string CompleteAbsoluteWebSocketUrl(string url, int port)
+        {
+            url = string.IsNullOrWhiteSpace(url) ? "ws://127.0.0.1" : url.Trim().TrimEnd('/');
+            if (port <= 0 || !Uri.TryCreate(url, UriKind.Absolute, out Uri uri))
+            {
+                return url;
+            }
+
+            if (!uri.IsDefaultPort && uri.Port > 0)
+            {
+                return url;
+            }
+
+            if ((uri.Scheme.Equals("wss", StringComparison.OrdinalIgnoreCase) && port == 443)
+                || (uri.Scheme.Equals("ws", StringComparison.OrdinalIgnoreCase) && port == 80))
+            {
+                return url;
+            }
+
+            var builder = new UriBuilder(uri) { Port = port };
+            return builder.Uri.ToString().TrimEnd('/');
         }
 
         private sealed class BrowserWebSocketBridge : MonoBehaviour

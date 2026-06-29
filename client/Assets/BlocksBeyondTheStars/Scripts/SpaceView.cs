@@ -238,6 +238,7 @@ namespace BlocksBeyondTheStars.Client
 
         private bool _confirmLand;        // a landing prompt is up — the pad chooser map (item 38)
         private string _choosePadBody;    // body whose pads the chooser is showing (null = no chooser)
+        private float _padWait;           // seconds spent waiting for the server's pad list
         private string _landDestBody;     // confirmed landing destination of the in-flight descent (survives until
                                           // the animation reads it; "" = home body, null = no landing committed).
                                           // Separate from _choosePadBody, which is cleared the moment a pad is picked
@@ -974,6 +975,7 @@ namespace BlocksBeyondTheStars.Client
                 var pads = Game.LandingPadsBody == _choosePadBody ? Game.LandingPads : null;
                 if (pads != null)
                 {
+                    _padWait = 0f;
                     // Show the planet map with the landing pads on it; the player clicks a free pad to touch down
                     // there. Number keys 1–9 mirror clicking, for keyboard players.
                     ShowLandMap(pads);
@@ -984,6 +986,15 @@ namespace BlocksBeyondTheStars.Client
                             LandOnPad(pads[i].Index);
                             break;
                         }
+                    }
+                }
+                else
+                {
+                    _padWait += Time.deltaTime;
+                    if (_padWait >= PadListTimeoutSeconds)
+                    {
+                        Game.ShowMessage(Loc("ui.space.pad_timeout", "Landing pads did not respond. Try again in a moment."));
+                        CancelLandChooser();
                     }
                 }
 
@@ -1224,15 +1235,42 @@ namespace BlocksBeyondTheStars.Client
         /// and shows the keyboard chooser. An empty body id means the current body (land back where you launched).</summary>
         private void OpenPadChooser(string bodyId)
         {
+            string resolvedBodyId = ResolveLandingBodyId(bodyId);
+            if (string.IsNullOrWhiteSpace(resolvedBodyId))
+            {
+                Game.ShowMessage(Loc("ui.space.pad_unavailable", "Landing pads are unavailable for this body."));
+                return;
+            }
+
             _confirmLand = true;
-            _choosePadBody = bodyId ?? string.Empty;
+            _padWait = 0f;
+            _choosePadBody = resolvedBodyId;
+            HideLandMap();
             Game.Network?.SendRequestLandingPads(_choosePadBody);
+        }
+
+        private string ResolveLandingBodyId(string bodyId)
+        {
+            if (!string.IsNullOrWhiteSpace(bodyId))
+            {
+                return bodyId.Trim();
+            }
+
+            string active = Game?.StarMap != null ? Game.StarMap.ActiveLocationId : string.Empty;
+            if (!string.IsNullOrWhiteSpace(active))
+            {
+                return active.Trim();
+            }
+
+            string loadedPadsBody = Game?.LandingPadsBody ?? string.Empty;
+            return string.IsNullOrWhiteSpace(loadedPadsBody) ? string.Empty : loadedPadsBody.Trim();
         }
 
         /// <summary>Closes the landing-pad map without landing (Esc / cancel).</summary>
         private void CancelLandChooser()
         {
             _confirmLand = false;
+            _padWait = 0f;
             _choosePadBody = null;
             _landDestBody = null; // chooser cancelled — no committed landing destination
             HideLandMap();
@@ -1247,6 +1285,7 @@ namespace BlocksBeyondTheStars.Client
             _landDestBody = _choosePadBody;
             Game.Network?.SendLeaveSpace(_choosePadBody, padIndex);
             _confirmLand = false;
+            _padWait = 0f;
             _choosePadBody = null;
             HideLandMap();
         }
@@ -1431,8 +1470,7 @@ namespace BlocksBeyondTheStars.Client
             _landMapBody = null;
             if (Game != null && Game.SpaceViewActive)
             {
-                Cursor.lockState = CursorLockMode.Locked;
-                Cursor.visible = false;
+                ClientCursor.LockForGameplay();
             }
         }
 
@@ -2502,7 +2540,8 @@ namespace BlocksBeyondTheStars.Client
             // orbit instead of all identical — an approximate reflection of how varied the bodies are.
             float homeDiameter = OrbitDiameterFor(current?.Id ?? Game?.LocationName ?? "home", current?.Kind, current?.PlanetType) * 3.2f;
             SpawnBody("HomePlanet", current?.Id, current?.Kind, Game?.LocationName ?? "home", homePos, homeDiameter, homeType);
-            _landables.Add((string.Empty, Game?.LocationName ?? "home", homePos, homeDiameter * 0.5f));
+            string homeBodyId = !string.IsNullOrEmpty(current?.Id) ? current.Id : ResolveLandingBodyId(string.Empty);
+            _landables.Add((homeBodyId, Game?.LocationName ?? "home", homePos, homeDiameter * 0.5f));
             _keepOut.Add((homePos, homeDiameter * 0.5f + KeepOutMargin));
             float maxDist = homePos.magnitude;
 
@@ -3555,6 +3594,7 @@ namespace BlocksBeyondTheStars.Client
                                                      // neighbouring planets are a short cruise apart, not minutes)
         private const float KeepOutMargin = 10f;     // how far outside a body's surface the ship is held
         private const float LandBand = 40f;          // land prompt shows within (body radius + margin + band)
+        private const float PadListTimeoutSeconds = 8f;
 
         private void EnsureUi()
         {

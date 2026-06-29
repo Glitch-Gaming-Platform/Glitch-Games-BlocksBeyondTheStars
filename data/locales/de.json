@@ -982,6 +982,8 @@
   "ui.space.land_confirm": "Zurück zur Startoberfläche?   Enter = ja · Esc = nein",
   "ui.space.pad_choose": "Landeplatz wählen",
   "ui.space.pad_loading": "Lese Landeplätze…",
+  "ui.space.pad_timeout": "Die Landeplätze antworten nicht. Versuch es gleich noch einmal.",
+  "ui.space.pad_unavailable": "Für diesen Himmelskörper sind keine Landeplätze verfügbar.",
   "ui.space.pad_full": "— ALLE LANDEPLÄTZE BELEGT",
   "ui.space.land_on": "Landen auf",
   "ui.space.land_prompt": "E drücken, um zu landen auf",

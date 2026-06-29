@@ -33,6 +33,19 @@ namespace BlocksBeyondTheStars.Client
         public static bool IsConfigured => TryReadConfig(out _, out _, out _, out _, out _);
         public static bool IsOnline => _instance != null && _instance._online;
         public static string InstallId => _instance == null ? string.Empty : _instance._installId;
+        public static string NameVerificationToken => FirstNonEmpty(
+            ReadQueryValue(Application.absoluteURL, "install_id"),
+            ReadQueryValue(Application.absoluteURL, "glitch_install_id"),
+            ReadQueryValue(Application.absoluteURL, "user_install_id"),
+            ReadQueryValue(Application.absoluteURL, "glitch_user_install_id"),
+            ReadCommandLineValue("--install_id"),
+            ReadCommandLineValue("-install_id"),
+            ReadCommandLineAssignment("install_id"),
+            ReadCommandLineValue("--user_install_id"),
+            ReadCommandLineValue("-user_install_id"),
+            ReadCommandLineAssignment("user_install_id"),
+            GetEnv("GLITCH_INSTALL_ID"),
+            GetEnv("GLITCH_USER_INSTALL_ID"));
 
         public static bool AutoJoinRequested
             => IsTruthy(FirstNonEmpty(
@@ -41,30 +54,59 @@ namespace BlocksBeyondTheStars.Client
                 GetEnv("BBS_AUTO_JOIN")));
 
         public static string AutoJoinPlayerName
-            => FirstNonEmpty(
-                ReadQueryValue(Application.absoluteURL, "player_name"),
-                ReadQueryValue(Application.absoluteURL, "bbs_player_name"),
-                GetEnv("BBS_PLAYER_NAME"));
+        {
+            get
+            {
+                string suppliedName = FirstNonEmpty(
+                    ReadQueryValue(Application.absoluteURL, "glitch_username"),
+                    ReadQueryValue(Application.absoluteURL, "username"),
+                    ReadQueryValue(Application.absoluteURL, "user_name"),
+                    ReadQueryValue(Application.absoluteURL, "display_name"),
+                    ReadQueryValue(Application.absoluteURL, "player_name"),
+                    ReadQueryValue(Application.absoluteURL, "bbs_player_name"),
+                    ReadQueryValue(Application.absoluteURL, "glitch_player_name"),
+                    GetEnv("GLITCH_USERNAME"),
+                    GetEnv("GLITCH_PLAYER_NAME"),
+                    GetEnv("BBS_PLAYER_NAME"));
+                if (!string.IsNullOrWhiteSpace(suppliedName))
+                {
+                    return NormalizePlayerName(suppliedName);
+                }
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+                string token = NameVerificationToken;
+                if (!string.IsNullOrWhiteSpace(token))
+                {
+                    return StableFallbackPlayerName(token);
+                }
+#endif
+
+                return string.Empty;
+            }
+        }
 
         public static bool TryGetConfiguredServer(out string host, out string port, out string password)
         {
-            host = FirstNonEmpty(
+            string queryHost = FirstNonEmpty(
                 ReadQueryValue(Application.absoluteURL, "server_host"),
-                ReadQueryValue(Application.absoluteURL, "game_server_host"),
-                GlitchIntegrationSecrets.ServerHost,
-                GetEnv("GLITCH_SERVER_HOST"));
-            port = FirstNonEmpty(
-                ReadQueryValue(Application.absoluteURL, "server_port"),
-                ReadQueryValue(Application.absoluteURL, "game_server_port"),
-                GlitchIntegrationSecrets.ServerPort,
-                GetEnv("GLITCH_SERVER_PORT"));
-            password = FirstNonEmpty(
-                ReadQueryValue(Application.absoluteURL, "server_password"),
-                ReadQueryValue(Application.absoluteURL, "game_server_password"),
-                GlitchIntegrationSecrets.ServerPassword,
-                GetEnv("GLITCH_SERVER_PASSWORD"));
+                ReadQueryValue(Application.absoluteURL, "game_server_host"));
+            string envHost = GetEnv("GLITCH_SERVER_HOST");
+            host = FirstNonEmpty(queryHost, GlitchIntegrationSecrets.ServerHost, envHost);
 
-            return IsConfigured && !string.IsNullOrWhiteSpace(host);
+            string queryPort = FirstNonEmpty(
+                ReadQueryValue(Application.absoluteURL, "server_port"),
+                ReadQueryValue(Application.absoluteURL, "game_server_port"));
+            string envPort = GetEnv("GLITCH_SERVER_PORT");
+            port = FirstNonEmpty(queryPort, GlitchIntegrationSecrets.ServerPort, envPort);
+
+            string queryPassword = FirstNonEmpty(
+                ReadQueryValue(Application.absoluteURL, "server_password"),
+                ReadQueryValue(Application.absoluteURL, "game_server_password"));
+            string envPassword = GetEnv("GLITCH_SERVER_PASSWORD");
+            password = FirstNonEmpty(queryPassword, GlitchIntegrationSecrets.ServerPassword, envPassword);
+
+            bool explicitServer = !string.IsNullOrWhiteSpace(queryHost) || !string.IsNullOrWhiteSpace(envHost);
+            return !string.IsNullOrWhiteSpace(host) && (explicitServer || IsConfigured);
         }
 
         public static void InstallIfConfigured()
@@ -373,7 +415,9 @@ namespace BlocksBeyondTheStars.Client
         {
             string fromUrl = FirstNonEmpty(
                 ReadQueryValue(Application.absoluteURL, "install_id"),
-                ReadQueryValue(Application.absoluteURL, "glitch_install_id"));
+                ReadQueryValue(Application.absoluteURL, "glitch_install_id"),
+                ReadQueryValue(Application.absoluteURL, "user_install_id"),
+                ReadQueryValue(Application.absoluteURL, "glitch_user_install_id"));
             if (!string.IsNullOrWhiteSpace(fromUrl))
             {
                 return fromUrl;
@@ -383,7 +427,11 @@ namespace BlocksBeyondTheStars.Client
                 ReadCommandLineValue("--install_id"),
                 ReadCommandLineValue("-install_id"),
                 ReadCommandLineAssignment("install_id"),
-                GetEnv("GLITCH_INSTALL_ID"));
+                ReadCommandLineValue("--user_install_id"),
+                ReadCommandLineValue("-user_install_id"),
+                ReadCommandLineAssignment("user_install_id"),
+                GetEnv("GLITCH_INSTALL_ID"),
+                GetEnv("GLITCH_USER_INSTALL_ID"));
             if (!string.IsNullOrWhiteSpace(fromArgs))
             {
                 return fromArgs;
@@ -394,6 +442,18 @@ namespace BlocksBeyondTheStars.Client
 #else
             return string.Empty;
 #endif
+        }
+
+        private static string NormalizePlayerName(string value)
+        {
+            string trimmed = (value ?? string.Empty).Trim();
+            return trimmed.Length <= 24 ? trimmed : trimmed.Substring(0, 24);
+        }
+
+        private static string StableFallbackPlayerName(string token)
+        {
+            string hash = Sha256Hex(Encoding.UTF8.GetBytes(token ?? string.Empty));
+            return "Glitch-" + hash.Substring(0, 8);
         }
 
         private string BuildHeartbeatJson()

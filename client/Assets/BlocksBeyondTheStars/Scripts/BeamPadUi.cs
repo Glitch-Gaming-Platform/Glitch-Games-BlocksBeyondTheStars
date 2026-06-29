@@ -67,8 +67,7 @@ namespace BlocksBeyondTheStars.Client
             _open = false;
             if (_canvas != null) _canvas.gameObject.SetActive(false);
             if (Game != null) Game.MenuOpen = false;
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
+            ClientCursor.LockForGameplay();
         }
 
         private NetBeam Find(int id)

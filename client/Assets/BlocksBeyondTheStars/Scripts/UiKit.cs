@@ -609,4 +609,38 @@ namespace BlocksBeyondTheStars.Client
                 SpriteMeshType.FullRect, new Vector4(b, b, b, b));
         }
     }
+
+    internal static class ClientCursor
+    {
+        public static void LockForGameplay()
+        {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            // Hosted WebGL builds may run inside an iframe without the browser's pointer-lock permission.
+            // Requesting CursorLockMode.Locked there throws "Permissions check failed" in JavaScript, which
+            // Unity escalates to a fatal alert. Keep gameplay usable and let mouse look degrade gracefully.
+            Cursor.lockState = CursorLockMode.None;
+#else
+            Cursor.lockState = CursorLockMode.Locked;
+#endif
+            Cursor.visible = false;
+        }
+
+        public static void UnlockForUi()
+        {
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+        }
+
+        public static void SetGameplayLock(bool locked)
+        {
+            if (locked)
+            {
+                LockForGameplay();
+            }
+            else
+            {
+                UnlockForUi();
+            }
+        }
+    }
 }

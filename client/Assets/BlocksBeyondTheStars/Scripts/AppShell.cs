@@ -528,8 +528,7 @@ namespace BlocksBeyondTheStars.Client
             DestroyMenuBackground();
             _gameRoot = WorldRig.Build(this);
             CurrentBoot = Boot(); // hand the live world to the music director
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
+            ClientCursor.LockForGameplay();
             Phase = ShellPhase.InGame;
         }
 

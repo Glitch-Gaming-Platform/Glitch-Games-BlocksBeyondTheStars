@@ -411,6 +411,12 @@ namespace BlocksBeyondTheStars.Client
         private void ApplyWindowMode()
         {
             var native = Screen.currentResolution;
+#if UNITY_WEBGL && !UNITY_EDITOR
+            int webW = Mathf.Clamp(WindowedWidth, 640, Mathf.Max(640, native.width));
+            int webH = Mathf.Clamp(WindowedHeight, 480, Mathf.Max(480, native.height));
+            Screen.SetResolution(webW, webH, FullScreenMode.Windowed);
+            return;
+#endif
             switch (Window)
             {
                 case WindowMode.Borderless:
